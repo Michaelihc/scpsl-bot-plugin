@@ -37,7 +37,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
             }
 
             var elevatorChamber = elevatorObstacle.Elevator;
-            var panelPosition = elevatorChamber.AllPanels[0].GetComponent<Collider>().bounds.center;
+            var panelPosition = elevatorChamber.GetComponentInChildren<ElevatorPanel>().GetComponent<Collider>().bounds.center;
 
             var directionToPanel = Vector3.Normalize(panelPosition - playerPosition);
             var playerDirection = botPlayer.BotHub.PlayerHub.transform.forward;
@@ -52,11 +52,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 return;
             }
 
-            var elevatorGroup = elevatorChamber.AssignedGroup;
-            var targetLvl = (elevatorChamber.CurrentLevel + 1) % ElevatorDoor.AllElevatorDoors[elevatorGroup].Count;
+            var targetLvl = elevatorChamber.NextLevel;
 
-            var elevatorSyncMsg = new ElevatorManager.ElevatorSyncMsg(elevatorGroup, targetLvl);
-            botPlayer.BotHub.ConnectionToServer.Send(elevatorSyncMsg);
+            elevatorChamber.ServerSetDestination(targetLvl, true);
         }
 
         public void Reset()

@@ -3,6 +3,7 @@ using Mirror;
 using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Mind.Door;
 using System;
+using System.Linq;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
@@ -34,10 +35,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         {
             var elevatorDoor = doorObstacle.GetLastDoor<ElevatorDoor>(out var goalPos);
             var isTargetStateOpen = elevatorDoor.TargetState;
-            var panel = elevatorDoor.TargetPanel;
-            var chamber = panel.AssignedChamber;
+            var panel = elevatorDoor.GetComponentInChildren<ElevatorPanel>();
+            var chamber = elevatorDoor.Chamber;
 
-            if (isTargetStateOpen || chamber.CurrentDestination == elevatorDoor)
+            if (isTargetStateOpen || chamber.DestinationDoor == elevatorDoor)
             {
                 // waiting
                 return;
@@ -60,7 +61,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 return;
             }
 
-            if (!ElevatorDoor.AllElevatorDoors.TryGetValue(chamber.AssignedGroup, out var groupElevatorDoors))
+            var groupElevatorDoors = ElevatorDoor.GetDoorsForGroup(chamber.AssignedGroup);
+            if (!groupElevatorDoors.Any())
             {
                 Log.Warning($"Elevator chamber group not added to all elevator doors");
                 return;
@@ -68,7 +70,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
             var targetLevel = groupElevatorDoors.IndexOf(elevatorDoor);
 
-            botPlayer.BotHub.ConnectionToServer.Send(new ElevatorManager.ElevatorSyncMsg(chamber.AssignedGroup, targetLevel));
+            chamber.ServerSetDestination(targetLevel, true);
         }
 
         public void Reset()

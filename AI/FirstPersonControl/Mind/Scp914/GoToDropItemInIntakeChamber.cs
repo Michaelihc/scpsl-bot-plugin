@@ -47,7 +47,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
             }
 
             var itemToDrop = itemInInventoryBelief.Item;
-            itemToDrop.ServerDropItem();
+            itemToDrop.ServerDropItem(true);
             itemInIntakeChamber.Update(playerPosition - itemDropPosition);
         }
 

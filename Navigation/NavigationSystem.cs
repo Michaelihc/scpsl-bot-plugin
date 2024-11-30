@@ -6,6 +6,7 @@ using PluginAPI.Core;
 using PluginAPI.Core.Attributes;
 using PluginAPI.Events;
 using SCPSLBot.Navigation.Mesh;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -71,8 +72,10 @@ namespace SCPSLBot.Navigation
                 }
             }
             Log.Info($"Connecting areas between elevator destinations.");
-            foreach (var (group, elevatorDoors) in ElevatorDoor.AllElevatorDoors)
+            var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
+            foreach (ElevatorGroup group in elevatorGroups)
             {
+                var elevatorDoors = ElevatorDoor.GetDoorsForGroup(group);
                 if (elevatorDoors.Count != 2)
                 {
                     Log.Warning($"Irregular elevator level count ({elevatorDoors.Count}) of group {group}");

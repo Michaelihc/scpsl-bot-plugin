@@ -52,7 +52,7 @@ namespace SCPSLBot.Navigation.Mesh
             EventManager.RegisterEvents(this);
         }
 
-        [PluginEvent(PluginAPI.Enums.ServerEventType.MapGenerated)]
+        [PluginEvent(PluginAPI.Enums.ServerEventType.WaitingForPlayers)]
         public void AssignPrimPrefab()
         {
             this.primPrefab = NetworkClient.prefabs.Values.Select(p => p.GetComponent<PrimitiveObjectToy>()).First(p => p);
