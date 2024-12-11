@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace SCPSLBot.Navigation.Mesh
+namespace SCPSLBot.Navigation.Mesh.Room
 {
     internal class RoomVertex
     {

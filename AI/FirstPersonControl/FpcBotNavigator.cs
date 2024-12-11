@@ -1,6 +1,7 @@
 ﻿using MapGeneration;
 using PluginAPI.Core;
 using SCPSLBot.Navigation.Mesh;
+using SCPSLBot.Navigation.Mesh.Room;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -10,12 +11,12 @@ namespace SCPSLBot.AI.FirstPersonControl
     internal class FpcBotNavigator
     {
         private Vector3 lastPlayerPosition;
-        private Area areaWithin;
+        private RoomArea areaWithin;
 
-        private Area currentArea;
-        private Area goalArea;
-        public List<Area> AreasPath { get; } = new();
-        public IEnumerable<(Area Area, Area NextArea)> AreaPathSegments { get; }
+        private RoomArea currentArea;
+        private RoomArea goalArea;
+        public List<RoomArea> AreasPath { get; } = new();
+        public IEnumerable<(RoomArea Area, RoomArea NextArea)> AreaPathSegments { get; }
         private int currentPathIdx = -1;
 
         public Vector3 GoalPosition { get; private set; }
@@ -144,7 +145,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
         }
 
-        public Area GetAreaWithin()
+        public RoomArea GetAreaWithin()
         {
             var playerPosition = botPlayer.PlayerPosition;
             if (playerPosition != lastPlayerPosition)

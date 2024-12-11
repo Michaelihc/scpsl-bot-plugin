@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace SCPSLBot.Navigation.Mesh
+namespace SCPSLBot.Navigation.Mesh.Room
 {
     internal class RoomKindArea
     {
@@ -24,7 +24,7 @@ namespace SCPSLBot.Navigation.Mesh
         public List<RoomKindArea> ConnectedRoomKindAreas { get; } = new();
         public List<RoomKindEdge> ConnectedRoomKindAreaEdges = new();
 
-        public Dictionary<FacilityRoom, Area> AreasOfRoom { get; } = new();
+        public Dictionary<FacilityRoom, RoomArea> AreasOfRoom { get; } = new();
 
         public RoomKindArea()
         { }

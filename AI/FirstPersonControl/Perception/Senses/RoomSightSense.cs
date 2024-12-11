@@ -2,6 +2,7 @@
 using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Navigation.Mesh;
+using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +13,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 {
     internal class RoomSightSense : SightSense, ISense
     {
-        public List<Area> ForeignRoomsAreas { get; } = new();
+        public List<RoomArea> ForeignRoomsAreas { get; } = new();
         public IEnumerable<RoomIdentifier> ForeignRooms { get; }
         public RoomIdentifier RoomWithin { get; private set; }
 
-        public event Action<Area> OnSensedForeignRoomArea;
+        public event Action<RoomArea> OnSensedForeignRoomArea;
         public event Action OnAfterSensedForeignRooms;
 
         public event Action<RoomIdentifier> OnSensedRoomWithin;

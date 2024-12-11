@@ -3,6 +3,7 @@ using MEC;
 using PluginAPI.Core;
 using SCPSLBot.Commands.Navigation;
 using SCPSLBot.MapGeneration;
+using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,8 +25,8 @@ namespace SCPSLBot.Navigation.Mesh
 
         private Player LastPlayerEditing { get; set; }
 
-        private Area CachedArea { get; set; }
-        private Area TracingEndingArea { get; set; }
+        private RoomArea CachedArea { get; set; }
+        private RoomArea TracingEndingArea { get; set; }
 
         private List<RoomKindVertex> SeletedVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
@@ -404,7 +405,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var path = new List<Area>();
+            var path = new List<RoomArea>();
             NavigationMesh.FindShortestPath(CachedArea, targetArea, path);
             if (path.Count == 0)
             {

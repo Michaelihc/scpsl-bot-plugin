@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SCPSLBot.Navigation.Mesh
+namespace SCPSLBot.Navigation.Mesh.Room
 {
     internal struct RoomKindEdge
     {

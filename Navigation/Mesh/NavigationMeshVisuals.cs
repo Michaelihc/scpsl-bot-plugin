@@ -4,6 +4,7 @@ using PluginAPI.Core;
 using PluginAPI.Core.Attributes;
 using PluginAPI.Core.Zones;
 using PluginAPI.Events;
+using SCPSLBot.Navigation.Mesh.Room;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,13 +26,13 @@ namespace SCPSLBot.Navigation.Mesh
         public RoomKindArea FacingArea { get; set; }
         public RoomKindArea CachedArea { get; set; }
 
-        public List<Area> Path { get; } = new ();
+        public List<RoomArea> Path { get; } = new ();
 
         private Dictionary<RoomVertex, PrimitiveObjectToy> VertexVisuals { get; } = new();
-        private Dictionary<(RoomKindEdge, FacilityRoom Room), (PrimitiveObjectToy, Area)> EdgeVisuals { get; } = new();
-        private Dictionary<(Area From, Area To), PrimitiveObjectToy> ConnectionVisuals { get; } = new();
+        private Dictionary<(RoomKindEdge, FacilityRoom Room), (PrimitiveObjectToy, RoomArea)> EdgeVisuals { get; } = new();
+        private Dictionary<(RoomArea From, RoomArea To), PrimitiveObjectToy> ConnectionVisuals { get; } = new();
 
-        private Dictionary<Area, PrimitiveObjectToy> AreaVisuals { get; } = new ();
+        private Dictionary<RoomArea, PrimitiveObjectToy> AreaVisuals { get; } = new ();
 
         private NavigationMesh NavigationMesh { get; } = NavigationMesh.Instance;
 

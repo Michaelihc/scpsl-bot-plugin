@@ -2,6 +2,7 @@
 using PluginAPI.Core;
 using PluginAPI.Core.Zones;
 using SCPSLBot.MapGeneration;
+using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,12 +22,12 @@ namespace SCPSLBot.Navigation.Mesh
         public Dictionary<FacilityRoom, List<RoomVertex>> VerticesByRoom { get; } = new();  // maybe dictionary from kind to room vertex
 
         public Dictionary<(RoomName, RoomShape, RoomZone), List<RoomKindArea>> AreasByRoomKind { get; } = new();
-        public Dictionary<FacilityRoom, List<Area>> AreasByRoom { get; } = new();
+        public Dictionary<FacilityRoom, List<RoomArea>> AreasByRoom { get; } = new();
 
         public void Init()
         { }
 
-        public Area GetAreaWithin(Vector3 position)
+        public RoomArea GetAreaWithin(Vector3 position)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
 
@@ -112,11 +113,11 @@ namespace SCPSLBot.Navigation.Mesh
             return planeClosestPoint;
         }
 
-        public void FindShortestPath(Area startingArea, Area endArea, List<Area> results)
+        public void FindShortestPath(RoomArea startingArea, RoomArea endArea, List<RoomArea> results)
         {
-            var areasWithPriorityToEvaluate = new Dictionary<Area, float>();
-            var cameFromAreas = new Dictionary<Area, Area>();
-            var costsTill = new Dictionary<Area, float>();
+            var areasWithPriorityToEvaluate = new Dictionary<RoomArea, float>();
+            var cameFromAreas = new Dictionary<RoomArea, RoomArea>();
+            var costsTill = new Dictionary<RoomArea, float>();
 
             var cost = 0f;
             var heuristic = Vector3.Magnitude(endArea.CenterPosition - startingArea.CenterPosition);
@@ -498,7 +499,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             foreach (var room in Facility.Rooms)
             {
-                var areas = new List<Area>();
+                var areas = new List<RoomArea>();
                 AreasByRoom.Add(room, areas);
 
                 if (!AreasByRoomKind.TryGetValue((room.Identifier.Name, room.Identifier.Shape, (RoomZone)room.Identifier.Zone), out var roomKindAreas))
@@ -506,7 +507,7 @@ namespace SCPSLBot.Navigation.Mesh
                     continue;
                 }
 
-                areas.AddRange(roomKindAreas.Select(k => new Area(k, room)));
+                areas.AddRange(roomKindAreas.Select(k => new RoomArea(k, room)));
 
                 foreach (var roomArea in areas)
                 {
@@ -542,7 +543,7 @@ namespace SCPSLBot.Navigation.Mesh
             area.Vertices.Insert(atIdx, vertex);
         }
 
-        public bool IsPointWithinArea(Area area, Vector3 pointPosition)
+        public bool IsPointWithinArea(RoomArea area, Vector3 pointPosition)
         {
             var room = area.Room;
             var pointLocalPosition = room.Transform.InverseTransformPoint(pointPosition);
@@ -550,7 +551,7 @@ namespace SCPSLBot.Navigation.Mesh
             return IsLocalPointWithinArea(area, pointLocalPosition);
         }
 
-        private bool IsLocalPointWithinArea(Area area, Vector3 pointLocalPosition)
+        private bool IsLocalPointWithinArea(RoomArea area, Vector3 pointLocalPosition)
         {
             var areaRoomKindEdges = area.RoomKindArea.Edges;
 
@@ -617,7 +618,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             foreach (var (room, areas) in roomsAreasOfRoomKind)
             {
-                var newRoomArea = new Area(roomKindArea, room);
+                var newRoomArea = new RoomArea(roomKindArea, room);
                 areas.Add(newRoomArea);
             }
         }

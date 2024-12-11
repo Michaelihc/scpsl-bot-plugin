@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace SCPSLBot.Navigation.Mesh
+namespace SCPSLBot.Navigation.Mesh.Room
 {
-    internal class Area
+    internal class RoomArea
     {
         public RoomKindArea RoomKindArea { get; }
         public FacilityRoom Room { get; }
@@ -15,12 +15,12 @@ namespace SCPSLBot.Navigation.Mesh
 
         //public IEnumerable<(RoomVertex From, RoomVertex To)> Edges => RoomKindArea.Edges.Select(e => (e.From.))
 
-        public IEnumerable<Area> ConnectedAreas => RoomKindArea.ConnectedRoomKindAreas.Select(k => k.AreasOfRoom[Room]).Concat(ForeignConnectedAreas);
-        public Dictionary<Area, (RoomVertex From, RoomVertex To)> ConnectedAreaEdges { get; } = new();
+        public IEnumerable<RoomArea> ConnectedAreas => RoomKindArea.ConnectedRoomKindAreas.Select(k => k.AreasOfRoom[Room]).Concat(ForeignConnectedAreas);
+        public Dictionary<RoomArea, (RoomVertex From, RoomVertex To)> ConnectedAreaEdges { get; } = new();
 
-        public List<Area> ForeignConnectedAreas { get; } = new();
+        public List<RoomArea> ForeignConnectedAreas { get; } = new();
 
-        public Area(RoomKindArea roomKindArea, FacilityRoom room)
+        public RoomArea(RoomKindArea roomKindArea, FacilityRoom room)
         {
             Room = room;
             RoomKindArea = roomKindArea;
@@ -28,7 +28,7 @@ namespace SCPSLBot.Navigation.Mesh
             RoomKindArea.AreasOfRoom.Add(Room, this);
         }
 
-        ~Area()
+        ~RoomArea()
         {
             RoomKindArea.AreasOfRoom.Remove(Room);
         }
