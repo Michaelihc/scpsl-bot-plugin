@@ -41,13 +41,9 @@ namespace SCPSLBot.Navigation.Mesh
             return roomAreas.Find(a => IsLocalPointWithinArea(a, localPosition));
         }
 
-        public bool IsAtPositiveEdgeSide(Vector3 position, (RoomVertex From, RoomVertex To) edge)
+        public bool IsAtPositiveEdgeSide(Vector3 position, Edge edge)
         {
-            var room = edge.From.Room.Identifier;
-
-            var localPosition = room.transform.InverseTransformPoint(position);
-
-            return GetPointDistToEdgePlane(new RoomKindEdge(edge.From.RoomKindVertex, edge.To.RoomKindVertex), localPosition) > 0f;
+            return GetPointDistToEdgePlane(edge, position) > 0f;
         }
 
         public (RoomVertex From, RoomVertex To)? GetNearestEdge(Vector3 position, RoomIdentifier room = null) => GetNearestEdge(position, out _, room);
@@ -113,11 +109,11 @@ namespace SCPSLBot.Navigation.Mesh
             return planeClosestPoint;
         }
 
-        public void FindShortestPath(RoomArea startingArea, RoomArea endArea, List<RoomArea> results)
+        public void FindShortestPath(Area startingArea, Area endArea, List<Area> results)
         {
-            var areasWithPriorityToEvaluate = new Dictionary<RoomArea, float>();
-            var cameFromAreas = new Dictionary<RoomArea, RoomArea>();
-            var costsTill = new Dictionary<RoomArea, float>();
+            var areasWithPriorityToEvaluate = new Dictionary<Area, float>();
+            var cameFromAreas = new Dictionary<Area, Area>();
+            var costsTill = new Dictionary<Area, float>();
 
             var cost = 0f;
             var heuristic = Vector3.Magnitude(endArea.CenterPosition - startingArea.CenterPosition);
@@ -516,10 +512,10 @@ namespace SCPSLBot.Navigation.Mesh
 
                     var connectedEdges = roomArea.RoomKindArea.ConnectedRoomKindAreas
                         .Select(cka => (cka, cke: cka.Edges.First(cke => roomArea.RoomKindArea.Edges.Any(e => cke == new RoomKindEdge(e.To, e.From)))))
-                        .Select(t => (roomArea.ConnectedAreas.First(ca => ca.RoomKindArea == t.cka), VerticesByRoom[room]
-                            .Aggregate((from: default(RoomVertex), to: default(RoomVertex)), (ce, v) => (
-                                v.RoomKindVertex == t.cke.From ? v : ce.from,
-                                v.RoomKindVertex == t.cke.To ? v : ce.to)
+                        .Select(t => (roomArea.ConnectedRoomAreas.First(ca => ca.RoomKindArea == t.cka), VerticesByRoom[room]
+                            .Aggregate(new Edge(default(RoomVertex), default(RoomVertex)), (ce, v) => new Edge(
+                                v.RoomKindVertex == t.cke.From ? v : ce.From,
+                                v.RoomKindVertex == t.cke.To ? v : ce.To)
                             )
                         ));
 
@@ -574,8 +570,24 @@ namespace SCPSLBot.Navigation.Mesh
             return isAnyVertexWithinVerticalRange;
         }
 
-        private float GetPointDistToEdgePlane(RoomKindEdge edge, Vector3 localPoint) => GetPointDistToEdgePlane(edge, localPoint, out _);
+        private float GetPointDistToEdgePlane(Edge edge, Vector3 point) => GetPointDistToEdgePlane(edge, point, out _);
+        private float GetPointDistToEdgePlane(Edge edge, Vector3 point, out Vector3 closestPoint)
+        {
+            var dirTo2 = edge.To.Position - edge.From.Position;
+            var dirToPoint = point - edge.From.Position;
 
+            var edgeNormal = Vector3.Cross(dirTo2.normalized, Vector3.down);
+
+            var dist = Vector3.Dot(edgeNormal, dirToPoint);
+
+            closestPoint = point - edgeNormal * dist;
+
+            return dist;
+        }
+
+        [Obsolete]
+        private float GetPointDistToEdgePlane(RoomKindEdge edge, Vector3 localPoint) => GetPointDistToEdgePlane(edge, localPoint, out _);
+        [Obsolete]
         private float GetPointDistToEdgePlane(RoomKindEdge edge, Vector3 localPoint, out Vector3 closestLocalPoint)
         {
             var dirTo2 = edge.To.LocalPosition - edge.From.LocalPosition;

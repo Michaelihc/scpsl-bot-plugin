@@ -11,12 +11,12 @@ namespace SCPSLBot.AI.FirstPersonControl
     internal class FpcBotNavigator
     {
         private Vector3 lastPlayerPosition;
-        private RoomArea areaWithin;
+        private Area areaWithin;
 
-        private RoomArea currentArea;
-        private RoomArea goalArea;
-        public List<RoomArea> AreasPath { get; } = new();
-        public IEnumerable<(RoomArea Area, RoomArea NextArea)> AreaPathSegments { get; }
+        private Area currentArea;
+        private Area goalArea;
+        public List<Area> AreasPath { get; } = new();
+        public IEnumerable<(Area Area, Area NextArea)> AreaPathSegments { get; }
         private int currentPathIdx = -1;
 
         public Vector3 GoalPosition { get; private set; }
@@ -145,7 +145,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
         }
 
-        public RoomArea GetAreaWithin()
+        public Area GetAreaWithin()
         {
             var playerPosition = botPlayer.PlayerPosition;
             if (playerPosition != lastPlayerPosition)

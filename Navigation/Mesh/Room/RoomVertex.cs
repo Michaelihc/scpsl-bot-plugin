@@ -9,12 +9,12 @@ using UnityEngine;
 
 namespace SCPSLBot.Navigation.Mesh.Room
 {
-    internal class RoomVertex
+    internal class RoomVertex : Vertex
     {
         public RoomKindVertex RoomKindVertex { get; }
         public FacilityRoom Room { get; }
 
-        public Vector3 Position => Room.Transform.TransformPoint(RoomKindVertex.LocalPosition);
+        public override Vector3 Position => Room.Transform.TransformPoint(RoomKindVertex.LocalPosition);
 
         public Vector3 LocalPosition => RoomKindVertex.LocalPosition;
 

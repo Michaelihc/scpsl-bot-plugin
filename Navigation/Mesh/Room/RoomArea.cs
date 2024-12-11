@@ -5,18 +5,18 @@ using UnityEngine;
 
 namespace SCPSLBot.Navigation.Mesh.Room
 {
-    internal class RoomArea
+    internal class RoomArea : Area
     {
         public RoomKindArea RoomKindArea { get; }
         public FacilityRoom Room { get; }
 
-        public Vector3 CenterPosition => Room.Transform.TransformPoint(RoomKindArea.LocalCenterPosition);
+        public override Vector3 CenterPosition => Room.Transform.TransformPoint(RoomKindArea.LocalCenterPosition);
         public Vector3 LocalCenterPosition => RoomKindArea.LocalCenterPosition;
 
-        //public IEnumerable<(RoomVertex From, RoomVertex To)> Edges => RoomKindArea.Edges.Select(e => (e.From.))
+        public override Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
 
-        public IEnumerable<RoomArea> ConnectedAreas => RoomKindArea.ConnectedRoomKindAreas.Select(k => k.AreasOfRoom[Room]).Concat(ForeignConnectedAreas);
-        public Dictionary<RoomArea, (RoomVertex From, RoomVertex To)> ConnectedAreaEdges { get; } = new();
+        public IEnumerable<RoomArea> ConnectedRoomAreas => RoomKindArea.ConnectedRoomKindAreas.Select(k => k.AreasOfRoom[Room]).Concat(ForeignConnectedAreas);
+        public override IEnumerable<Area> ConnectedAreas => ConnectedRoomAreas;
 
         public List<RoomArea> ForeignConnectedAreas { get; } = new();
 
@@ -37,5 +37,6 @@ namespace SCPSLBot.Navigation.Mesh.Room
         {
             return $"#{NavigationMesh.Instance.AreasByRoom[Room].IndexOf(this)} {RoomKindArea.RoomKind}";
         }
+
     }
 }

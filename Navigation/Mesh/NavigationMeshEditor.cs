@@ -405,7 +405,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var path = new List<RoomArea>();
+            var path = new List<Area>();
             NavigationMesh.FindShortestPath(CachedArea, targetArea, path);
             if (path.Count == 0)
             {

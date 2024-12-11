@@ -67,7 +67,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
                 {
                     foreach (var fa in a.ForeignConnectedAreas)
                     {
-                        var faa = fa.ConnectedAreas.First();
+                        var faa = fa.ConnectedRoomAreas.First();
                         ForeignRoomsAreas.Add(faa);
                     }
                 }

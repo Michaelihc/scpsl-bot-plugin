@@ -1,5 +1,6 @@
 ﻿using Interactables.Interobjects;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
+using SCPSLBot.Navigation.Mesh;
 using SCPSLBot.Navigation.Mesh.Room;
 using System.Linq;
 using UnityEngine;
@@ -61,9 +62,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         public bool Has(Vector3 goalPos) => GoalPosition == goalPos;
         public ElevatorChamber Elevator { get; private set; }
         public Vector3? GoalPosition { get; private set; }
-        public RoomArea DestinationArea { get; private set; }
+        public Area DestinationArea { get; private set; }
 
-        private void Update(ElevatorChamber newChamberValue, Vector3? goalPos, RoomArea destinationArea)
+        private void Update(ElevatorChamber newChamberValue, Vector3? goalPos, Area destinationArea)
         {
             if (newChamberValue != Elevator) 
             { 

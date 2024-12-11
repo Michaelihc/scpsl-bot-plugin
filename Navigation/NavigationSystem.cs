@@ -66,10 +66,10 @@ namespace SCPSLBot.Navigation
                             .Find(a => a.RoomKindArea.Edges.Any(e => e == new RoomKindEdge(edgeInBack.Value.From.RoomKindVertex, edgeInBack.Value.To.RoomKindVertex)));
 
                         areaInFront.ForeignConnectedAreas.Add(areaInBack);
-                        areaInFront.ConnectedAreaEdges.Add(areaInBack, edgeInBack.Value);
+                        areaInFront.ConnectedAreaEdges.Add(areaInBack, new Edge(edgeInBack.Value.From, edgeInBack.Value.To));
 
                         areaInBack.ForeignConnectedAreas.Add(areaInFront);
-                        areaInBack.ConnectedAreaEdges.Add(areaInFront, edgeInFront.Value);
+                        areaInBack.ConnectedAreaEdges.Add(areaInFront, new Edge(edgeInFront.Value.From, edgeInFront.Value.To));
                     }
                 }
             }

@@ -26,13 +26,13 @@ namespace SCPSLBot.Navigation.Mesh
         public RoomKindArea FacingArea { get; set; }
         public RoomKindArea CachedArea { get; set; }
 
-        public List<RoomArea> Path { get; } = new ();
+        public List<Area> Path { get; } = new ();
 
         private Dictionary<RoomVertex, PrimitiveObjectToy> VertexVisuals { get; } = new();
         private Dictionary<(RoomKindEdge, FacilityRoom Room), (PrimitiveObjectToy, RoomArea)> EdgeVisuals { get; } = new();
         private Dictionary<(RoomArea From, RoomArea To), PrimitiveObjectToy> ConnectionVisuals { get; } = new();
 
-        private Dictionary<RoomArea, PrimitiveObjectToy> AreaVisuals { get; } = new ();
+        private Dictionary<Area, PrimitiveObjectToy> AreaVisuals { get; } = new ();
 
         private NavigationMesh NavigationMesh { get; } = NavigationMesh.Instance;
 
@@ -411,8 +411,15 @@ namespace SCPSLBot.Navigation.Mesh
                             continue;
                         }
 
-                        var roomKindEdge = new RoomKindEdge(connectedEdge.From.RoomKindVertex, connectedEdge.To.RoomKindVertex);
-                        var (edgeVisual, _) = EdgeVisuals[(roomKindEdge, nextArea.Room)];
+                        if (nextArea is not RoomArea nextRoomArea)
+                        {
+                            continue;
+                        }
+
+                        var roomConnectedEdge = (From: connectedEdge.From as RoomVertex, To: connectedEdge.To as RoomVertex);
+
+                        var roomKindEdge = new RoomKindEdge(roomConnectedEdge.From!.RoomKindVertex, roomConnectedEdge.To!.RoomKindVertex);
+                        var (edgeVisual, _) = EdgeVisuals[(roomKindEdge, nextRoomArea.Room)];
                         edgeVisual.NetworkMaterialColor = Color.blue;
                     }
                 }
@@ -459,15 +466,15 @@ namespace SCPSLBot.Navigation.Mesh
                                 && areaFrom.ConnectedAreaEdges.TryGetValue(areaTo, out var toAreaEdge))
                             {
                                 // Adjacent rooms connection
-                                var fromAreaEdgeLocalPos = Vector3.Lerp(fromAreaEdge.From.LocalPosition, fromAreaEdge.To.LocalPosition, .5f);
-                                var toAreaEdgeLocalPos = Vector3.Lerp(toAreaEdge.From.LocalPosition, toAreaEdge.To.LocalPosition, .5f);
+                                var fromAreaEdgePos = Vector3.Lerp(fromAreaEdge.From.Position, fromAreaEdge.To.Position, .5f);
+                                var toAreaEdgePos = Vector3.Lerp(toAreaEdge.From.Position, toAreaEdge.To.Position, .5f);
 
                                 newConnectionVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
-                                newConnectionVisual.transform.position = Vector3.Lerp(roomFrom.Transform.TransformPoint(fromAreaEdgeLocalPos), roomTo.Transform.TransformPoint(toAreaEdgeLocalPos), 0.5f);
-                                newConnectionVisual.transform.LookAt(roomTo.Transform.TransformPoint(toAreaEdgeLocalPos));
+                                newConnectionVisual.transform.position = Vector3.Lerp(fromAreaEdgePos, toAreaEdgePos, 0.5f);
+                                newConnectionVisual.transform.LookAt(toAreaEdgePos);
                                 newConnectionVisual.transform.RotateAround(newConnectionVisual.transform.position, newConnectionVisual.transform.right, 90f);
                                 newConnectionVisual.transform.localScale = Vector3.forward * 0.01f + Vector3.right * 0.01f;
-                                newConnectionVisual.transform.localScale += Vector3.up * Vector3.Distance(roomFrom.Transform.TransformPoint(fromAreaEdgeLocalPos), roomTo.Transform.TransformPoint(toAreaEdgeLocalPos)) * 0.5f;
+                                newConnectionVisual.transform.localScale += Vector3.up * Vector3.Distance(fromAreaEdgePos, toAreaEdgePos) * 0.5f;
                             }
                             else
                             {
