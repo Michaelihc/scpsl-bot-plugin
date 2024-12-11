@@ -45,14 +45,15 @@ namespace SCPSLBot.Navigation
             yield return Timing.WaitUntilTrue(() => SeedSynchronizer.MapGenerated);
             
             Log.Info($"Connecting areas between rooms.");
-            foreach (var door in DoorVariant.AllDoors)
+            
+            foreach (var connector in RoomConnector.AllConnectors)
             {
-                if (door.Rooms.Length == 2)
+                if (connector.Rooms.Length == 2)
                 {
-                    var doorCenterPosition = door.transform.position + Vector3.up;  // assuming pivot point is located at the bottom of all doors
+                    var doorCenterPosition = connector.transform.position + Vector3.up;  // assuming pivot point is located at the bottom of all doors
 
-                    var edgeInFront = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[0]);
-                    var edgeInBack = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[1]);
+                    var edgeInFront = NavigationMesh.GetNearestEdge(doorCenterPosition, connector.Rooms[0]);
+                    var edgeInBack = NavigationMesh.GetNearestEdge(doorCenterPosition, connector.Rooms[1]);
                     
                     if (edgeInFront != null && edgeInBack != null)
                     {
