@@ -29,7 +29,7 @@ namespace SCPSLBot.Navigation.Mesh
         public List<Area> Path { get; } = new ();
 
         private Dictionary<RoomVertex, PrimitiveObjectToy> VertexVisuals { get; } = new();
-        private Dictionary<(Vertex From, Vertex To), (PrimitiveObjectToy, Area)> EdgeVisuals { get; } = new();
+        private Dictionary<(Vertex From, Vertex To), (PrimitiveObjectToy Visual, Area Area)> EdgeVisuals { get; } = new();
         private Dictionary<(RoomArea From, RoomArea To), PrimitiveObjectToy> ConnectionVisuals { get; } = new();
 
         private Dictionary<Area, PrimitiveObjectToy> AreaVisuals { get; } = new ();
@@ -332,7 +332,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEnabledVisualsFor != null)
             {
-                var enabledEdgeVisuals = EdgeVisuals.Where(p => p.Value.Item1.gameObject.activeInHierarchy);
+                var enabledEdgeVisuals = EdgeVisuals.Where(p => p.Value.Visual.gameObject.activeInHierarchy);
                 foreach (var (edge, (visual, area)) in enabledEdgeVisuals.Select(p => (p.Key, p.Value)).ToArray())
                 {
                     var isAreaRemoved = area switch
