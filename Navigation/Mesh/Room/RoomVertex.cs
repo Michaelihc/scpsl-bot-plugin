@@ -26,7 +26,7 @@ namespace SCPSLBot.Navigation.Mesh.Room
 
         public override string ToString()
         {
-            var idx = NavigationMesh.Instance.VerticesByRoom[Room].IndexOf(this);
+            var idx = NavigationMesh.Instance.VerticesByRoomKind[RoomKindVertex.RoomKind].IndexOf(RoomKindVertex);
             return $"#{idx} {RoomKindVertex.RoomKind}";
         }
     }

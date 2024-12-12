@@ -5,11 +5,11 @@ using PluginAPI.Core.Attributes;
 using PluginAPI.Core.Zones;
 using PluginAPI.Events;
 using SCPSLBot.Navigation.Mesh.Room;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using static UnityEngine.RectTransform;
 
 namespace SCPSLBot.Navigation.Mesh
 {
@@ -29,7 +29,7 @@ namespace SCPSLBot.Navigation.Mesh
         public List<Area> Path { get; } = new ();
 
         private Dictionary<RoomVertex, PrimitiveObjectToy> VertexVisuals { get; } = new();
-        private Dictionary<(RoomKindEdge, FacilityRoom Room), (PrimitiveObjectToy, RoomArea)> EdgeVisuals { get; } = new();
+        private Dictionary<(Vertex From, Vertex To), (PrimitiveObjectToy, Area)> EdgeVisuals { get; } = new();
         private Dictionary<(RoomArea From, RoomArea To), PrimitiveObjectToy> ConnectionVisuals { get; } = new();
 
         private Dictionary<Area, PrimitiveObjectToy> AreaVisuals { get; } = new ();
@@ -182,14 +182,14 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var vertexPosChanged = vertexVisual.Value.transform.position != vertexVisual.Key.Position;
 
-                    if (!NavigationMesh.VerticesByRoom.Values.Any(l => l.Contains(vertexVisual.Key)) || vertexPosChanged)
+                    if (!NavigationMesh.VerticesByRoom.Values.Any(l => l.Values.Contains(vertexVisual.Key)) || vertexPosChanged)
                     {
                         NetworkServer.Destroy(vertexVisual.Value.gameObject);
                         VertexVisuals.Remove(vertexVisual.Key);
                     }
                 }
 
-                foreach (var vertex in NavigationMesh.VerticesByRoom.Values.SelectMany(l => l))
+                foreach (var vertex in NavigationMesh.VerticesByRoom.Values.SelectMany(l => l.Values))
                 {
                     var room = vertex.Room.Identifier;
 
@@ -333,17 +333,21 @@ namespace SCPSLBot.Navigation.Mesh
             if (PlayerEnabledVisualsFor != null)
             {
                 var enabledEdgeVisuals = EdgeVisuals.Where(p => p.Value.Item1.gameObject.activeInHierarchy);
-                foreach (var ((edge, room), (visual, area)) in enabledEdgeVisuals.Select(p => (p.Key, p.Value)).ToArray())
+                foreach (var (edge, (visual, area)) in enabledEdgeVisuals.Select(p => (p.Key, p.Value)).ToArray())
                 {
-                    var isAreaRemoved = !NavigationMesh.AreasByRoom[area.Room].Contains(area);
-                    
-                    var currentEdgeCenter = () => Vector3.Lerp(room.Transform.TransformPoint(edge.From.LocalPosition), room.Transform.TransformPoint(edge.To.LocalPosition), 0.5f);
-                    var isEdgeCenterChanged = () => currentEdgeCenter() != visual.transform.position;
+                    var isAreaRemoved = area switch
+                    {
+                        RoomArea roomArea => !NavigationMesh.AreasByRoom[roomArea.Room].Contains(roomArea),
+                        _ => throw new NotImplementedException()
+                    };
 
-                    if (isAreaRemoved || (!area.RoomKindArea.Edges.Contains(edge)) || isEdgeCenterChanged())
+                    Vector3 currentEdgeCenter() => Vector3.Lerp(edge.From.Position, edge.To.Position, 0.5f);
+                    bool isEdgeCenterChanged() => currentEdgeCenter() != visual.transform.position;
+
+                    if (isAreaRemoved || !area.ContainsEdge(new(edge.From, edge.To)) || isEdgeCenterChanged())
                     {
                         NetworkServer.Destroy(visual.gameObject);
-                        EdgeVisuals.Remove((edge, room));
+                        EdgeVisuals.Remove(edge);
                     }
                 }
 
@@ -351,9 +355,14 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var room = area.Room;
 
-                    foreach (var edge in area.RoomKindArea.Edges)
+                    foreach (var roomKindEdge in area.RoomKindArea.Edges)
                     {
-                        if (!EdgeVisuals.TryGetValue((edge, room), out var edgeVisualArea))
+                        var edge = (
+                            From: NavigationMesh.VerticesByRoom[room][roomKindEdge.From],
+                            To: NavigationMesh.VerticesByRoom[room][roomKindEdge.To]
+                        );
+
+                        if (!EdgeVisuals.TryGetValue(edge, out var edgeVisualArea))
                         {
                             var newEdgeVisual = UnityEngine.Object.Instantiate(this.primPrefab);
                             newEdgeVisual.gameObject.SetActive(false);
@@ -369,7 +378,7 @@ namespace SCPSLBot.Navigation.Mesh
                             // NetworkServer.Spawn(newEdgeVisual.gameObject);
 
                             edgeVisualArea = (newEdgeVisual, area);
-                            EdgeVisuals.Add((edge, room), edgeVisualArea);
+                            EdgeVisuals.Add(edge, edgeVisualArea);
                         }
 
                         var (edgeVisual, _) = edgeVisualArea;
@@ -389,7 +398,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                         if (edgeVisual.gameObject.activeSelf)
                         {
-                            edgeVisual.NetworkMaterialColor = (NearestArea?.Edges.Contains(edge) ?? false) ? Color.yellow : Color.white;
+                            edgeVisual.NetworkMaterialColor = (NearestArea?.Edges.Contains(roomKindEdge) ?? false) ? Color.yellow : Color.white;
                         }
                     }
                 }
@@ -411,15 +420,8 @@ namespace SCPSLBot.Navigation.Mesh
                             continue;
                         }
 
-                        if (nextArea is not RoomArea nextRoomArea)
-                        {
-                            continue;
-                        }
-
-                        var roomConnectedEdge = (From: connectedEdge.From as RoomVertex, To: connectedEdge.To as RoomVertex);
-
-                        var roomKindEdge = new RoomKindEdge(roomConnectedEdge.From!.RoomKindVertex, roomConnectedEdge.To!.RoomKindVertex);
-                        var (edgeVisual, _) = EdgeVisuals[(roomKindEdge, nextRoomArea.Room)];
+                        var roomEdge = (connectedEdge.From, connectedEdge.To);
+                        var (edgeVisual, _) = EdgeVisuals[roomEdge];
                         edgeVisual.NetworkMaterialColor = Color.blue;
                     }
                 }

@@ -9,5 +9,7 @@ namespace SCPSLBot.Navigation.Mesh
         public abstract Vector3 CenterPosition { get; }
         public abstract Dictionary<Area, Edge> ConnectedAreaEdges { get; }
         public abstract IEnumerable<Area> ConnectedAreas { get; }
+
+        public abstract bool ContainsEdge(Edge edge);
     }
 }

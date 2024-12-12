@@ -19,7 +19,7 @@ namespace SCPSLBot.Navigation.Mesh
         public static NavigationMesh Instance { get; } = new();
 
         public Dictionary<(RoomName, RoomShape, RoomZone), List<RoomKindVertex>> VerticesByRoomKind { get; } = new();
-        public Dictionary<FacilityRoom, List<RoomVertex>> VerticesByRoom { get; } = new();  // maybe dictionary from kind to room vertex
+        public Dictionary<FacilityRoom, Dictionary<RoomKindVertex, RoomVertex>> VerticesByRoom { get; } = new();
 
         public Dictionary<(RoomName, RoomShape, RoomZone), List<RoomKindArea>> AreasByRoomKind { get; } = new();
         public Dictionary<FacilityRoom, List<RoomArea>> AreasByRoom { get; } = new();
@@ -81,8 +81,8 @@ namespace SCPSLBot.Navigation.Mesh
 
             var (roomKindEdge, dist, closestLocalPoint) = hit.Value;
                 
-            RoomVertex roomEdgeFrom = VerticesByRoom[room.ApiRoom].Find(v => v.RoomKindVertex == roomKindEdge.From),
-                       roomEdgeTo = VerticesByRoom[room.ApiRoom].Find(v => v.RoomKindVertex == roomKindEdge.To);
+            RoomVertex roomEdgeFrom = VerticesByRoom[room.ApiRoom][roomKindEdge.From],
+                       roomEdgeTo = VerticesByRoom[room.ApiRoom][roomKindEdge.To];
 
             closestPoint = room.transform.TransformPoint(closestLocalPoint);
 
@@ -189,7 +189,7 @@ namespace SCPSLBot.Navigation.Mesh
             var radiusSqr = Mathf.Pow(radius, 2);
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var verticesWithinRadius = roomVertexs.Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.RoomKindVertex.LocalPosition - localPosition)))
+            var verticesWithinRadius = roomVertexs.Values.Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.RoomKindVertex.LocalPosition - localPosition)))
                 .Where(t => t.distSqr < radiusSqr);
 
             if (!verticesWithinRadius.Any())
@@ -216,7 +216,7 @@ namespace SCPSLBot.Navigation.Mesh
             foreach (var roomVerticesPair in VerticesByRoom.Where(r => (r.Key.Identifier.Name, r.Key.Identifier.Shape, (RoomZone)r.Key.Identifier.Zone) == roomKind))
             {
                 Log.Debug($"Room vertex added.");
-                roomVerticesPair.Value.Add(new RoomVertex(newRoomKindVertex, roomVerticesPair.Key));
+                roomVerticesPair.Value.Add(newRoomKindVertex, new RoomVertex(newRoomKindVertex, roomVerticesPair.Key));
             }
 
             return newRoomKindVertex;
@@ -251,8 +251,7 @@ namespace SCPSLBot.Navigation.Mesh
             foreach (var roomVerticesPair in VerticesByRoom.Where(r => (r.Key.Identifier.Name, r.Key.Identifier.Shape, (RoomZone)r.Key.Identifier.Zone) == roomKind))
             {
                 Log.Debug($"Room vertex removed.");
-                var vertex = roomVerticesPair.Value.Find(n => n.RoomKindVertex == roomKindVertex);
-                roomVerticesPair.Value.Remove(vertex);
+                roomVerticesPair.Value.Remove(roomKindVertex);
             }
 
             return true;
@@ -474,7 +473,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             foreach (var room in Facility.Rooms)
             {
-                var vertices = new List<RoomVertex>();
+                var vertices = new Dictionary<RoomKindVertex, RoomVertex>();
                 VerticesByRoom.Add(room, vertices);
 
                 if (!VerticesByRoomKind.TryGetValue((room.Identifier.Name, room.Identifier.Shape, (RoomZone)room.Identifier.Zone), out var roomKindVertices))
@@ -482,7 +481,10 @@ namespace SCPSLBot.Navigation.Mesh
                     continue;
                 }
 
-                vertices.AddRange(roomKindVertices.Select(k => new RoomVertex(k, room)));
+                foreach (var k in roomKindVertices)
+                {
+                    vertices.Add(k, new RoomVertex(k, room));
+                }
             }
         }
 
@@ -512,11 +514,9 @@ namespace SCPSLBot.Navigation.Mesh
 
                     var connectedEdges = roomArea.RoomKindArea.ConnectedRoomKindAreas
                         .Select(cka => (cka, cke: cka.Edges.First(cke => roomArea.RoomKindArea.Edges.Any(e => cke == new RoomKindEdge(e.To, e.From)))))
-                        .Select(t => (roomArea.ConnectedRoomAreas.First(ca => ca.RoomKindArea == t.cka), VerticesByRoom[room]
-                            .Aggregate(new Edge(default(RoomVertex), default(RoomVertex)), (ce, v) => new Edge(
-                                v.RoomKindVertex == t.cke.From ? v : ce.From,
-                                v.RoomKindVertex == t.cke.To ? v : ce.To)
-                            )
+                        .Select(t => (
+                            roomArea.ConnectedRoomAreas.First(ca => ca.RoomKindArea == t.cka),
+                            new Edge(VerticesByRoom[room][t.cke.From], VerticesByRoom[room][t.cke.To])
                         ));
 
                     foreach (var (connectedArea, connectedEdge) in connectedEdges)

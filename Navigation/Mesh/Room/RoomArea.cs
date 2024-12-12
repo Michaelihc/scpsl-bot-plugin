@@ -33,6 +33,12 @@ namespace SCPSLBot.Navigation.Mesh.Room
             RoomKindArea.AreasOfRoom.Remove(Room);
         }
 
+        public override bool ContainsEdge(Edge edge)
+        {
+            var (from, to) = (edge.From as RoomVertex, edge.To as RoomVertex);
+            return RoomKindArea.Edges.Contains(new RoomKindEdge(from!.RoomKindVertex, to!.RoomKindVertex));
+        }
+
         public override string ToString()
         {
             return $"#{NavigationMesh.Instance.AreasByRoom[Room].IndexOf(this)} {RoomKindArea.RoomKind}";
