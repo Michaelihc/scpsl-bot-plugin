@@ -33,18 +33,18 @@ namespace SCPSLBot.Navigation
         [PluginEvent(PluginAPI.Enums.ServerEventType.MapGenerated)]
         public void OnMapGenerated()
         {
-            Log.Info($"Initializing vertices and areas from room kind counterparts.");
-
-            NavigationMesh.InitRoomVertices();
-            NavigationMesh.InitRoomAreas();
-
             Timing.RunCoroutine(ConnectForeignAreasAsync());
         }
 
         private IEnumerator<float> ConnectForeignAreasAsync()
         {
             yield return Timing.WaitUntilTrue(() => SeedSynchronizer.MapGenerated);
-            
+
+            Log.Info($"Initializing vertices and areas from room kind counterparts.");
+
+            NavigationMesh.InitRoomVertices();
+            NavigationMesh.InitRoomAreas();
+
             Log.Info($"Connecting areas between rooms.");
             
             foreach (var connector in RoomConnector.AllConnectors)
@@ -60,10 +60,10 @@ namespace SCPSLBot.Navigation
                     {
                         // Connect
                         var areaInFront = NavigationMesh.AreasByRoom[edgeInFront.Value.From.Room]
-                            .Find(a => a.RoomKindArea.Edges.Any(e => e == new RoomKindEdge(edgeInFront.Value.From.RoomKindVertex, edgeInFront.Value.To.RoomKindVertex)));
+                            .Find(a => a.RoomFormArea.Edges.Any(e => e == new RoomFormEdge(edgeInFront.Value.From.RoomFormVertex, edgeInFront.Value.To.RoomFormVertex)));
 
                         var areaInBack = NavigationMesh.AreasByRoom[edgeInBack.Value.From.Room]
-                            .Find(a => a.RoomKindArea.Edges.Any(e => e == new RoomKindEdge(edgeInBack.Value.From.RoomKindVertex, edgeInBack.Value.To.RoomKindVertex)));
+                            .Find(a => a.RoomFormArea.Edges.Any(e => e == new RoomFormEdge(edgeInBack.Value.From.RoomFormVertex, edgeInBack.Value.To.RoomFormVertex)));
 
                         areaInFront.ForeignConnectedAreas.Add(areaInBack);
                         areaInFront.ConnectedAreaEdges.Add(areaInBack, new Edge(edgeInBack.Value.From, edgeInBack.Value.To));

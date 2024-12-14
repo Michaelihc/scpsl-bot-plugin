@@ -90,8 +90,8 @@ namespace SCPSLBot.AI.FirstPersonControl
                 var nearestEdge = navMesh.GetNearestEdge(goalPosition, out var closestPoint, goalRoom);
                 if (nearestEdge.HasValue)
                 {
-                    var nearestRoomKindEdge = new RoomKindEdge(nearestEdge.Value.From.RoomKindVertex, nearestEdge.Value.To.RoomKindVertex);
-                    targetArea = navMesh.AreasByRoom[goalRoom.ApiRoom].Find(a => a.RoomKindArea.Edges.Any(e => e == nearestRoomKindEdge));
+                    var nearestRoomFormEdge = new RoomFormEdge(nearestEdge.Value.From.RoomFormVertex, nearestEdge.Value.To.RoomFormVertex);
+                    targetArea = navMesh.AreasByRoom[goalRoom.ApiRoom].Find(a => a.RoomFormArea.Edges.Any(e => e == nearestRoomFormEdge));
                     targetAreaClosestPositionToGoal = closestPoint;
                 }
                 else

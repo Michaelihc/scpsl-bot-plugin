@@ -1,20 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace SCPSLBot.Navigation.Mesh.Room
 {
-    internal struct RoomKindEdge
+    internal struct RoomFormEdge
     {
-        public RoomKindVertex From;
-        public RoomKindVertex To;
+        public RoomFormVertex From;
+        public RoomFormVertex To;
 
-        public RoomKindEdge(RoomKindVertex from, RoomKindVertex to)
+        public RoomFormEdge(RoomFormVertex from, RoomFormVertex to)
         {
             From = from;
             To = to;
         }
         public override bool Equals(object obj)
         {
-            return obj is RoomKindEdge edge && (From, To).Equals((edge.From, edge.To));
+            return obj is RoomFormEdge edge && (From, To).Equals((edge.From, edge.To));
         }
 
         public override int GetHashCode()
@@ -22,12 +26,12 @@ namespace SCPSLBot.Navigation.Mesh.Room
             return (From, To).GetHashCode();
         }
 
-        public static bool operator ==(RoomKindEdge left, RoomKindEdge right)
+        public static bool operator ==(RoomFormEdge left, RoomFormEdge right)
         {
             return (left.From, left.To) == (right.From, right.To);
         }
 
-        public static bool operator !=(RoomKindEdge left, RoomKindEdge right)
+        public static bool operator !=(RoomFormEdge left, RoomFormEdge right)
         {
             return !(left == right);
         }
