@@ -8,16 +8,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavVertex))]
-    internal class NavVertexDeleteCommand : ICommand
+    internal class NavVertexSelectAddCommand : ICommand
     {
-        public string Command { get; } = "delete";
+        public string Command { get; } = "select_add";
 
-        public string[] Aliases { get; } = new string[] { "nvd" };
+        public string[] Aliases { get; } = new string[] { "nvsa" };
 
-        public string Description { get; } = "Deletes navigation mesh vertex nearby at current position.";
+        public string Description { get; } = "Adds navigation mesh vertex to selection nearby at current position.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,13 +33,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.DeleteVertex(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.AddVertexToSelection(playerCommandSender.ReferenceHub.transform.position))
             {
-                response = $"No vertex valid to be removed.";
+                response = $"No vertex nearby to select.";
                 return false;
             }
 
-            response = $"Vertex removed.";
+            response = $"Vertex added to selection.";
             return true;
         }
     }

@@ -8,16 +8,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavVertex))]
-    internal class NavVertexSelectStartCommand : ICommand
+    internal class NavVertexDeleteCommand : ICommand
     {
-        public string Command { get; } = "select_start";
+        public string Command { get; } = "delete";
 
-        public string[] Aliases { get; } = new string[] { "nvss" };
+        public string[] Aliases { get; } = new string[] { "nvd" };
 
-        public string Description { get; } = "Starts navigation mesh vertex auto-selection.";
+        public string Description { get; } = "Deletes navigation mesh vertex nearby at current position.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,9 +33,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            NavigationMeshEditor.Instance.ToggleAutoSelectingVertices(true);
+            if (!NavigationMeshEditor.Instance.DeleteVertex(playerCommandSender.ReferenceHub.transform.position))
+            {
+                response = $"No vertex valid to be removed.";
+                return false;
+            }
 
-            response = $"Vertex auto-selection started.";
+            response = $"Vertex removed.";
             return true;
         }
     }

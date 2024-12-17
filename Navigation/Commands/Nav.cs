@@ -5,14 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
-	[CommandHandler(typeof(RemoteAdminCommandHandler))]
+    [CommandHandler(typeof(RemoteAdminCommandHandler))]
     internal class Nav : ParentCommand
     {
         public override string Command { get; } = "nav";
 
-        public override string[] Aliases { get; } = new string [] { };
+        public override string[] Aliases { get; } = new string[] { };
 
         public override string Description { get; } = "Manipulates navigation mesh.";
 

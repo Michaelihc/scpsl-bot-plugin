@@ -3,17 +3,21 @@ using PlayerRoles;
 using RemoteAdmin;
 using SCPSLBot.Navigation.Mesh;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavArea))]
-    internal class NavAreaConnectCommand : ICommand
+    internal class NavAreaDissolveCommand : ICommand
     {
-        public string Command { get; } = "connect";
+        public string Command { get; } = "dissolve";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Creates connection from cached area to area within.";
+        public string Description { get; } = "Dissolves navigation mesh area within.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -29,13 +33,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.CreateConnection(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.DissolveArea(playerCommandSender.ReferenceHub.transform.position))
             {
-                response = "Failed to create connection!";
+                response = $"No area to be dissolved.";
                 return false;
             }
 
-            response = $"Connection from cached area to area within created.";
+            response = $"Area dissolved.";
             return true;
         }
     }

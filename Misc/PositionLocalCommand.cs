@@ -6,7 +6,7 @@ using PluginAPI.Core;
 using RemoteAdmin;
 using System;
 
-namespace TestPlugin.Commands
+namespace SCPSLBot.Misc
 {
     [CommandHandler(typeof(RemoteAdminCommandHandler))]
     internal class PositionLocalCommand : ICommand

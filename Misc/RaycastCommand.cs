@@ -8,7 +8,7 @@ using RemoteAdmin;
 using System;
 using UnityEngine;
 
-namespace TestPlugin.Commands
+namespace SCPSLBot.Misc
 {
     [CommandHandler(typeof(ClientCommandHandler))]
     internal class RaycastCommand : ICommand
@@ -38,7 +38,7 @@ namespace TestPlugin.Commands
                 response = "Raycast produced no any hit within max distance.";
                 return false;
             }
-            
+
             var collider = hit.collider;
             var layerName = LayerMask.LayerToName(collider.gameObject.layer);
             var tag = collider.gameObject.tag;

@@ -3,21 +3,17 @@ using PlayerRoles;
 using RemoteAdmin;
 using SCPSLBot.Navigation.Mesh;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
-    [CommandHandler(typeof(NavVertex))]
-    internal class NavVertexSelectAddCommand : ICommand
+    [CommandHandler(typeof(NavArea))]
+    internal class NavAreaConnectCommand : ICommand
     {
-        public string Command { get; } = "select_add";
+        public string Command { get; } = "connect";
 
-        public string[] Aliases { get; } = new string[] { "nvsa" };
+        public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Adds navigation mesh vertex to selection nearby at current position.";
+        public string Description { get; } = "Creates connection from cached area to area within.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,13 +29,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.AddVertexToSelection(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.CreateConnection(playerCommandSender.ReferenceHub.transform.position))
             {
-                response = $"No vertex nearby to select.";
+                response = "Failed to create connection!";
                 return false;
             }
 
-            response = $"Vertex added to selection.";
+            response = $"Connection from cached area to area within created.";
             return true;
         }
     }

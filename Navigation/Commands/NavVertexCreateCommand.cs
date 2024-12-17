@@ -8,16 +8,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavVertex))]
-    internal class NavVertexSelectStopCommand : ICommand
+    internal class NavVertexCreateCommand : ICommand
     {
-        public string Command { get; } = "select_stop";
+        public string Command { get; } = "create";
 
-        public string[] Aliases { get; } = new string[] { "nvsst" };
+        public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Stops navigation mesh vertex auto-selection.";
+        public string Description { get; } = "Creates navigation mesh vertex at current position.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,9 +33,9 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            NavigationMeshEditor.Instance.ToggleAutoSelectingVertices(false);
+            var vertex = NavigationMeshEditor.Instance.CreateVertex(playerCommandSender.ReferenceHub.transform.position);
 
-            response = $"Vertex auto-selection stopped.";
+            response = $"Vertex at local position {vertex.LocalPosition} added.";
             return true;
         }
     }

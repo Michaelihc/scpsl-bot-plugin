@@ -8,16 +8,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavVertex))]
-    internal class NavVertexMoveCommand : ICommand
+    internal class NavVertexSelectStopCommand : ICommand
     {
-        public string Command { get; } = "move";
+        public string Command { get; } = "select_stop";
 
-        public string[] Aliases { get; } = new string[] { "nvm" };
+        public string[] Aliases { get; } = new string[] { "nvsst" };
 
-        public string Description { get; } = "Moves nearby or selected navigation mesh vertex to current position.";
+        public string Description { get; } = "Stops navigation mesh vertex auto-selection.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,13 +33,9 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.MoveVertex(playerCommandSender.ReferenceHub.transform.position))
-            {
-                response = $"No vertex nearby or no selected vertex to perform operation on.";
-                return false;
-            }
+            NavigationMeshEditor.Instance.ToggleAutoSelectingVertices(false);
 
-            response = $"Vertex moved.";
+            response = $"Vertex auto-selection stopped.";
             return true;
         }
     }

@@ -2,21 +2,21 @@
 using System;
 using System.Linq;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(Nav))]
-    internal class NavArea : ParentCommand
+    internal class NavVertex : ParentCommand
     {
-        public override string Command { get; } = "area";
+        public override string Command { get; } = "vertex";
 
         public override string[] Aliases { get; } = new string[] { };
 
-        public override string Description { get; } = "Manipulates navigation mesh areas.";
+        public override string Description { get; } = "Manipulates navigation mesh vertices.";
 
         public override void LoadGeneratedCommands()
         {
-            this.RegisterCommand(new NavAreaMakeCommand());
-            this.RegisterCommand(new NavAreaDissolveCommand());
+            this.RegisterCommand(new NavVertexCreateCommand());
+            this.RegisterCommand(new NavVertexDeleteCommand());
         }
 
         protected override bool ExecuteParent(ArraySegment<string> arguments, ICommandSender sender, out string response)

@@ -3,17 +3,21 @@ using PlayerRoles;
 using RemoteAdmin;
 using SCPSLBot.Navigation.Mesh;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavArea))]
-    internal class NavAreaDisconnectCommand : ICommand
+    internal class NavAreaVertexCreateCommand : ICommand
     {
-        public string Command { get; } = "disconnect";
+        public string Command { get; } = "vertex_create";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Deletes connection from cached area to area within.";
+        public string Description { get; } = "Creates vertex on navigation mesh area nearest edge.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -29,13 +33,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.DeleteConnection(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.CreateVertexOnClosestEdge(playerCommandSender.ReferenceHub.transform.position))
             {
-                response = "Failed to delete connection!";
+                response = $"No nearby area.";
                 return false;
             }
 
-            response = $"Connection from cached area to area within is deleted.";
+            response = $"Vertex on area edge created and added to area.";
             return true;
         }
     }

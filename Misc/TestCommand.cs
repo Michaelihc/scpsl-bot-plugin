@@ -2,7 +2,7 @@
 using Mirror;
 using System;
 
-namespace TestPlugin.Commands
+namespace SCPSLBot.Misc
 {
     [CommandHandler(typeof(RemoteAdminCommandHandler))]
     internal class TestCommand : ICommand

@@ -5,20 +5,19 @@ using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavArea))]
-    internal class NavAreaEdgeSliceCommand : ICommand
+    internal class NavAreaTraceCommand : ICommand
     {
-        public string Command { get; } = "edge_slice";
+        public string Command { get; } = "trace";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Slices closest area edge at direction from current position.";
+        public string Description { get; } = "Traces areas path from cached area to area at current position.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -34,13 +33,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.SliceClosestAreaEdge(playerCommandSender.ReferenceHub.transform.position, playerCommandSender.ReferenceHub.transform.forward))
+            if (!NavigationMeshEditor.Instance.TracePath(playerCommandSender.ReferenceHub.transform.position))
             {
-                response = $"No nearby area edge.";
+                response = $"Failed to trace areas path.";
                 return false;
             }
 
-            response = $"Vertex on area edge at direction created and added to area.";
+            response = $"Path traced.";
             return true;
         }
     }

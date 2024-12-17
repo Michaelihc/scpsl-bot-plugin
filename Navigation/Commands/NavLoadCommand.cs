@@ -1,6 +1,8 @@
 ﻿using CommandSystem;
+using PlayerRoles;
 using PluginAPI.Core;
 using RemoteAdmin;
+using SCPSLBot.Navigation;
 using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
@@ -8,16 +10,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(Nav))]
-    internal class NavEditCommand : ICommand
+    internal class NavLoadCommand : ICommand
     {
-        public string Command { get; } = "edit";
+        public string Command { get; } = "load";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Toggles editing of nav mesh.";
+        public string Description { get; } = "Re-loads navigation mesh from storage.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -27,12 +29,15 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            var navMeshEditor = NavigationMeshEditor.Instance;
+            NavigationMesh.Instance.ResetAreas();
+            NavigationMesh.Instance.ResetVertices();
 
-            navMeshEditor.IsEditing = !navMeshEditor.IsEditing;
-            navMeshEditor.PlayerEditing = navMeshEditor.IsEditing ? Player.Get(playerCommandSender) : null;
+            NavigationSystem.Instance.LoadMesh();
 
-            response = $"Nav mesh editing is now {(navMeshEditor.IsEditing ? "enabled" : "disabled")}.";
+            NavigationMesh.Instance.InitRoomVertices();  // Assuming map is already generated.
+            NavigationMesh.Instance.InitRoomAreas();  // Assuming map is already generated.
+
+            response = $"Navigation mesh re-loaded.";
             return true;
         }
     }

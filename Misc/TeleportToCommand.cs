@@ -8,7 +8,7 @@ using RemoteAdmin;
 using System;
 using UnityEngine;
 
-namespace TestPlugin.Commands
+namespace SCPSLBot.Misc
 {
     [CommandHandler(typeof(RemoteAdminCommandHandler))]
     internal class TeleportRoCommand : ICommand

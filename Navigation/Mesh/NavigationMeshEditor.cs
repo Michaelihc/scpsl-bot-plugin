@@ -1,8 +1,6 @@
 ﻿using MapGeneration;
 using MEC;
 using PluginAPI.Core;
-using SCPSLBot.Commands.Navigation;
-using SCPSLBot.MapGeneration;
 using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;

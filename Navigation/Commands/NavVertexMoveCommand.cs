@@ -8,16 +8,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
-    [CommandHandler(typeof(NavArea))]
-    internal class NavAreaMakeCommand : ICommand
+    [CommandHandler(typeof(NavVertex))]
+    internal class NavVertexMoveCommand : ICommand
     {
-        public string Command { get; } = "make";
+        public string Command { get; } = "move";
 
-        public string[] Aliases { get; } = new string[] { };
+        public string[] Aliases { get; } = new string[] { "nvm" };
 
-        public string Description { get; } = "Makes new navigation mesh area from selection.";
+        public string Description { get; } = "Moves nearby or selected navigation mesh vertex to current position.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,9 +33,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            var area = NavigationMeshEditor.Instance.MakeArea(playerCommandSender.ReferenceHub.transform.position);
+            if (!NavigationMeshEditor.Instance.MoveVertex(playerCommandSender.ReferenceHub.transform.position))
+            {
+                response = $"No vertex nearby or no selected vertex to perform operation on.";
+                return false;
+            }
 
-            response = $"Area at local center position {area.LocalCenterPosition} created.";
+            response = $"Vertex moved.";
             return true;
         }
     }

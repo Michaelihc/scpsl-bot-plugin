@@ -4,7 +4,7 @@ using PluginAPI.Core;
 using SCPSLBot.AI;
 using System;
 
-namespace TestPlugin.Commands
+namespace SCPSLBot.AI.Commands
 {
     [CommandHandler(typeof(GameConsoleCommandHandler))]
     internal class BotAddCommand : ICommand

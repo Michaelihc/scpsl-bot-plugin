@@ -8,16 +8,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavVertex))]
-    internal class NavVertexSelectClearCommand : ICommand
+    internal class NavVertexSelectRemoveCommand : ICommand
     {
-        public string Command { get; } = "select_clear";
+        public string Command { get; } = "select_remove";
 
-        public string[] Aliases { get; } = new string[] { "nvsc" };
+        public string[] Aliases { get; } = new string[] { "nvsr" };
 
-        public string Description { get; } = "Clears navigation mesh vertex selection.";
+        public string Description { get; } = "Removes navigation mesh vertex from selection nearby at current position.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,9 +33,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            NavigationMeshEditor.Instance.ClearVertexSelection();
+            if (!NavigationMeshEditor.Instance.RemoveVertexFromSelection(playerCommandSender.ReferenceHub.transform.position))
+            {
+                response = $"No vertex nearby to perform this command.";
+                return false;
+            }
 
-            response = $"Vertex selection cleared.";
+            response = $"Vertex removed from selection.";
             return true;
         }
     }

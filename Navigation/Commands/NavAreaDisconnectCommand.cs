@@ -3,21 +3,17 @@ using PlayerRoles;
 using RemoteAdmin;
 using SCPSLBot.Navigation.Mesh;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
     [CommandHandler(typeof(NavArea))]
-    internal class NavAreaCacheCommand : ICommand
+    internal class NavAreaDisconnectCommand : ICommand
     {
-        public string Command { get; } = "cache";
+        public string Command { get; } = "disconnect";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Caches navigation graph area at current position.";
+        public string Description { get; } = "Deletes connection from cached area to area within.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,13 +29,13 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.CacheArea(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.DeleteConnection(playerCommandSender.ReferenceHub.transform.position))
             {
-                response = $"Failed to cache area.";
+                response = "Failed to delete connection!";
                 return false;
             }
 
-            response = $"Area cached.";
+            response = $"Connection from cached area to area within is deleted.";
             return true;
         }
     }

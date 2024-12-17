@@ -8,16 +8,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SCPSLBot.Commands.Navigation
+namespace SCPSLBot.Navigation.Commands
 {
-    [CommandHandler(typeof(NavArea))]
-    internal class NavAreaDissolveCommand : ICommand
+    [CommandHandler(typeof(NavVertex))]
+    internal class NavVertexSelectClearCommand : ICommand
     {
-        public string Command { get; } = "dissolve";
+        public string Command { get; } = "select_clear";
 
-        public string[] Aliases { get; } = new string[] { };
+        public string[] Aliases { get; } = new string[] { "nvsc" };
 
-        public string Description { get; } = "Dissolves navigation mesh area within.";
+        public string Description { get; } = "Clears navigation mesh vertex selection.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,13 +33,9 @@ namespace SCPSLBot.Commands.Navigation
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.DissolveArea(playerCommandSender.ReferenceHub.transform.position))
-            {
-                response = $"No area to be dissolved.";
-                return false;
-            }
+            NavigationMeshEditor.Instance.ClearVertexSelection();
 
-            response = $"Area dissolved.";
+            response = $"Vertex selection cleared.";
             return true;
         }
     }
