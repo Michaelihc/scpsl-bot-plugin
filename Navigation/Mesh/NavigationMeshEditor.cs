@@ -132,7 +132,7 @@ namespace SCPSLBot.Navigation.Mesh
                 localPosition = projected;
             }
 
-            var newVertex = NavigationMesh.AddVertex(localPosition, roomForm);
+            var newVertex = NavigationMesh.AddRoomVertex(localPosition, roomForm);
 
             Log.Info($"Vertex #{NavigationMesh.VerticesByRoomForm[roomForm].IndexOf(newVertex)} at local position {newVertex.LocalPosition} added under room {roomForm}.");
 
@@ -141,7 +141,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool DeleteVertex(Vector3 position)
         {
-            var vertex = NavigationMesh.GetNearbyVertex(position);
+            var vertex = NavigationMesh.GetRoomVertexNearby(position);
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby to remove.");
@@ -150,11 +150,11 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            var roomForm = (room.Name, room.Shape, (RoomZone)room.Zone);
+            var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
             SeletedVertices.Remove(vertex.RoomFormVertex);
 
-            if (!NavigationMesh.DeleteVertex(vertex.RoomFormVertex))
+            if (!NavigationMesh.DeleteRoomVertex(vertex.RoomFormVertex))
             {
                 return false;
             }
@@ -166,7 +166,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool MoveVertex(Vector3 position)
         {
-            var vertex = NavigationMesh.GetNearbyVertex(position)?.RoomFormVertex;
+            var vertex = NavigationMesh.GetRoomVertexNearby(position)?.RoomFormVertex;
             if (vertex == null)
             {
                 Log.Info($"No vertex found nearby to move. Checking for selection.");
@@ -185,7 +185,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            if (!NavigationMesh.MoveVertex(vertex, localPosition))
+            if (!NavigationMesh.MoveRoomVertex(vertex, localPosition))
             {
                 return false;
             }
@@ -197,7 +197,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool AddVertexToSelection(Vector3 position)
         {
-            var vertex = NavigationMesh.GetNearbyVertex(position);
+            var vertex = NavigationMesh.GetRoomVertexNearby(position);
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby for selection.");
@@ -213,7 +213,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool RemoveVertexFromSelection(Vector3 position)
         {
-            var vertex = NavigationMesh.GetNearbyVertex(position);
+            var vertex = NavigationMesh.GetRoomVertexNearby(position);
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby to remove from selection.");
@@ -248,7 +248,7 @@ namespace SCPSLBot.Navigation.Mesh
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
-            var newArea = NavigationMesh.MakeArea(SeletedVertices, roomForm);
+            var newArea = NavigationMesh.MakeRoomArea(SeletedVertices, roomForm);
 
             Log.Info($"Area #{NavigationMesh.AreasByRoomForm[roomForm].IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under room {roomForm}.");
 
@@ -272,7 +272,7 @@ namespace SCPSLBot.Navigation.Mesh
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
-            NavigationMesh.RemoveArea(area);
+            NavigationMesh.RemoveRoomArea(area);
 
             Log.Info($"Area at local center position {area.LocalCenterPosition} removed under room {roomForm}.");
 
@@ -310,9 +310,9 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var vertex = NavigationMesh.AddVertex(newVertexPos, roomForm);
+            var vertex = NavigationMesh.AddRoomVertex(newVertexPos, roomForm);
 
-            NavigationMesh.AddVertexToArea(area, vertex, edge.to);
+            NavigationMesh.AddRoomVertexToArea(area, vertex, edge.to);
 
             Log.Info($"Vertex #{NavigationMesh.VerticesByRoomForm[roomForm].IndexOf(vertex)} created on edge of area #{NavigationMesh.AreasByRoomForm[roomForm].IndexOf(area)}");
 
@@ -375,9 +375,9 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var vertex = NavigationMesh.AddVertex(newVertexPos, roomForm);
+            var vertex = NavigationMesh.AddRoomVertex(newVertexPos, roomForm);
 
-            NavigationMesh.AddVertexToArea(area, vertex, edge.to);
+            NavigationMesh.AddRoomVertexToArea(area, vertex, edge.to);
 
             Log.Info($"Vertex #{NavigationMesh.VerticesByRoomForm[roomForm].IndexOf(vertex)} created on edge of area #{NavigationMesh.AreasByRoomForm[roomForm].IndexOf(area)}");
 
@@ -430,7 +430,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            NavigationMesh.CreateConnection(CachedArea.RoomFormArea, targetArea.RoomFormArea);
+            NavigationMesh.CreateRoomAreaConnection(CachedArea.RoomFormArea, targetArea.RoomFormArea);
 
             return true;
         }
@@ -448,7 +448,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            NavigationMesh.DeleteConnection(CachedArea.RoomFormArea, targetArea.RoomFormArea);
+            NavigationMesh.DeleteRoomAreaConnection(CachedArea.RoomFormArea, targetArea.RoomFormArea);
 
             return true;
         }
@@ -469,7 +469,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                Visuals.NearestVertex = NavigationMesh.GetNearbyVertex(PlayerEditing.Position, .125f)?.RoomFormVertex;
+                Visuals.NearestVertex = NavigationMesh.GetRoomVertexNearby(PlayerEditing.Position, .125f)?.RoomFormVertex;
             }
         }
 
