@@ -23,15 +23,15 @@ namespace SCPSLBot.Navigation.Mesh
 
         private Player LastPlayerEditing { get; set; }
 
-        private RoomArea CachedArea { get; set; }
+        private RoomArea CachedRoomArea { get; set; }
         private RoomArea TracingEndingArea { get; set; }
 
-        private List<RoomFormVertex> SeletedVertices { get; } = new();
+        private List<RoomFormVertex> SeletedRoomVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
 
         public void Init()
         {
-            Visuals.SelectedVertices = SeletedVertices;
+            Visuals.SelectedVertices = SeletedRoomVertices;
             Visuals.Init();
 
             Timing.RunCoroutine(RunEachFrame(UpdateEditing));
@@ -120,9 +120,9 @@ namespace SCPSLBot.Navigation.Mesh
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            if (SeletedVertices.Count == 2)
+            if (SeletedRoomVertices.Count == 2)
             {
-                var lineSegment = (from: SeletedVertices.First(), to: SeletedVertices.Last());
+                var lineSegment = (from: SeletedRoomVertices.First(), to: SeletedRoomVertices.Last());
                 
                 var dirTo2 = (lineSegment.to.LocalPosition - lineSegment.from.LocalPosition);
                 var dirToPoint = (localPosition - lineSegment.from.LocalPosition);
@@ -152,7 +152,7 @@ namespace SCPSLBot.Navigation.Mesh
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
-            SeletedVertices.Remove(vertex.RoomFormVertex);
+            SeletedRoomVertices.Remove(vertex.RoomFormVertex);
 
             if (!NavigationMesh.DeleteRoomVertex(vertex.RoomFormVertex))
             {
@@ -171,13 +171,13 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 Log.Info($"No vertex found nearby to move. Checking for selection.");
 
-                if (!SeletedVertices.Any())
+                if (!SeletedRoomVertices.Any())
                 {
                     Log.Warning($"No vertices selected to move.");
                     return false;
                 }
 
-                vertex = SeletedVertices.First();
+                vertex = SeletedRoomVertices.First();
             }
 
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
@@ -204,7 +204,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            SeletedVertices.Add(vertex.RoomFormVertex);
+            SeletedRoomVertices.Add(vertex.RoomFormVertex);
 
             Log.Info($"Vertex at local position {vertex.RoomFormVertex.LocalPosition} added to selection under room {vertex.RoomFormVertex.RoomForm}.");
 
@@ -220,7 +220,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            SeletedVertices.Remove(vertex.RoomFormVertex);
+            SeletedRoomVertices.Remove(vertex.RoomFormVertex);
 
             Log.Info($"Vertex at local position {vertex.RoomFormVertex.LocalPosition} removed from selection under room {vertex.RoomFormVertex.RoomForm}.");
 
@@ -229,7 +229,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void ClearVertexSelection()
         {
-            SeletedVertices.Clear();
+            SeletedRoomVertices.Clear();
         }
 
         public void ToggleAutoSelectingVertices(bool isEnabled)
@@ -239,7 +239,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public RoomFormArea MakeArea(Vector3 position)
         {
-            if (SeletedVertices.Count < 2)
+            if (SeletedRoomVertices.Count < 2)
             {
                 Log.Warning($"Not enough vertices (min 2) selected.");
                 return null;
@@ -248,11 +248,11 @@ namespace SCPSLBot.Navigation.Mesh
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
-            var newArea = NavigationMesh.MakeRoomArea(SeletedVertices, roomForm);
+            var newArea = NavigationMesh.MakeRoomArea(SeletedRoomVertices, roomForm);
 
             Log.Info($"Area #{NavigationMesh.AreasByRoomForm[roomForm].IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under room {roomForm}.");
 
-            SeletedVertices.Clear();
+            SeletedRoomVertices.Clear();
             AutoSelectModeEnabled = false;
             PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on area creation.", 3f);
 
@@ -386,14 +386,14 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool CacheArea(Vector3 position)
         {
-            CachedArea = NavigationMesh.GetAreaWithin(position);
+            CachedRoomArea = NavigationMesh.GetAreaWithin(position);
 
-            return CachedArea != null;
+            return CachedRoomArea != null;
         }
 
         public bool TracePath(Vector3 position)
         {
-            if (CachedArea == null)
+            if (CachedRoomArea == null)
             {
                 return false;
             }
@@ -405,7 +405,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             var path = new List<Area>();
-            NavigationMesh.FindShortestPath(CachedArea, targetArea, path);
+            NavigationMesh.FindShortestPath(CachedRoomArea, targetArea, path);
             if (path.Count == 0)
             {
                 Log.Warning($"No path found.");
@@ -419,7 +419,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool CreateConnection(Vector3 position)
         {
-            if (CachedArea == null)
+            if (CachedRoomArea == null)
             {
                 return false;
             }
@@ -430,14 +430,14 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            NavigationMesh.CreateRoomAreaConnection(CachedArea.RoomFormArea, targetArea.RoomFormArea);
+            NavigationMesh.CreateRoomAreaConnection(CachedRoomArea.RoomFormArea, targetArea.RoomFormArea);
 
             return true;
         }
 
         public bool DeleteConnection(Vector3 position)
         {
-            if (CachedArea == null)
+            if (CachedRoomArea == null)
             {
                 return false;
             }
@@ -448,7 +448,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            NavigationMesh.DeleteRoomAreaConnection(CachedArea.RoomFormArea, targetArea.RoomFormArea);
+            NavigationMesh.DeleteRoomAreaConnection(CachedRoomArea.RoomFormArea, targetArea.RoomFormArea);
 
             return true;
         }
@@ -499,7 +499,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                Visuals.CachedArea = CachedArea?.RoomFormArea;
+                Visuals.CachedArea = CachedRoomArea?.RoomFormArea;
             }
         }
 
@@ -520,11 +520,11 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestVertex != null)
             {
-                if (!SeletedVertices.Contains(Visuals.NearestVertex))
+                if (!SeletedRoomVertices.Contains(Visuals.NearestVertex))
                 {
-                    SeletedVertices.Add(Visuals.NearestVertex);
+                    SeletedRoomVertices.Add(Visuals.NearestVertex);
                 }
-                else if (SeletedVertices.Count > 1 && SeletedVertices.FirstOrDefault() == Visuals.NearestVertex)
+                else if (SeletedRoomVertices.Count > 1 && SeletedRoomVertices.FirstOrDefault() == Visuals.NearestVertex)
                 {
                     AutoSelectModeEnabled = false;
                     PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);
