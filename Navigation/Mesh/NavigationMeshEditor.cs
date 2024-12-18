@@ -31,7 +31,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void Init()
         {
-            Visuals.SelectedVertices = SeletedRoomVertices;
+            Visuals.SelectedRoomVertices = SeletedRoomVertices;
             Visuals.Init();
 
             Timing.RunCoroutine(RunEachFrame(UpdateEditing));
@@ -261,7 +261,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool DissolveArea(Vector3 position)
         {
-            var area = Visuals.NearestArea;
+            var area = Visuals.NearestRoomArea;
             if (area == null)
             {
                 Log.Warning($"No area found within to remove.");
@@ -469,7 +469,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                Visuals.NearestVertex = NavigationMesh.GetRoomVertexNearby(PlayerEditing.Position, .125f)?.RoomFormVertex;
+                Visuals.NearestRoomVertex = NavigationMesh.GetRoomVertexNearby(PlayerEditing.Position, .125f)?.RoomFormVertex;
             }
         }
 
@@ -482,7 +482,7 @@ namespace SCPSLBot.Navigation.Mesh
                 var localPosition = room.transform.InverseTransformPoint(PlayerEditing.Camera.position);
                 var localForward = room.transform.InverseTransformDirection(PlayerEditing.Camera.forward);
 
-                Visuals.FacingVertex = FindClosestVertexFacingAt(NavigationMesh.GetRoomForm(room.gameObject.name), localPosition, localForward);
+                Visuals.FacingRoomVertex = FindClosestVertexFacingAt(NavigationMesh.GetRoomForm(room.gameObject.name), localPosition, localForward);
             }
         }
 
@@ -491,7 +491,7 @@ namespace SCPSLBot.Navigation.Mesh
             if (PlayerEditing != null)
             {
                 var playerPosition = PlayerEditing.Position;
-                Visuals.NearestArea = NavigationMesh.GetAreaWithin(playerPosition)?.RoomFormArea ?? FindClosestAreaByCenter(playerPosition, .25f);
+                Visuals.NearestRoomArea = NavigationMesh.GetAreaWithin(playerPosition)?.RoomFormArea ?? FindClosestAreaByCenter(playerPosition, .25f);
             }
         }
 
@@ -499,7 +499,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                Visuals.CachedArea = CachedRoomArea?.RoomFormArea;
+                Visuals.CachedRoomArea = CachedRoomArea?.RoomFormArea;
             }
         }
 
@@ -512,19 +512,19 @@ namespace SCPSLBot.Navigation.Mesh
                 var localPosition = room.transform.InverseTransformPoint(PlayerEditing.Camera.position);
                 var localForward = room.transform.InverseTransformDirection(PlayerEditing.Camera.forward);
 
-                Visuals.FacingArea = FindClosestAreaFacingAt(NavigationMesh.GetRoomForm(room.gameObject.name), localPosition, localForward);
+                Visuals.FacingRoomArea = FindClosestAreaFacingAt(NavigationMesh.GetRoomForm(room.gameObject.name), localPosition, localForward);
             }
         }
 
         private void UpdateVertexAutoSelect()
         {
-            if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestVertex != null)
+            if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestRoomVertex != null)
             {
-                if (!SeletedRoomVertices.Contains(Visuals.NearestVertex))
+                if (!SeletedRoomVertices.Contains(Visuals.NearestRoomVertex))
                 {
-                    SeletedRoomVertices.Add(Visuals.NearestVertex);
+                    SeletedRoomVertices.Add(Visuals.NearestRoomVertex);
                 }
-                else if (SeletedRoomVertices.Count > 1 && SeletedRoomVertices.FirstOrDefault() == Visuals.NearestVertex)
+                else if (SeletedRoomVertices.Count > 1 && SeletedRoomVertices.FirstOrDefault() == Visuals.NearestRoomVertex)
                 {
                     AutoSelectModeEnabled = false;
                     PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);
