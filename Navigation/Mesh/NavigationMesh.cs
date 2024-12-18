@@ -423,17 +423,22 @@ namespace SCPSLBot.Navigation.Mesh
                 return;
             }
 
-            foreach (var connectedToRemovingArea in connectorFormArea.ConnectedConnectorFormAreas)
+            foreach (var otherConnectorFormArea in connectorFormAreas)
             {
-                connectedToRemovingArea.ConnectedConnectorFormAreas.Remove(connectorFormArea);
+                otherConnectorFormArea.ConnectedConnectorFormAreas.Remove(connectorFormArea);
             }
 
             connectorFormAreas.Remove(connectorFormArea);
 
-            foreach (var connectorOfForm in AreasByConnector.Where(p => StartsWithForm(p.Key, connectorForm)))
+            foreach (var (_, areasOfForm) in AreasByConnector.Where(p => StartsWithForm(p.Key, connectorForm)))
             {
-                var area = connectorOfForm.Value.Find(n => n.ConnectorFormArea == connectorFormArea);
-                connectorOfForm.Value.Remove(area);
+                var areaToRemove = areasOfForm.Find(n => n.ConnectorFormArea == connectorFormArea);
+                areasOfForm.Remove(areaToRemove);
+
+                foreach (var area in areasOfForm)
+                {
+                    area.ConnectedAreasOfForm.Remove(connectorFormArea);
+                }
             }
         }
 
@@ -441,18 +446,31 @@ namespace SCPSLBot.Navigation.Mesh
         {
             fromArea.ConnectedRoomFormAreas.Add(toArea);
         }
-        public void CreateConnectorAreaConnection(ConnectorFormArea fromArea, ConnectorFormArea toArea)
+        public void CreateConnectorAreaConnection(ConnectorFormArea fromFormArea, ConnectorFormArea toFormArea)
         {
-            fromArea.ConnectedConnectorFormAreas.Add(toArea);
+            fromFormArea.ConnectedConnectorFormAreas.Add(toFormArea);
+
+            foreach (var (_, connectorAreas) in AreasByConnector.Where(a => StartsWithForm(a.Key, fromFormArea.ConnectorForm)))
+            {
+                var fromConnectorArea = connectorAreas.Find(a => a.ConnectorFormArea == fromFormArea);
+                var toConnectorArea = connectorAreas.Find(a => a.ConnectorFormArea == toFormArea);
+                fromConnectorArea.ConnectedAreasOfForm.Add(toFormArea, toConnectorArea);
+            }
         }
 
         public void DeleteRoomAreaConnection(RoomFormArea fromArea, RoomFormArea toArea)
         {
             fromArea.ConnectedRoomFormAreas.Remove(toArea);
         }
-        public void DeleteConnectorAreaConnection(ConnectorFormArea fromArea, ConnectorFormArea toArea)
+        public void DeleteConnectorAreaConnection(ConnectorFormArea fromFormArea, ConnectorFormArea toFormArea)
         {
-            fromArea.ConnectedConnectorFormAreas.Remove(toArea);
+            fromFormArea.ConnectedConnectorFormAreas.Remove(toFormArea);
+
+            foreach (var (_, connectorAreas) in AreasByConnector.Where(a => StartsWithForm(a.Key, fromFormArea.ConnectorForm)))
+            {
+                var fromConnectorArea = connectorAreas.Find(a => a.ConnectorFormArea == fromFormArea);
+                fromConnectorArea.ConnectedAreasOfForm.Remove(toFormArea);
+            }
         }
 
         public void AddRoomVertexToArea(RoomFormArea area, RoomFormVertex vertex, RoomFormVertex beforeVertex)
@@ -479,14 +497,26 @@ namespace SCPSLBot.Navigation.Mesh
                 areas.Add(newRoomArea);
             }
         }
-        private void AddConnectorAreas(ConnectorFormArea connectorFormArea)
+        private void AddConnectorAreas(ConnectorFormArea newConnectorFormArea)
         {
-            var connectorsAreasOfConnectorForm = AreasByConnector.Where(p => StartsWithForm(p.Key, connectorFormArea.ConnectorForm));
+            var connectingFromFormAreas = AreasByConnectorForm[newConnectorFormArea.ConnectorForm].Where(a => a.ConnectedConnectorFormAreas.Contains(newConnectorFormArea));
 
-            foreach (var (connector, areas) in connectorsAreasOfConnectorForm)
+            foreach (var (connector, areas) in AreasByConnector.Where(p => StartsWithForm(p.Key, newConnectorFormArea.ConnectorForm)))
             {
-                var newConnectorArea = new ConnectorArea(connectorFormArea, connector);
+                var newConnectorArea = new ConnectorArea(newConnectorFormArea, connector);
                 areas.Add(newConnectorArea);
+
+                foreach (var connectedToFormArea in newConnectorFormArea.ConnectedConnectorFormAreas)
+                {
+                    var areaOfConnectedToForm = areas.Find(a => a.ConnectorFormArea == connectedToFormArea);
+                    newConnectorArea.ConnectedAreasOfForm.Add(connectedToFormArea, areaOfConnectedToForm);
+                }
+
+                foreach (var connectingFromFormArea in connectingFromFormAreas)
+                {
+                    var areaOfConnectingFrom = areas.Find(a => a.ConnectorFormArea == connectingFromFormArea);
+                    areaOfConnectingFrom.ConnectedAreasOfForm.Add(newConnectorFormArea, newConnectorArea);
+                }
             }
         }
 

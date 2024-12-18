@@ -11,26 +11,17 @@ namespace SCPSLBot.Navigation.Mesh.Connector
         public RoomConnector Connector { get; }
 
         public override Vector3 CenterPosition => Connector.transform.TransformPoint(ConnectorFormArea.LocalCenterPosition);
-        public Vector3 LocalCenterPosition => ConnectorFormArea.LocalCenterPosition;
 
+        public Dictionary<ConnectorFormArea, Area> ConnectedAreasOfForm { get; } = new();
+        public List<Area> ForeignConnectedAreas { get; } = new();
+
+        public override IEnumerable<Area> ConnectedAreas => ConnectorFormArea.ConnectedConnectorFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
         public override Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
-
-        public IEnumerable<ConnectorArea> ConnectedConnectorAreas => ConnectorFormArea.ConnectedConnectorFormAreas.Select(k => k.AreasOfConnector[Connector]).Concat(ForeignConnectedAreas);
-        public override IEnumerable<Area> ConnectedAreas => ConnectedConnectorAreas;
-
-        public List<ConnectorArea> ForeignConnectedAreas { get; } = new();
 
         public ConnectorArea(ConnectorFormArea roomFormArea, RoomConnector room)
         {
             Connector = room;
             ConnectorFormArea = roomFormArea;
-
-            ConnectorFormArea.AreasOfConnector.Add(Connector, this);
-        }
-
-        ~ConnectorArea()
-        {
-            ConnectorFormArea.AreasOfConnector.Remove(Connector);
         }
 
         public override bool ContainsEdge(Edge edge)
