@@ -7,33 +7,32 @@ namespace SCPSLBot.Navigation.Mesh.Connector
 {
     internal class ConnectorArea : Area
     {
-        public ConnectorFormArea ConnectorFormArea { get; }
+        public FormArea FormArea { get; }
         public RoomConnector Connector { get; }
 
-        public override Vector3 CenterPosition => Connector.transform.TransformPoint(ConnectorFormArea.LocalCenterPosition);
+        public override Vector3 CenterPosition => Connector.transform.TransformPoint(FormArea.LocalCenterPosition);
 
-        public Dictionary<ConnectorFormArea, Area> ConnectedAreasOfForm { get; } = new();
+        public Dictionary<FormArea, Area> ConnectedAreasOfForm { get; } = new();
         public List<Area> ForeignConnectedAreas { get; } = new();
 
-        public override IEnumerable<Area> ConnectedAreas => ConnectorFormArea.ConnectedConnectorFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
+        public override IEnumerable<Area> ConnectedAreas => FormArea.ConnectedFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
         public override Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
 
-        public ConnectorArea(ConnectorFormArea roomFormArea, RoomConnector room)
+        public ConnectorArea(FormArea connectorFormArea, RoomConnector room)
         {
             Connector = room;
-            ConnectorFormArea = roomFormArea;
+            FormArea = connectorFormArea;
         }
 
         public override bool ContainsEdge(Edge edge)
         {
             var (from, to) = (edge.From as ConnectorVertex, edge.To as ConnectorVertex);
-            return ConnectorFormArea.Edges.Contains(new ConnectorFormEdge(from!.ConnectorFormVertex, to!.ConnectorFormVertex));
+            return FormArea.Edges.Contains(new FormEdge(from!.ConnectorFormVertex, to!.ConnectorFormVertex));
         }
 
         public override string ToString()
         {
-            return ConnectorFormArea.ConnectorForm;
+            return FormArea.Form;
         }
-
     }
 }

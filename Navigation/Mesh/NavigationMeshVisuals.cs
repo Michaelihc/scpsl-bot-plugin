@@ -17,14 +17,14 @@ namespace SCPSLBot.Navigation.Mesh
     {
         public Player PlayerEnabledVisualsFor { get; set; }
 
-        public RoomFormVertex NearestRoomVertex { get; set; }
-        public RoomFormVertex FacingRoomVertex { get; set; }
+        public FormVertex NearestRoomVertex { get; set; }
+        public FormVertex FacingRoomVertex { get; set; }
 
-        public List<RoomFormVertex> SelectedRoomVertices { get; set; }
+        public List<FormVertex> SelectedRoomVertices { get; set; }
 
-        public RoomFormArea NearestRoomArea { get; set; }
-        public RoomFormArea FacingRoomArea { get; set; }
-        public RoomFormArea CachedRoomArea { get; set; }
+        public FormArea NearestRoomArea { get; set; }
+        public FormArea FacingRoomArea { get; set; }
+        public FormArea CachedRoomArea { get; set; }
 
         public List<Area> Path { get; } = new ();
 
@@ -87,8 +87,8 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 if (NearestRoomVertex != null)
                 {
-                    var nearestVertexId = NavigationMesh.VerticesByRoomForm[NearestRoomVertex.RoomForm].IndexOf(NearestRoomVertex);
-                    VisualsMessages[0] = $"Vertex #{nearestVertexId} in {NearestRoomVertex.RoomForm}";
+                    var nearestVertexId = NavigationMesh.VerticesByRoomForm[NearestRoomVertex.Form].IndexOf(NearestRoomVertex);
+                    VisualsMessages[0] = $"Vertex #{nearestVertexId} in {NearestRoomVertex.Form}";
 
                     var selectedIdx = SelectedRoomVertices.IndexOf(NearestRoomVertex);
                     if (selectedIdx >= 0)
@@ -99,8 +99,8 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (FacingRoomVertex != null)
                 {
-                    var facingVertexId = NavigationMesh.VerticesByRoomForm[FacingRoomVertex.RoomForm].IndexOf(FacingRoomVertex);
-                    VisualsMessages[1] = $"Facing vertex #{facingVertexId} in {FacingRoomVertex.RoomForm}";
+                    var facingVertexId = NavigationMesh.VerticesByRoomForm[FacingRoomVertex.Form].IndexOf(FacingRoomVertex);
+                    VisualsMessages[1] = $"Facing vertex #{facingVertexId} in {FacingRoomVertex.Form}";
 
                     var selectedIdx = SelectedRoomVertices.IndexOf(FacingRoomVertex);
                     if (selectedIdx >= 0)
@@ -118,26 +118,26 @@ namespace SCPSLBot.Navigation.Mesh
                 if (NearestRoomArea != null)
                 {
                     //var connectedIdsStr = string.Join(", ", NearestArea.ConnectedAreas.Select(c => $"#{c.Id}"));
-                    var NearestAreaId = NavigationMesh.AreasByRoomForm[NearestRoomArea.RoomForm].IndexOf(NearestRoomArea);
-                    VisualsMessages[0] = $"Area #{NearestAreaId} in {NearestRoomArea.RoomForm}";
+                    var NearestAreaId = NavigationMesh.AreasByRoomForm[NearestRoomArea.Form].IndexOf(NearestRoomArea);
+                    VisualsMessages[0] = $"Area #{NearestAreaId} in {NearestRoomArea.Form}";
                 }
 
                 if (CachedRoomArea != null)
                 {
-                    var cachedAreaId = NavigationMesh.AreasByRoomForm[CachedRoomArea.RoomForm].IndexOf(CachedRoomArea);
-                    VisualsMessages[1] = $"Cached area #{cachedAreaId} in {CachedRoomArea.RoomForm}";
+                    var cachedAreaId = NavigationMesh.AreasByRoomForm[CachedRoomArea.Form].IndexOf(CachedRoomArea);
+                    VisualsMessages[1] = $"Cached area #{cachedAreaId} in {CachedRoomArea.Form}";
 
                     if (NearestRoomArea != null)
                     {
-                        if (NearestRoomArea.ConnectedRoomFormAreas.Contains(CachedRoomArea) && CachedRoomArea.ConnectedRoomFormAreas.Contains(NearestRoomArea))
+                        if (NearestRoomArea.ConnectedFormAreas.Contains(CachedRoomArea) && CachedRoomArea.ConnectedFormAreas.Contains(NearestRoomArea))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (NearestRoomArea.ConnectedRoomFormAreas.Contains(CachedRoomArea))
+                        else if (NearestRoomArea.ConnectedFormAreas.Contains(CachedRoomArea))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (CachedRoomArea.ConnectedRoomFormAreas.Contains(NearestRoomArea))
+                        else if (CachedRoomArea.ConnectedFormAreas.Contains(NearestRoomArea))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
@@ -146,20 +146,20 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (FacingRoomArea != null)
                 {
-                    var facingAreaId = NavigationMesh.AreasByRoomForm[FacingRoomArea.RoomForm].IndexOf(FacingRoomArea);
-                    VisualsMessages[1] = $"Facing area #{facingAreaId} in {FacingRoomArea.RoomForm}";
+                    var facingAreaId = NavigationMesh.AreasByRoomForm[FacingRoomArea.Form].IndexOf(FacingRoomArea);
+                    VisualsMessages[1] = $"Facing area #{facingAreaId} in {FacingRoomArea.Form}";
 
                     if (NearestRoomArea != null)
                     {
-                        if (NearestRoomArea.ConnectedRoomFormAreas.Contains(FacingRoomArea) && FacingRoomArea.ConnectedRoomFormAreas.Contains(NearestRoomArea))
+                        if (NearestRoomArea.ConnectedFormAreas.Contains(FacingRoomArea) && FacingRoomArea.ConnectedFormAreas.Contains(NearestRoomArea))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (NearestRoomArea.ConnectedRoomFormAreas.Contains(FacingRoomArea))
+                        else if (NearestRoomArea.ConnectedFormAreas.Contains(FacingRoomArea))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (FacingRoomArea.ConnectedRoomFormAreas.Contains(NearestRoomArea))
+                        else if (FacingRoomArea.ConnectedFormAreas.Contains(NearestRoomArea))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
@@ -291,11 +291,11 @@ namespace SCPSLBot.Navigation.Mesh
 
                     if (visual.gameObject.activeSelf)
                     {
-                        if (NearestRoomArea == area.RoomFormArea)
+                        if (NearestRoomArea == area.FormArea)
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
-                        else if (NearestRoomArea?.ConnectedRoomFormAreas.Contains(area.RoomFormArea) ?? false)
+                        else if (NearestRoomArea?.ConnectedFormAreas.Contains(area.FormArea) ?? false)
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
@@ -349,7 +349,7 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var room = area.Room;
 
-                    foreach (var roomFormEdge in area.RoomFormArea.Edges)
+                    foreach (var roomFormEdge in area.FormArea.Edges)
                     {
                         var edge = (
                             From: NavigationMesh.VerticesByRoom[room][roomFormEdge.From],

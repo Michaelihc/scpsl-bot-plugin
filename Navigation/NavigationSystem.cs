@@ -60,10 +60,10 @@ namespace SCPSLBot.Navigation
                     {
                         // Connect
                         var areaInFront = NavigationMesh.AreasByRoom[edgeInFront.Value.From.Room]
-                            .Find(a => a.RoomFormArea.Edges.Any(e => e == new RoomFormEdge(edgeInFront.Value.From.RoomFormVertex, edgeInFront.Value.To.RoomFormVertex)));
+                            .Find(a => a.FormArea.Edges.Any(e => e == new FormEdge(edgeInFront.Value.From.RoomFormVertex, edgeInFront.Value.To.RoomFormVertex)));
 
                         var areaInBack = NavigationMesh.AreasByRoom[edgeInBack.Value.From.Room]
-                            .Find(a => a.RoomFormArea.Edges.Any(e => e == new RoomFormEdge(edgeInBack.Value.From.RoomFormVertex, edgeInBack.Value.To.RoomFormVertex)));
+                            .Find(a => a.FormArea.Edges.Any(e => e == new FormEdge(edgeInBack.Value.From.RoomFormVertex, edgeInBack.Value.To.RoomFormVertex)));
 
                         areaInFront.ForeignConnectedAreas.Add(areaInBack);
                         areaInFront.ConnectedAreaEdges.Add(areaInBack, new Edge(edgeInBack.Value.From, edgeInBack.Value.To));

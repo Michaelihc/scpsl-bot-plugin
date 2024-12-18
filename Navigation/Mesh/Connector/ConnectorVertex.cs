@@ -5,12 +5,12 @@ namespace SCPSLBot.Navigation.Mesh.Connector
 {
     internal class ConnectorVertex : Vertex
     {
-        public ConnectorFormVertex ConnectorFormVertex { get; }
+        public FormVertex ConnectorFormVertex { get; }
         public RoomConnector Connector { get; }
 
         public override Vector3 Position => Connector.transform.TransformPoint(ConnectorFormVertex.LocalPosition);
 
-        public ConnectorVertex(ConnectorFormVertex connectorFormVertex, RoomConnector connector)
+        public ConnectorVertex(FormVertex connectorFormVertex, RoomConnector connector)
         {
             ConnectorFormVertex = connectorFormVertex;
             Connector = connector;
@@ -18,7 +18,7 @@ namespace SCPSLBot.Navigation.Mesh.Connector
 
         public override string ToString()
         {
-            return ConnectorFormVertex.ConnectorForm;
+            return ConnectorFormVertex.Form;
         }
     }
 }

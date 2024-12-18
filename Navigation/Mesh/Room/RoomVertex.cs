@@ -11,14 +11,14 @@ namespace SCPSLBot.Navigation.Mesh.Room
 {
     internal class RoomVertex : Vertex
     {
-        public RoomFormVertex RoomFormVertex { get; }
+        public FormVertex RoomFormVertex { get; }
         public FacilityRoom Room { get; }
 
         public override Vector3 Position => Room.Transform.TransformPoint(RoomFormVertex.LocalPosition);
 
         public Vector3 LocalPosition => RoomFormVertex.LocalPosition;
 
-        public RoomVertex(RoomFormVertex roomFormVertex, FacilityRoom room)
+        public RoomVertex(FormVertex roomFormVertex, FacilityRoom room)
         {
             RoomFormVertex = roomFormVertex;
             Room = room;
@@ -26,8 +26,8 @@ namespace SCPSLBot.Navigation.Mesh.Room
 
         public override string ToString()
         {
-            var idx = NavigationMesh.Instance.VerticesByRoomForm[RoomFormVertex.RoomForm].IndexOf(RoomFormVertex);
-            return $"#{idx} {RoomFormVertex.RoomForm}";
+            var idx = NavigationMesh.Instance.VerticesByRoomForm[RoomFormVertex.Form].IndexOf(RoomFormVertex);
+            return $"#{idx} {RoomFormVertex.Form}";
         }
     }
 }
