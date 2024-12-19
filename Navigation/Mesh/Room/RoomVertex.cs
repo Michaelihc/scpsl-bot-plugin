@@ -1,4 +1,5 @@
-﻿using PluginAPI.Core;
+﻿using MapGeneration;
+using PluginAPI.Core;
 using PluginAPI.Core.Zones;
 using System;
 using System.Collections.Generic;
@@ -12,13 +13,13 @@ namespace SCPSLBot.Navigation.Mesh.Room
     internal class RoomVertex : Vertex
     {
         public FormVertex RoomFormVertex { get; }
-        public FacilityRoom Room { get; }
+        public RoomIdentifier Room { get; }
 
-        public override Vector3 Position => Room.Transform.TransformPoint(RoomFormVertex.LocalPosition);
+        public override Vector3 Position => Room.transform.TransformPoint(RoomFormVertex.LocalPosition);
 
         public Vector3 LocalPosition => RoomFormVertex.LocalPosition;
 
-        public RoomVertex(FormVertex roomFormVertex, FacilityRoom room)
+        public RoomVertex(FormVertex roomFormVertex, RoomIdentifier room)
         {
             RoomFormVertex = roomFormVertex;
             Room = room;

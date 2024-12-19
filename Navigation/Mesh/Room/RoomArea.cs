@@ -1,4 +1,4 @@
-﻿using PluginAPI.Core.Zones;
+﻿using MapGeneration;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -7,20 +7,22 @@ namespace SCPSLBot.Navigation.Mesh.Room
 {
     internal class RoomArea : Area
     {
-        public FormArea FormArea { get; }
-        public FacilityRoom Room { get; }
+        public override FormArea FormArea { get; }
+        public RoomIdentifier Room { get; }
 
-        public override Vector3 CenterPosition => Room.Transform.TransformPoint(FormArea.LocalCenterPosition);
+        public override Vector3 CenterPosition => Room.transform.TransformPoint(FormArea.LocalCenterPosition);
         public Vector3 LocalCenterPosition => FormArea.LocalCenterPosition;
 
-        public Dictionary<FormArea, RoomArea> ConnectedAreasOfForm { get; } = new();
-        public List<RoomArea> ForeignConnectedAreas { get; } = new();
-        public IEnumerable<RoomArea> ConnectedRoomAreas => FormArea.ConnectedFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
+        public override Dictionary<FormArea, Area> ConnectedAreasOfForm { get; } = new();
+        public List<Area> ForeignConnectedAreas { get; } = new();
 
-        public override IEnumerable<Area> ConnectedAreas => ConnectedRoomAreas;
+        public override IEnumerable<Area> ConnectedAreas => FormArea.ConnectedFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
         public override Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
 
-        public RoomArea(FormArea formArea, FacilityRoom room)
+        public IEnumerable<RoomArea> ForeignConnectedRoomAreas => ForeignConnectedAreas.OfType<RoomArea>();
+        public IEnumerable<RoomArea> ConnectedRoomAreas => ConnectedAreas.OfType<RoomArea>();
+
+        public RoomArea(FormArea formArea, RoomIdentifier room)
         {
             Room = room;
             FormArea = formArea;

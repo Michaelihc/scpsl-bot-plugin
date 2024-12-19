@@ -7,12 +7,12 @@ namespace SCPSLBot.Navigation.Mesh.Connector
 {
     internal class ConnectorArea : Area
     {
-        public FormArea FormArea { get; }
+        public override FormArea FormArea { get; }
         public RoomConnector Connector { get; }
 
         public override Vector3 CenterPosition => Connector.transform.TransformPoint(FormArea.LocalCenterPosition);
 
-        public Dictionary<FormArea, Area> ConnectedAreasOfForm { get; } = new();
+        public override Dictionary<FormArea, Area> ConnectedAreasOfForm { get; } = new();
         public List<Area> ForeignConnectedAreas { get; } = new();
 
         public override IEnumerable<Area> ConnectedAreas => FormArea.ConnectedFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);

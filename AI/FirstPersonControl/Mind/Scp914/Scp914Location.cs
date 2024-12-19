@@ -18,7 +18,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
 
         private void OnSensedRoom(RoomArea foreignRoomArea)
         {
-            var foreignRoom = foreignRoomArea.Room.Identifier;
+            var foreignRoom = foreignRoomArea.Room;
             if (foreignRoom.Name != RoomName.Lcz914)
             {
                 return;

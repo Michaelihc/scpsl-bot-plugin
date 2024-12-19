@@ -28,7 +28,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
         {
             _fpcBotPlayer = botPlayer;
 
-            ForeignRooms = ForeignRoomsAreas.Select(fa => fa.Room.Identifier).Distinct();
+            ForeignRooms = ForeignRoomsAreas.Select(fa => fa.Room).Distinct();
         }
 
         public override void ProcessSightSensedItems()
@@ -63,9 +63,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
             if (RoomWithin)
             {
                 ForeignRoomsAreas.Clear();
-                foreach (var a in NavigationMesh.Instance.AreasByRoom[RoomWithin.ApiRoom])
+                foreach (var a in NavigationMesh.Instance.AreasByRoom[RoomWithin])
                 {
-                    foreach (var fa in a.ForeignConnectedAreas)
+                    foreach (var fa in a.ForeignConnectedRoomAreas)
                     {
                         var faa = fa.ConnectedRoomAreas.First();
                         ForeignRoomsAreas.Add(faa);
