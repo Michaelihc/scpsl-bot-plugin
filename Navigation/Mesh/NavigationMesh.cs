@@ -356,7 +356,7 @@ namespace SCPSLBot.Navigation.Mesh
         public FormArea MakeRoomArea(IEnumerable<FormVertex> roomFormVertices, string roomForm)
         {
             var newRoomFormArea = CreateFormArea(roomFormVertices, roomForm, AreasByRoomForm);
-            AddRoomAreas(newRoomFormArea);
+            AddAreas(newRoomFormArea, AreasByRoom, (formArea, room) => new RoomArea(formArea, room), AreasByRoomForm);
 
             return newRoomFormArea;
         }
@@ -364,7 +364,7 @@ namespace SCPSLBot.Navigation.Mesh
         public FormArea MakeConnectorArea(IEnumerable<FormVertex> connectorFormVertices, string connectorForm)
         {
             var newFormArea = CreateFormArea(connectorFormVertices, connectorForm, AreasByConnectorForm);
-            AddConnectorAreas(newFormArea);
+            AddAreas(newFormArea, AreasByConnector, (formArea, connector) => new ConnectorArea(formArea, connector), AreasByConnectorForm);
 
             return newFormArea;
         }
@@ -392,6 +392,30 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             return newFormArea;
+        }
+
+        private void AddAreas<TFormInstance, TArea>(
+            FormArea formArea,
+            Dictionary<TFormInstance, List<TArea>> areasByFormInstance,
+            Func<FormArea, TFormInstance, TArea> areaFactory,
+            Dictionary<string, List<FormArea>> areasByForm)
+            where TFormInstance : MonoBehaviour
+            where TArea : Area
+        {
+            var connectingFromFormAreas = areasByForm[formArea.Form].Where(a => a.ConnectedFormAreas.Contains(formArea));
+
+            foreach (var (formInstance, areas) in areasByFormInstance.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            {
+                var newArea = areaFactory.Invoke(formArea, formInstance);
+                areas.Add(newArea);
+
+                foreach (var connectedToFormArea in formArea.ConnectedFormAreas)
+                {
+                    var areaOfConnectedToForm = areas.Find(a => a.FormArea == connectedToFormArea);
+                    newArea.ConnectedAreasOfForm.Add(connectedToFormArea, areaOfConnectedToForm);
+                    areaOfConnectedToForm.ConnectedAreasOfForm.Add(formArea, newArea);
+                }
+            }
         }
 
         public void RemoveRoomArea(FormArea roomFormArea)
@@ -510,45 +534,6 @@ namespace SCPSLBot.Navigation.Mesh
         {
             var atIdx = area.Vertices.IndexOf(beforeVertex);
             area.Vertices.Insert(atIdx, vertex);
-        }
-
-        private void AddRoomAreas(FormArea newRoomFormArea)
-        {
-            AddAreas(newRoomFormArea, AreasByRoom, (formArea, room) => new RoomArea(formArea, room), AreasByRoomForm);
-        }
-
-        private void AddConnectorAreas(FormArea newFormArea)
-        {
-            AddAreas(newFormArea, AreasByConnector, (formArea, connector) => new ConnectorArea(formArea, connector), AreasByConnectorForm);
-        }
-
-        private void AddAreas<TFormInstance, TArea>(
-            FormArea formArea, 
-            Dictionary<TFormInstance, List<TArea>> areasByFormInstance, 
-            Func<FormArea, TFormInstance, TArea> areaFactory,
-            Dictionary<string, List<FormArea>> areasByForm)
-            where TFormInstance : MonoBehaviour
-            where TArea : Area
-        {
-            var connectingFromFormAreas = areasByForm[formArea.Form].Where(a => a.ConnectedFormAreas.Contains(formArea));
-
-            foreach (var (formInstance, areas) in areasByFormInstance.Where(p => StartsWithForm(p.Key, formArea.Form)))
-            {
-                var newArea = areaFactory.Invoke(formArea, formInstance);
-                areas.Add(newArea);
-
-                foreach (var connectedToFormArea in formArea.ConnectedFormAreas)
-                {
-                    var areaOfConnectedToForm = areas.Find(a => a.FormArea == connectedToFormArea);
-                    newArea.ConnectedAreasOfForm.Add(connectedToFormArea, areaOfConnectedToForm);
-                }
-
-                foreach (var connectingFromFormArea in connectingFromFormAreas)
-                {
-                    var areaOfConnectingFrom = areas.Find(a => a.FormArea == connectingFromFormArea);
-                    areaOfConnectingFrom.ConnectedAreasOfForm.Add(formArea, newArea);
-                }
-            }
         }
 
         private void RemoveConnectorVertexFromAreas(FormVertex connectorFormVertex)
@@ -906,18 +891,15 @@ namespace SCPSLBot.Navigation.Mesh
 
                 foreach (var roomArea in areas)
                 {
-                    var connectedAreas = roomArea.FormArea.ConnectedFormAreas.Select(c => AreasByRoom[room.Identifier].Find(a => a.FormArea == c));
-                    //roomArea.ConnectedAreas.AddRange(connectedAreas);
+                    var connectedFormEdges = roomArea.FormArea.ConnectedFormAreas
+                        .Select(cfa => (cfa, cfe: cfa.Edges.First(cfe => roomArea.FormArea.Edges.Any(e => cfe == new FormEdge(e.To, e.From)))));
 
-                    var connectedEdges = roomArea.FormArea.ConnectedFormAreas
-                        .Select(cka => (cka, cke: cka.Edges.First(cke => roomArea.FormArea.Edges.Any(e => cke == new FormEdge(e.To, e.From)))))
-                        .Select(t => (
-                            roomArea.ConnectedRoomAreas.First(ca => ca.FormArea == t.cka),
-                            new Edge(VerticesByRoom[room.Identifier][t.cke.From], VerticesByRoom[room.Identifier][t.cke.To])
-                        ));
-
-                    foreach (var (connectedArea, connectedEdge) in connectedEdges)
+                    foreach (var (connectedFormArea, connectedFormEdge) in connectedFormEdges)
                     {
+                        var connectedArea = areas.Find(a => a.FormArea == connectedFormArea);
+                        var connectedEdge = new Edge(VerticesByRoom[room.Identifier][connectedFormEdge.From], VerticesByRoom[room.Identifier][connectedFormEdge.To]);
+
+                        roomArea.ConnectedAreasOfForm.Add(connectedFormArea, connectedArea);
                         roomArea.ConnectedAreaEdges.Add(connectedArea, connectedEdge);
                     }
                 }
