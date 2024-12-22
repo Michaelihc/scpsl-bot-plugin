@@ -7,7 +7,7 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class FormArea
     {
-        public string Form { get; set; }
+        public string Form { get; private set; }
         public List<FormVertex> Vertices { get; } = new();
 
         public Vector3 LocalCenterPosition => Vertices.Select(v => v.LocalPosition)
@@ -17,7 +17,12 @@ namespace SCPSLBot.Navigation.Mesh
             .Append(new FormEdge(Vertices.Last(), Vertices.First()));
 
         public List<FormArea> ConnectedFormAreas { get; } = new();
-        public List<FormEdge> ConnectedFormAreaEdges = new();
+
+        public event Action<FormVertex> VertexAdded;
+        public event Action<FormVertex> VertexRemoved;
+
+        public event Action<FormArea> ConnectionAdded;
+        public event Action<FormArea> ConnectionRemoved;
 
         public FormArea(string form)
         {
@@ -28,6 +33,34 @@ namespace SCPSLBot.Navigation.Mesh
         {
             Form = form;
             Vertices.AddRange(vertices);
+        }
+
+        public void AddVertex(FormVertex vertex)
+        {
+            Vertices.Add(vertex);
+            VertexAdded?.Invoke(vertex);
+        }
+
+        public void RemoveVertex(FormVertex vertex)
+        {
+            if (Vertices.Remove(vertex))
+            {
+                VertexRemoved?.Invoke(vertex);
+            }
+        }
+
+        public void AddConnection(FormArea connectingArea)
+        {
+            ConnectedFormAreas.Add(connectingArea);
+            ConnectionAdded?.Invoke(connectingArea);
+        }
+
+        public void RemoveConnection(FormArea connectedArea)
+        {
+            if (ConnectedFormAreas.Remove(connectedArea))
+            {
+                ConnectionRemoved?.Invoke(connectedArea);
+            }
         }
 
         public override string ToString()
