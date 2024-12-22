@@ -1,5 +1,4 @@
-﻿using CustomRendering;
-using Interactables.Interobjects;
+﻿using Interactables.Interobjects;
 using MapGeneration;
 using PluginAPI.Core;
 using PluginAPI.Core.Zones;
@@ -27,8 +26,6 @@ namespace SCPSLBot.Navigation.Mesh
         public Dictionary<RoomIdentifier, List<RoomArea>> AreasByRoom { get; } = new();
         public event Action<FormArea> RoomAreaCreated;
         public event Action<FormArea> RoomAreaDeleted;
-        public event Action<FormArea, FormVertex> RoomVertexAddedToArea;
-        public event Action<FormArea, FormVertex> RoomVertexRemovedFromArea;
 
         public Dictionary<string, List<FormVertex>> VerticesByConnectorForm { get; } = new();
         public Dictionary<RoomConnector, Dictionary<FormVertex, ConnectorVertex>> VerticesByConnector { get; } = new();
@@ -39,19 +36,25 @@ namespace SCPSLBot.Navigation.Mesh
         public Dictionary<RoomConnector, List<ConnectorArea>> AreasByConnector { get; } = new();
         public event Action<FormArea> ConnectorAreaCreated;
         public event Action<FormArea> ConnectorAreaDeleted;
-        public event Action<FormArea, FormVertex> ConnectorVertexAddedToArea;
-        public event Action<FormArea, FormVertex> ConnectorVertexRemovedFromArea;
 
 
         private NavigationMesh()
         {
-            RoomVertexCreated += AddRoomVertices;
-            RoomVertexDeleted += RemoveRoomVertexFromAreas;
-            RoomVertexDeleted += RemoveRoomVertices;
+            RoomVertexCreated += (FormVertex formVertex) => AddVertices(formVertex, VerticesByRoom, (formVertex, formInst) => new RoomVertex(formVertex, formInst));
+            RoomVertexDeleted += (FormVertex formVertex) => RemoveFormVertexFromAreas(formVertex, AreasByRoomForm[formVertex.Form]);
+            RoomVertexDeleted += (FormVertex formVertex) => RemoveVertices(formVertex, VerticesByRoom);
 
-            ConnectorVertexCreated += AddConnectorVertices;
-            ConnectorVertexDeleted += RemoveConnectorVertexFromAreas;
-            ConnectorVertexDeleted += RemoveConnectorVertices;
+            RoomAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, areaGetter) => new RoomArea(formArea, room, areaGetter));
+            RoomAreaCreated += (FormArea formArea) => ConnectAdjacentAreas(formArea, AreasByRoomForm[formArea.Form]);
+            RoomAreaDeleted += (FormArea formArea) => RemoveAreas(formArea, AreasByRoom);
+
+            ConnectorVertexCreated += (FormVertex formVertex) => AddVertices(formVertex, VerticesByConnector, (formVertex, formInst) => new ConnectorVertex(formVertex, formInst));
+            ConnectorVertexDeleted += (FormVertex formVertex) => RemoveFormVertexFromAreas(formVertex, AreasByConnectorForm[formVertex.Form]);
+            ConnectorVertexDeleted += (FormVertex formVertex) => RemoveVertices(formVertex, VerticesByConnector);
+
+            ConnectorAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByConnector, (formArea, connector, areaGetter) => new ConnectorArea(formArea, connector, areaGetter));
+            ConnectorAreaCreated += (FormArea formArea) => ConnectAdjacentAreas(formArea, AreasByConnectorForm[formArea.Form]);
+            ConnectorAreaDeleted += (FormArea formArea) => RemoveAreas(formArea, AreasByConnector);
         }
 
         #region Mesh querying
@@ -275,16 +278,6 @@ namespace SCPSLBot.Navigation.Mesh
             return newFormVertex;
         }
 
-        private void AddRoomVertices(FormVertex formVertex)
-        {
-            AddVertices(formVertex, VerticesByRoom, (formVertex, formInst) => new RoomVertex(formVertex, formInst));
-        }
-
-        private void AddConnectorVertices(FormVertex formVertex)
-        {
-            AddVertices(formVertex, VerticesByConnector, (formVertex, formInst) => new ConnectorVertex(formVertex, formInst));
-        }
-
         private void AddVertices<TFormInstance, TVertex>(
             FormVertex formVertex, 
             Dictionary<TFormInstance, Dictionary<FormVertex, TVertex>> verticesByFormInstance, 
@@ -337,16 +330,6 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        private void RemoveRoomVertices(FormVertex formVertex)
-        {
-            RemoveVertices(formVertex, VerticesByRoom);
-        }
-
-        private void RemoveConnectorVertices(FormVertex formVertex)
-        {
-            RemoveVertices(formVertex, VerticesByConnector);
-        }
-
         private void RemoveVertices<TFormInstance, TVertex>(
             FormVertex formVertex,
             Dictionary<TFormInstance, Dictionary<FormVertex, TVertex>> verticesByFormInstance)
@@ -375,16 +358,16 @@ namespace SCPSLBot.Navigation.Mesh
 
         public FormArea MakeRoomArea(IEnumerable<FormVertex> roomFormVertices, string roomForm)
         {
-            var newRoomFormArea = CreateFormArea(roomFormVertices, roomForm, AreasByRoomForm);
-            AddAreas(newRoomFormArea, AreasByRoom, (formArea, room) => new RoomArea(formArea, room), AreasByRoomForm);
+            var newFormArea = CreateFormArea(roomFormVertices, roomForm, AreasByRoomForm);
+            RoomAreaCreated?.Invoke(newFormArea);
 
-            return newRoomFormArea;
+            return newFormArea;
         }
 
         public FormArea MakeConnectorArea(IEnumerable<FormVertex> connectorFormVertices, string connectorForm)
         {
             var newFormArea = CreateFormArea(connectorFormVertices, connectorForm, AreasByConnectorForm);
-            AddAreas(newFormArea, AreasByConnector, (formArea, connector) => new ConnectorArea(formArea, connector), AreasByConnectorForm);
+            ConnectorAreaCreated?.Invoke(newFormArea);
 
             return newFormArea;
         }
@@ -400,78 +383,69 @@ namespace SCPSLBot.Navigation.Mesh
             var newFormArea = new FormArea(formVertices, form);
             formAreas.Add(newFormArea);
 
-            foreach (var edge in newFormArea.Edges)
-            {
-                var inversedEdge = new FormEdge(edge.To, edge.From);
-                var connectedArea = formAreas.Find(a => a != newFormArea && a.Edges.Contains(inversedEdge));
-                if (connectedArea != null)
-                {
-                    newFormArea.ConnectedFormAreas.Add(connectedArea);
-                    connectedArea.ConnectedFormAreas.Add(newFormArea);
-                }
-            }
-
             return newFormArea;
         }
 
         private void AddAreas<TFormInstance, TArea>(
             FormArea formArea,
             Dictionary<TFormInstance, List<TArea>> areasByFormInstance,
-            Func<FormArea, TFormInstance, TArea> areaFactory,
-            Dictionary<string, List<FormArea>> areasByForm)
+            Func<FormArea, TFormInstance, Func<FormArea, Area>, TArea> areaFactory)
             where TFormInstance : MonoBehaviour
             where TArea : Area
         {
-            var connectingFromFormAreas = areasByForm[formArea.Form].Where(a => a.ConnectedFormAreas.Contains(formArea));
-
             foreach (var (formInstance, areas) in areasByFormInstance.Where(p => StartsWithForm(p.Key, formArea.Form)))
             {
-                var newArea = areaFactory.Invoke(formArea, formInstance);
+                var newArea = areaFactory.Invoke(formArea, formInstance, formArea => areas.Find(a => a.FormArea == formArea));
                 areas.Add(newArea);
+            }
+        }
 
-                foreach (var connectedToFormArea in formArea.ConnectedFormAreas)
+        private void ConnectAdjacentAreas(FormArea formArea, List<FormArea> formAreas)
+        {
+            foreach (var edge in formArea.Edges)
+            {
+                var inversedEdge = new FormEdge(edge.To, edge.From);
+                var connectedArea = formAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
+                if (connectedArea != null)
                 {
-                    var areaOfConnectedToForm = areas.Find(a => a.FormArea == connectedToFormArea);
-                    newArea.ConnectedAreasOfForm.Add(connectedToFormArea, areaOfConnectedToForm);
-                    areaOfConnectedToForm.ConnectedAreasOfForm.Add(formArea, newArea);
+                    formArea.AddConnection(connectedArea);
+                    connectedArea.AddConnection(formArea);
                 }
             }
         }
 
         public void RemoveRoomArea(FormArea roomFormArea)
         {
-            if (!DeleteFormArea(roomFormArea, AreasByRoomForm))
+            if (!DeleteFormArea(roomFormArea, AreasByRoomForm[roomFormArea.Form]))
             {
                 Log.Warning($"No areas at room {roomFormArea.Form} to remove area from.");
                 return;
             }
 
-            RemoveAreas(roomFormArea, AreasByRoom);
+            RoomAreaDeleted?.Invoke(roomFormArea);
         }
 
         public void RemoveConnectorArea(FormArea connectorFormArea)
         {
-            if (!DeleteFormArea(connectorFormArea, AreasByConnectorForm))
+            if (!DeleteFormArea(connectorFormArea, AreasByConnectorForm[connectorFormArea.Form]))
             {
                 Log.Warning($"No areas at connector {connectorFormArea.Form} to remove area from.");
                 return;
             }
 
-            RemoveAreas(connectorFormArea, AreasByConnector);
+            ConnectorAreaDeleted?.Invoke(connectorFormArea);
         }
 
-        private bool DeleteFormArea(FormArea formArea, Dictionary<string, List<FormArea>> areasByForm)
+        private bool DeleteFormArea(FormArea formArea, List<FormArea> formAreas)
         {
-            if (!areasByForm.TryGetValue(formArea.Form, out var connectorFormAreas))
+            if (!formAreas.Remove(formArea))
             {
                 return false;
             }
 
-            connectorFormAreas.Remove(formArea);
-
-            foreach (var otherFormArea in connectorFormAreas)
+            foreach (var otherFormArea in formAreas)
             {
-                otherFormArea.ConnectedFormAreas.Remove(formArea);
+                otherFormArea.RemoveConnection(formArea);
             }
 
             return true;
@@ -485,107 +459,49 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var areaToRemove = areasOfForm.Find(n => n.FormArea == formArea);
                 areasOfForm.Remove(areaToRemove);
-
-                foreach (var area in areasOfForm)
-                {
-                    area.ConnectedAreasOfForm.Remove(formArea);
-                }
             }
         }
 
         public void CreateRoomAreaConnection(FormArea fromFormArea, FormArea toFormArea)
         {
-            CreateAreaConnections(fromFormArea, toFormArea, AreasByRoom);
+            fromFormArea.AddConnection(toFormArea);
         }
 
         public void CreateConnectorAreaConnection(FormArea fromFormArea, FormArea toFormArea)
         {
-            CreateAreaConnections(fromFormArea, toFormArea, AreasByConnector);
-        }
-
-        private void CreateAreaConnections<TFormInstance, TArea>(FormArea fromFormArea, FormArea toFormArea, Dictionary<TFormInstance, List<TArea>> areasByFormInstance)
-            where TFormInstance : MonoBehaviour
-            where TArea : Area
-        {
-            fromFormArea.ConnectedFormAreas.Add(toFormArea);
-
-            foreach (var (_, connectorAreas) in areasByFormInstance.Where(a => StartsWithForm(a.Key, fromFormArea.Form)))
-            {
-                var fromConnectorArea = connectorAreas.Find(a => a.FormArea == fromFormArea);
-                var toConnectorArea = connectorAreas.Find(a => a.FormArea == toFormArea);
-                fromConnectorArea.ConnectedAreasOfForm.Add(toFormArea, toConnectorArea);
-            }
+            fromFormArea.AddConnection(toFormArea);
         }
 
         public void DeleteRoomAreaConnection(FormArea fromFormArea, FormArea toFormArea)
         {
-            DeleteAreaConnections(fromFormArea, toFormArea, AreasByRoom);
+            fromFormArea.RemoveConnection(toFormArea);;
         }
 
         public void DeleteConnectorAreaConnection(FormArea fromFormArea, FormArea toFormArea)
         {
-            DeleteAreaConnections(fromFormArea, toFormArea, AreasByConnector);
-        }
-
-        private void DeleteAreaConnections<TFormInstance, TArea>(FormArea fromFormArea, FormArea toFormArea, Dictionary<TFormInstance, List<TArea>> areasByFormInstance)
-            where TFormInstance : MonoBehaviour
-            where TArea : Area
-        {
-            fromFormArea.ConnectedFormAreas.Remove(toFormArea);
-
-            foreach (var (_, connectorAreas) in areasByFormInstance.Where(a => StartsWithForm(a.Key, fromFormArea.Form)))
-            {
-                var fromConnectorArea = connectorAreas.Find(a => a.FormArea == fromFormArea);
-                fromConnectorArea.ConnectedAreasOfForm.Remove(toFormArea);
-            }
+            fromFormArea.RemoveConnection(toFormArea);
         }
 
         public void AddRoomVertexToArea(FormArea area, FormVertex vertex, FormVertex beforeVertex)
         {
-            AddVertexToArea(area, vertex, beforeVertex);
+            area.AddVertex(vertex, beforeVertex);
         }
 
         public void AddConnectorVertexToArea(FormArea area, FormVertex vertex, FormVertex beforeVertex)
         {
-            AddVertexToArea(area, vertex, beforeVertex);
+            area.AddVertex(vertex, beforeVertex);
         }
 
-        private void AddVertexToArea(FormArea area, FormVertex vertex, FormVertex beforeVertex)
+        private void RemoveFormVertexFromAreas(FormVertex formVertex, List<FormArea> formAreas)
         {
-            var atIdx = area.Vertices.IndexOf(beforeVertex);
-            area.Vertices.Insert(atIdx, vertex);
-        }
-
-        private void RemoveRoomVertexFromAreas(FormVertex formVertex)
-        {
-            if (AreasByConnectorForm.TryGetValue(formVertex.Form, out var formAreas))
+            foreach (var area in formAreas.ToArray())
             {
-                foreach (var area in formAreas.ToArray())
+                area.RemoveVertex(formVertex);
+                if (area.Vertices.Count < 3)
                 {
-                    area.RemoveVertex(formVertex);
-                    if (area.Vertices.Count < 3)
-                    {
-                        RemoveRoomArea(area);
+                    DeleteFormArea(area, formAreas);
 
-                        Log.Warning($"Area at local center position {area.LocalCenterPosition} removed under room {formVertex.Form}.");
-                    }
-                }
-            }
-        }
-
-        private void RemoveConnectorVertexFromAreas(FormVertex connectorFormVertex)
-        {
-            if (AreasByConnectorForm.TryGetValue(connectorFormVertex.Form, out var connectorFormAreas))
-            {
-                foreach (var area in connectorFormAreas.ToArray())
-                {
-                    area.RemoveVertex(connectorFormVertex);
-                    if (area.Vertices.Count < 3)
-                    {
-                        RemoveConnectorArea(area);
-
-                        Log.Warning($"Area at local center position {area.LocalCenterPosition} removed under connector {connectorFormVertex.Form}.");
-                    }
+                    Log.Warning($"Area at local center position {area.LocalCenterPosition} removed under form {formVertex.Form}.");
                 }
             }
         }
@@ -924,7 +840,7 @@ namespace SCPSLBot.Navigation.Mesh
                     continue;
                 }
 
-                areas.AddRange(roomFormAreas.Select(k => new RoomArea(k, room.Identifier)));
+                areas.AddRange(roomFormAreas.Select(k => new RoomArea(k, room.Identifier, formArea => areas.Find(a => a.FormArea == formArea))));
 
                 foreach (var roomArea in areas)
                 {
@@ -936,7 +852,6 @@ namespace SCPSLBot.Navigation.Mesh
                         var connectedArea = areas.Find(a => a.FormArea == connectedFormArea);
                         var connectedEdge = new Edge(VerticesByRoom[room.Identifier][connectedFormEdge.From], VerticesByRoom[room.Identifier][connectedFormEdge.To]);
 
-                        roomArea.ConnectedAreasOfForm.Add(connectedFormArea, connectedArea);
                         roomArea.ConnectedAreaEdges.Add(connectedArea, connectedEdge);
                     }
                 }

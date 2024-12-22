@@ -1,4 +1,5 @@
 ﻿using Interactables.Interobjects;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -18,7 +19,7 @@ namespace SCPSLBot.Navigation.Mesh.Connector
         public override IEnumerable<Area> ConnectedAreas => FormArea.ConnectedFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
         public override Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
 
-        public ConnectorArea(FormArea connectorFormArea, RoomConnector room)
+        public ConnectorArea(FormArea connectorFormArea, RoomConnector room, Func<FormArea, Area> areaGetter) : base(areaGetter)
         {
             Connector = room;
             FormArea = connectorFormArea;

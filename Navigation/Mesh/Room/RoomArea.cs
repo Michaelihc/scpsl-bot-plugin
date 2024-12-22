@@ -1,4 +1,5 @@
 ﻿using MapGeneration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -22,7 +23,7 @@ namespace SCPSLBot.Navigation.Mesh.Room
         public IEnumerable<RoomArea> ForeignConnectedRoomAreas => ForeignConnectedAreas.OfType<RoomArea>();
         public IEnumerable<RoomArea> ConnectedRoomAreas => ConnectedAreas.OfType<RoomArea>();
 
-        public RoomArea(FormArea formArea, RoomIdentifier room)
+        public RoomArea(FormArea formArea, RoomIdentifier room, Func<FormArea, Area> areaGetter) : base(areaGetter)
         {
             Room = room;
             FormArea = formArea;

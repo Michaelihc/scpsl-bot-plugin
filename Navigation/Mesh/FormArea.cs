@@ -35,9 +35,11 @@ namespace SCPSLBot.Navigation.Mesh
             Vertices.AddRange(vertices);
         }
 
-        public void AddVertex(FormVertex vertex)
+        public void AddVertex(FormVertex vertex, FormVertex beforeVertex)
         {
-            Vertices.Add(vertex);
+            var atIdx = Vertices.IndexOf(beforeVertex);
+            Vertices.Insert(atIdx, vertex);
+
             VertexAdded?.Invoke(vertex);
         }
 
