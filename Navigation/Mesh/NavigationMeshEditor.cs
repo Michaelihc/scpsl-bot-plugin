@@ -122,14 +122,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             if (SeletedRoomVertices.Count == 2)
             {
-                var lineSegment = (from: SeletedRoomVertices.First(), to: SeletedRoomVertices.Last());
-                
-                var dirTo2 = (lineSegment.to.LocalPosition - lineSegment.from.LocalPosition);
-                var dirToPoint = (localPosition - lineSegment.from.LocalPosition);
-                var dirToProj = (Vector3.Project(dirToPoint, dirTo2));
-                var projected = (dirToProj + lineSegment.from.LocalPosition);
-
-                localPosition = projected;
+                localPosition = GetProjectedPosition(localPosition);
             }
 
             var newVertex = NavigationMesh.AddRoomVertex(localPosition, roomForm);
@@ -169,23 +162,21 @@ namespace SCPSLBot.Navigation.Mesh
             var vertex = NavigationMesh.GetRoomVertexNearby(position)?.RoomFormVertex;
             if (vertex == null)
             {
-                Log.Info($"No vertex found nearby to move. Checking for selection.");
-
-                if (!SeletedRoomVertices.Any())
-                {
-                    Log.Warning($"No vertices selected to move.");
-                    return false;
-                }
-
-                vertex = SeletedRoomVertices.First();
+                Log.Info($"No vertex found nearby to move.");
+                return false;
             }
 
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
-            var localPosition = room.transform.InverseTransformPoint(position);
+            var newLocalPosition = room.transform.InverseTransformPoint(position);
 
-            if (!NavigationMesh.MoveRoomVertex(vertex, localPosition))
+            if (SeletedRoomVertices.Count == 2)
+            {
+                newLocalPosition = GetProjectedPosition(newLocalPosition);
+            }
+
+            if (!NavigationMesh.MoveRoomVertex(vertex, newLocalPosition))
             {
                 return false;
             }
@@ -451,6 +442,18 @@ namespace SCPSLBot.Navigation.Mesh
             NavigationMesh.DeleteRoomAreaConnection(CachedRoomArea.FormArea, targetArea.FormArea);
 
             return true;
+        }
+
+        private Vector3 GetProjectedPosition(Vector3 position)
+        {
+            var lineSegment = (from: SeletedRoomVertices.First(), to: SeletedRoomVertices.Last());
+
+            var dirTo2 = (lineSegment.to.LocalPosition - lineSegment.from.LocalPosition);
+            var dirToPoint = (position - lineSegment.from.LocalPosition);
+            var dirToProj = (Vector3.Project(dirToPoint, dirTo2));
+            var projected = (dirToProj + lineSegment.from.LocalPosition);
+
+            return projected;
         }
 
         private void UpdateEditing()
