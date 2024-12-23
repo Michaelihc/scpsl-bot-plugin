@@ -232,7 +232,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (SeletedRoomVertices.Count < 2)
             {
-                Log.Warning($"Not enough vertices (min 2) selected.");
+                Log.Warning($"Not enough vertices (min 3) selected.");
                 return null;
             }
 
@@ -240,6 +240,7 @@ namespace SCPSLBot.Navigation.Mesh
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
             var newArea = NavigationMesh.MakeRoomArea(SeletedRoomVertices, roomForm);
+            ConnectAdjacentAreas(newArea, NavigationMesh.AreasByRoomForm[roomForm]);
 
             Log.Info($"Area #{NavigationMesh.AreasByRoomForm[roomForm].IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under room {roomForm}.");
 
@@ -454,6 +455,20 @@ namespace SCPSLBot.Navigation.Mesh
             var projected = (dirToProj + lineSegment.from.LocalPosition);
 
             return projected;
+        }
+
+        private void ConnectAdjacentAreas(FormArea formArea, List<FormArea> formAreas)
+        {
+            foreach (var edge in formArea.Edges)
+            {
+                var inversedEdge = new FormEdge(edge.To, edge.From);
+                var connectedArea = formAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
+                if (connectedArea != null)
+                {
+                    formArea.AddConnection(connectedArea);
+                    connectedArea.AddConnection(formArea);
+                }
+            }
         }
 
         private void UpdateEditing()

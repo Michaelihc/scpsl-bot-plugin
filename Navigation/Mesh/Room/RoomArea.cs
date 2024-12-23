@@ -8,7 +8,6 @@ namespace SCPSLBot.Navigation.Mesh.Room
 {
     internal class RoomArea : Area
     {
-        public override FormArea FormArea { get; }
         public RoomIdentifier Room { get; }
 
         public override Vector3 CenterPosition => Room.transform.TransformPoint(FormArea.LocalCenterPosition);
@@ -23,10 +22,9 @@ namespace SCPSLBot.Navigation.Mesh.Room
         public IEnumerable<RoomArea> ForeignConnectedRoomAreas => ForeignConnectedAreas.OfType<RoomArea>();
         public IEnumerable<RoomArea> ConnectedRoomAreas => ConnectedAreas.OfType<RoomArea>();
 
-        public RoomArea(FormArea formArea, RoomIdentifier room, Func<FormArea, Area> areaGetter) : base(areaGetter)
+        public RoomArea(FormArea formArea, RoomIdentifier room, Func<FormArea, Area> areaGetter) : base(formArea, areaGetter)
         {
             Room = room;
-            FormArea = formArea;
         }
 
         public override bool ContainsEdge(Edge edge)

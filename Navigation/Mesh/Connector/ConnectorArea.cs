@@ -8,7 +8,6 @@ namespace SCPSLBot.Navigation.Mesh.Connector
 {
     internal class ConnectorArea : Area
     {
-        public override FormArea FormArea { get; }
         public RoomConnector Connector { get; }
 
         public override Vector3 CenterPosition => Connector.transform.TransformPoint(FormArea.LocalCenterPosition);
@@ -19,10 +18,9 @@ namespace SCPSLBot.Navigation.Mesh.Connector
         public override IEnumerable<Area> ConnectedAreas => FormArea.ConnectedFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
         public override Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
 
-        public ConnectorArea(FormArea connectorFormArea, RoomConnector room, Func<FormArea, Area> areaGetter) : base(areaGetter)
+        public ConnectorArea(FormArea connectorFormArea, RoomConnector room, Func<FormArea, Area> areaGetter) : base(connectorFormArea, areaGetter)
         {
             Connector = room;
-            FormArea = connectorFormArea;
         }
 
         public override bool ContainsEdge(Edge edge)

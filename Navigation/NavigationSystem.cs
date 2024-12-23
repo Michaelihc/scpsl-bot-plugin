@@ -26,8 +26,6 @@ namespace SCPSLBot.Navigation
         public void Init()
         {
             EventManager.RegisterEvents(this);
-
-            LoadMesh();
         }
 
         [PluginEvent(PluginAPI.Enums.ServerEventType.MapGenerated)]
@@ -44,6 +42,7 @@ namespace SCPSLBot.Navigation
 
             NavigationMesh.InitRoomVertices();
             NavigationMesh.InitRoomAreas();
+            LoadMesh();
 
             Log.Info($"Connecting areas between rooms.");
             

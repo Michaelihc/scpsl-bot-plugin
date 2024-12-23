@@ -45,7 +45,6 @@ namespace SCPSLBot.Navigation.Mesh
             RoomVertexDeleted += (FormVertex formVertex) => RemoveVertices(formVertex, VerticesByRoom);
 
             RoomAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, areaGetter) => new RoomArea(formArea, room, areaGetter));
-            RoomAreaCreated += (FormArea formArea) => ConnectAdjacentAreas(formArea, AreasByRoomForm[formArea.Form]);
             RoomAreaDeleted += (FormArea formArea) => RemoveAreas(formArea, AreasByRoom);
 
             ConnectorVertexCreated += (FormVertex formVertex) => AddVertices(formVertex, VerticesByConnector, (formVertex, formInst) => new ConnectorVertex(formVertex, formInst));
@@ -53,7 +52,6 @@ namespace SCPSLBot.Navigation.Mesh
             ConnectorVertexDeleted += (FormVertex formVertex) => RemoveVertices(formVertex, VerticesByConnector);
 
             ConnectorAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByConnector, (formArea, connector, areaGetter) => new ConnectorArea(formArea, connector, areaGetter));
-            ConnectorAreaCreated += (FormArea formArea) => ConnectAdjacentAreas(formArea, AreasByConnectorForm[formArea.Form]);
             ConnectorAreaDeleted += (FormArea formArea) => RemoveAreas(formArea, AreasByConnector);
         }
 
@@ -249,8 +247,6 @@ namespace SCPSLBot.Navigation.Mesh
             var newFormVertex = CreateFormVertex(localPosition, roomForm, VerticesByRoomForm);
             RoomVertexCreated?.Invoke(newFormVertex);
 
-            Log.Debug($"Room vertex added.");
-
             return newFormVertex;
         }
 
@@ -258,8 +254,6 @@ namespace SCPSLBot.Navigation.Mesh
         {
             var newFormVertex = CreateFormVertex(localPosition, connectorForm, VerticesByConnectorForm);
             ConnectorVertexCreated?.Invoke(newFormVertex);
-
-            Log.Debug($"Connector vertex added.");
 
             return newFormVertex;
         }
@@ -397,20 +391,6 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var newArea = areaFactory.Invoke(formArea, formInstance, formArea => areas.Find(a => a.FormArea == formArea));
                 areas.Add(newArea);
-            }
-        }
-
-        private void ConnectAdjacentAreas(FormArea formArea, List<FormArea> formAreas)
-        {
-            foreach (var edge in formArea.Edges)
-            {
-                var inversedEdge = new FormEdge(edge.To, edge.From);
-                var connectedArea = formAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
-                if (connectedArea != null)
-                {
-                    formArea.AddConnection(connectedArea);
-                    connectedArea.AddConnection(formArea);
-                }
             }
         }
 
@@ -561,8 +541,7 @@ namespace SCPSLBot.Navigation.Mesh
                         z = binaryReader.ReadSingle()
                     };
 
-                    var newRoomFormVertex = new FormVertex(vertexLocalPosition, roomForm);
-                    roomFormVertices.Add(newRoomFormVertex);
+                    var newRoomFormVertex = AddRoomVertex(vertexLocalPosition, roomForm);
                 }
 
                 ///
@@ -586,8 +565,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 for (var j = 0; j < areasCount; j++)
                 {
-                    var newRoomFormArea = new FormArea(roomForm);
-                    roomFormAreas.Add(newRoomFormArea);
+                    var newRoomFormArea = MakeRoomArea(Enumerable.Empty<FormVertex>(), roomForm);
 
                     var areaVerticesCount = binaryReader.ReadInt32();
                     var areaVertices = new int[areaVerticesCount];
@@ -608,12 +586,18 @@ namespace SCPSLBot.Navigation.Mesh
 
                 foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (roomFormAreas[areaIndex], vertices)))
                 {
-                    area.Vertices.AddRange(vertices.Select(vertexIdx => roomFormVertices![vertexIdx]));
+                    foreach (var areaVertex in vertices.Select(vertexIdx => roomFormVertices[vertexIdx]))
+                    {
+                        area.AddVertex(areaVertex);
+                    }
                 }
 
                 foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (roomFormAreas[areaIndex], conns)))
                 {
-                    area.ConnectedFormAreas.AddRange(conns.Select(connectedIndex => roomFormAreas[connectedIndex]));
+                    foreach (var connectingArea in conns.Select(connectedIndex => roomFormAreas[connectedIndex]))
+                    {
+                        area.AddConnection(connectingArea);
+                    }
                 }
             }
         }
@@ -651,8 +635,7 @@ namespace SCPSLBot.Navigation.Mesh
                         z = binaryReader.ReadSingle()
                     };
 
-                    var newFormVertex = new FormVertex(vertexLocalPosition, connectorForm);
-                    connectorFormVertices.Add(newFormVertex);
+                    var newFormVertex = AddConnectorVertex(vertexLocalPosition, connectorForm);
                 }
 
                 ///
@@ -676,8 +659,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 for (var j = 0; j < areasCount; j++)
                 {
-                    var newFormArea = new FormArea(connectorForm);
-                    connectorFormAreas.Add(newFormArea);
+                    var newRoomFormArea = MakeConnectorArea(Enumerable.Empty<FormVertex>(), connectorForm);
 
                     var areaVerticesCount = binaryReader.ReadInt32();
                     var areaVertices = new int[areaVerticesCount];
@@ -698,12 +680,18 @@ namespace SCPSLBot.Navigation.Mesh
 
                 foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (connectorFormAreas[areaIndex], vertices)))
                 {
-                    area.Vertices.AddRange(vertices.Select(vertexIdx => connectorFormVertices![vertexIdx]));
+                    foreach (var areaVertex in vertices.Select(vertexIdx => connectorFormVertices[vertexIdx]))
+                    {
+                        area.AddVertex(areaVertex);
+                    }
                 }
 
                 foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (connectorFormAreas[areaIndex], conns)))
                 {
-                    area.ConnectedFormAreas.AddRange(conns.Select(connectedIndex => connectorFormAreas[connectedIndex]));
+                    foreach (var connectingArea in conns.Select(connectedIndex => connectorFormAreas[connectedIndex]))
+                    {
+                        area.AddConnection(connectingArea);
+                    }
                 }
             }
         }
@@ -806,18 +794,6 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var vertices = new Dictionary<FormVertex, RoomVertex>();
                 VerticesByRoom.Add(room.Identifier, vertices);
-
-                var roomForm = GetRoomForm(room.Identifier.gameObject.name);
-
-                if (!VerticesByRoomForm.TryGetValue(roomForm, out var roomFormVertices))
-                {
-                    continue;
-                }
-
-                foreach (var f in roomFormVertices)
-                {
-                    vertices.Add(f, new RoomVertex(f, room.Identifier));
-                }
             }
         }
 
@@ -832,29 +808,6 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var areas = new List<RoomArea>();
                 AreasByRoom.Add(room.Identifier, areas);
-
-                var roomForm = GetRoomForm(room.Identifier.gameObject.name);
-
-                if (!AreasByRoomForm.TryGetValue(roomForm, out var roomFormAreas))
-                {
-                    continue;
-                }
-
-                areas.AddRange(roomFormAreas.Select(k => new RoomArea(k, room.Identifier, formArea => areas.Find(a => a.FormArea == formArea))));
-
-                foreach (var roomArea in areas)
-                {
-                    var connectedFormEdges = roomArea.FormArea.ConnectedFormAreas
-                        .Select(cfa => (cfa, cfe: cfa.Edges.First(cfe => roomArea.FormArea.Edges.Any(e => cfe == new FormEdge(e.To, e.From)))));
-
-                    foreach (var (connectedFormArea, connectedFormEdge) in connectedFormEdges)
-                    {
-                        var connectedArea = areas.Find(a => a.FormArea == connectedFormArea);
-                        var connectedEdge = new Edge(VerticesByRoom[room.Identifier][connectedFormEdge.From], VerticesByRoom[room.Identifier][connectedFormEdge.To]);
-
-                        roomArea.ConnectedAreaEdges.Add(connectedArea, connectedEdge);
-                    }
-                }
             }
         }
 
