@@ -134,7 +134,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool DeleteVertex(Vector3 position)
         {
-            var vertex = NavigationMesh.GetRoomVertexNearby(position);
+            var vertex = NavigationMesh.GetRoomVertexNearby(position)?.RoomFormVertex;
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby to remove.");
@@ -142,17 +142,27 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
+            var roomForm = vertex.Form;
 
-            SeletedRoomVertices.Remove(vertex.RoomFormVertex);
+            SeletedRoomVertices.Remove(vertex);
 
-            if (!NavigationMesh.DeleteRoomVertex(vertex.RoomFormVertex))
+            if (!NavigationMesh.DeleteRoomVertex(vertex))
             {
                 return false;
             }
 
-            Log.Info($"Vertex at local position {vertex.RoomFormVertex.LocalPosition} removed under room {roomForm}.");
+            foreach (var area in NavigationMesh.AreasByRoomForm[vertex.Form].ToArray())
+            {
+                area.RemoveVertex(vertex);
+                if (area.Vertices.Count < 3)
+                {
+                    NavigationMesh.RemoveRoomArea(area);
+
+                    Log.Warning($"Area at local center position {area.LocalCenterPosition} removed under room {vertex.Form}.");
+                }
+            }
+
+            Log.Info($"Vertex at local position {vertex.LocalPosition} removed under room {roomForm}.");
 
             return true;
         }
@@ -230,7 +240,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public FormArea MakeArea(Vector3 position)
         {
-            if (SeletedRoomVertices.Count < 2)
+            if (SeletedRoomVertices.Count < 3)
             {
                 Log.Warning($"Not enough vertices (min 3) selected.");
                 return null;

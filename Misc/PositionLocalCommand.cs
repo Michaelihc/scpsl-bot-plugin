@@ -35,9 +35,9 @@ namespace SCPSLBot.Misc
             var room = RoomIdUtils.RoomAtPositionRaycasts(playerPos);
 
             var relPlayerPos = room.transform.InverseTransformPoint(playerPos);
-            var roomKind = (room.Name, room.Shape, room.Zone);
+            var roomForm = room.gameObject.name;
 
-            response = $"Relative player {playerCommandSender.Nickname} position to room of kind {roomKind}: {relPlayerPos}";
+            response = $"Relative player {playerCommandSender.Nickname} position to room of kind {roomForm}: {relPlayerPos}";
             Log.Info(response);
 
             return true;

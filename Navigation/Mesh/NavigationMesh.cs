@@ -41,14 +41,12 @@ namespace SCPSLBot.Navigation.Mesh
         private NavigationMesh()
         {
             RoomVertexCreated += (FormVertex formVertex) => AddVertices(formVertex, VerticesByRoom, (formVertex, formInst) => new RoomVertex(formVertex, formInst));
-            RoomVertexDeleted += (FormVertex formVertex) => RemoveFormVertexFromAreas(formVertex, AreasByRoomForm[formVertex.Form]);
             RoomVertexDeleted += (FormVertex formVertex) => RemoveVertices(formVertex, VerticesByRoom);
 
             RoomAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, areaGetter) => new RoomArea(formArea, room, areaGetter));
             RoomAreaDeleted += (FormArea formArea) => RemoveAreas(formArea, AreasByRoom);
 
             ConnectorVertexCreated += (FormVertex formVertex) => AddVertices(formVertex, VerticesByConnector, (formVertex, formInst) => new ConnectorVertex(formVertex, formInst));
-            ConnectorVertexDeleted += (FormVertex formVertex) => RemoveFormVertexFromAreas(formVertex, AreasByConnectorForm[formVertex.Form]);
             ConnectorVertexDeleted += (FormVertex formVertex) => RemoveVertices(formVertex, VerticesByConnector);
 
             ConnectorAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByConnector, (formArea, connector, areaGetter) => new ConnectorArea(formArea, connector, areaGetter));
@@ -331,7 +329,6 @@ namespace SCPSLBot.Navigation.Mesh
         {
             foreach (var connectorVerticesPair in verticesByFormInstance.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
-                Log.Debug($"Connector vertex removed.");
                 connectorVerticesPair.Value.Remove(formVertex);
             }
         }
@@ -470,20 +467,6 @@ namespace SCPSLBot.Navigation.Mesh
         public void AddConnectorVertexToArea(FormArea area, FormVertex vertex, FormVertex beforeVertex)
         {
             area.AddVertex(vertex, beforeVertex);
-        }
-
-        private void RemoveFormVertexFromAreas(FormVertex formVertex, List<FormArea> formAreas)
-        {
-            foreach (var area in formAreas.ToArray())
-            {
-                area.RemoveVertex(formVertex);
-                if (area.Vertices.Count < 3)
-                {
-                    DeleteFormArea(area, formAreas);
-
-                    Log.Warning($"Area at local center position {area.LocalCenterPosition} removed under form {formVertex.Form}.");
-                }
-            }
         }
 
         #endregion
@@ -895,17 +878,8 @@ namespace SCPSLBot.Navigation.Mesh
         public static bool StartsWithForm<TBehaviour>(TBehaviour behaviour, string comparingForm)
             where TBehaviour : MonoBehaviour
         {
-            return behaviour.gameObject.name.StartsWith(comparingForm);
-        }
-
-        public static bool StartsWithForm(RoomIdentifier room, string comparingForm)
-        {
-            return room.gameObject.name.StartsWith(comparingForm);
-        }
-
-        public static bool StartsWithForm(RoomConnector roomConnector, string comparingForm)
-        {
-            return roomConnector.gameObject.name.StartsWith(comparingForm);
+            var gameObjectName = behaviour.gameObject.name;
+            return gameObjectName.Equals(gameObjectName.EndsWith("(Clone)") ? $"{comparingForm}(Clone)" : comparingForm);
         }
     }
 }

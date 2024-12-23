@@ -32,10 +32,9 @@ namespace SCPSLBot.Navigation.Commands
             NavigationMesh.Instance.ResetAreas();
             NavigationMesh.Instance.ResetVertices();
 
+            NavigationMesh.Instance.InitRoomVertices();
+            NavigationMesh.Instance.InitRoomAreas();
             NavigationSystem.Instance.LoadMesh();
-
-            NavigationMesh.Instance.InitRoomVertices();  // Assuming map is already generated.
-            NavigationMesh.Instance.InitRoomAreas();  // Assuming map is already generated.
 
             response = $"Navigation mesh re-loaded.";
             return true;
