@@ -43,35 +43,7 @@ namespace SCPSLBot.Navigation
             NavigationMesh.InitRoomVertices();
             NavigationMesh.InitRoomAreas();
             LoadMesh();
-
-            Log.Info($"Connecting areas between rooms.");
             
-            foreach (var connector in RoomConnector.AllConnectors)
-            {
-                if (connector.Rooms.Length == 2)
-                {
-                    var doorCenterPosition = connector.transform.position + Vector3.up;  // assuming pivot point is located at the bottom of all doors
-
-                    var edgeInFront = NavigationMesh.GetNearestEdge(doorCenterPosition, connector.Rooms[0]);
-                    var edgeInBack = NavigationMesh.GetNearestEdge(doorCenterPosition, connector.Rooms[1]);
-                    
-                    if (edgeInFront != null && edgeInBack != null)
-                    {
-                        // Connect
-                        var areaInFront = NavigationMesh.AreasByRoom[edgeInFront.Value.From.Room]
-                            .Find(a => a.FormArea.Edges.Any(e => e == new FormEdge(edgeInFront.Value.From.RoomFormVertex, edgeInFront.Value.To.RoomFormVertex)));
-
-                        var areaInBack = NavigationMesh.AreasByRoom[edgeInBack.Value.From.Room]
-                            .Find(a => a.FormArea.Edges.Any(e => e == new FormEdge(edgeInBack.Value.From.RoomFormVertex, edgeInBack.Value.To.RoomFormVertex)));
-
-                        areaInFront.ForeignConnectedAreas.Add(areaInBack);
-                        areaInFront.ConnectedAreaEdges.Add(areaInBack, new Edge(edgeInBack.Value.From, edgeInBack.Value.To));
-
-                        areaInBack.ForeignConnectedAreas.Add(areaInFront);
-                        areaInBack.ConnectedAreaEdges.Add(areaInFront, new Edge(edgeInFront.Value.From, edgeInFront.Value.To));
-                    }
-                }
-            }
             Log.Info($"Connecting areas between elevator destinations.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
             foreach (ElevatorGroup group in elevatorGroups)
