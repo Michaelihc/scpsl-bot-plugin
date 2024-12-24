@@ -13,7 +13,7 @@ namespace SCPSLBot.Navigation.Mesh.Room
         public override Vector3 CenterPosition => Room.transform.TransformPoint(FormArea.LocalCenterPosition);
         public Vector3 LocalCenterPosition => FormArea.LocalCenterPosition;
 
-        public override Dictionary<FormArea, Area> ConnectedAreasOfForm { get; } = new();
+        public override Dictionary<RoomFormArea, Area> ConnectedAreasOfForm { get; } = new();
         public List<Area> ForeignConnectedAreas { get; } = new();
 
         public override IEnumerable<Area> ConnectedAreas => FormArea.ConnectedFormAreas.Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
@@ -22,7 +22,7 @@ namespace SCPSLBot.Navigation.Mesh.Room
         public IEnumerable<RoomArea> ForeignConnectedRoomAreas => ForeignConnectedAreas.OfType<RoomArea>();
         public IEnumerable<RoomArea> ConnectedRoomAreas => ConnectedAreas.OfType<RoomArea>();
 
-        public RoomArea(FormArea formArea, RoomIdentifier room, Func<FormArea, Area> areaGetter) : base(formArea, areaGetter)
+        public RoomArea(RoomFormArea formArea, RoomIdentifier room, Func<RoomFormArea, Area> areaGetter) : base(formArea, areaGetter)
         {
             Room = room;
         }
@@ -30,7 +30,7 @@ namespace SCPSLBot.Navigation.Mesh.Room
         public override bool ContainsEdge(Edge edge)
         {
             var (from, to) = (edge.From as RoomVertex, edge.To as RoomVertex);
-            return FormArea.Edges.Contains(new FormEdge(from!.RoomFormVertex, to!.RoomFormVertex));
+            return FormArea.Edges.Contains(new RoomFormEdge(from!.RoomFormVertex, to!.RoomFormVertex));
         }
 
         public override string ToString()

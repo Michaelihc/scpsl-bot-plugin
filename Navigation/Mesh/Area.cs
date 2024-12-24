@@ -6,18 +6,18 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal abstract class Area
     {
-        public FormArea FormArea { get; }
+        public RoomFormArea FormArea { get; }
 
         public abstract Vector3 CenterPosition { get; }
         public abstract Dictionary<Area, Edge> ConnectedAreaEdges { get; }
         public abstract IEnumerable<Area> ConnectedAreas { get; }
-        public abstract Dictionary<FormArea, Area> ConnectedAreasOfForm { get; }
+        public abstract Dictionary<RoomFormArea, Area> ConnectedAreasOfForm { get; }
 
-        public Area(FormArea formArea, Func<FormArea, Area> areaGetter)
+        public Area(RoomFormArea formArea, Func<RoomFormArea, Area> areaGetter)
         {
             FormArea = formArea;
 
-            FormArea.ConnectionAdded += (FormArea otherFormArea) => AddConnection(otherFormArea, areaGetter.Invoke(otherFormArea));
+            FormArea.ConnectionAdded += (RoomFormArea otherFormArea) => AddConnection(otherFormArea, areaGetter.Invoke(otherFormArea));
             FormArea.ConnectionRemoved += RemoveConnection;
 
             foreach (var connectedFormArea in FormArea.ConnectedFormAreas)
@@ -28,12 +28,12 @@ namespace SCPSLBot.Navigation.Mesh
 
         public abstract bool ContainsEdge(Edge edge);
 
-        private void AddConnection(FormArea otherFormArea, Area otherArea)
+        private void AddConnection(RoomFormArea otherFormArea, Area otherArea)
         {
             ConnectedAreasOfForm.Add(otherFormArea, otherArea);
         }
 
-        private void RemoveConnection(FormArea otherFormArea)
+        private void RemoveConnection(RoomFormArea otherFormArea)
         {
             ConnectedAreasOfForm.Remove(otherFormArea);
         }

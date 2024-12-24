@@ -26,7 +26,7 @@ namespace SCPSLBot.Navigation.Mesh
         private RoomArea CachedRoomArea { get; set; }
         private RoomArea TracingEndingArea { get; set; }
 
-        private List<FormVertex> SeletedRoomVertices { get; } = new();
+        private List<RoomFormVertex> SeletedRoomVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
 
         public void Init()
@@ -53,7 +53,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         }
 
-        public FormVertex FindClosestVertexFacingAt(string roomForm, Vector3 localPosition, Vector3 localDirection)
+        public RoomFormVertex FindClosestVertexFacingAt(string roomForm, Vector3 localPosition, Vector3 localDirection)
         {
             if (!NavigationMesh.Instance.VerticesByRoomForm.TryGetValue(roomForm, out var roomFormVertices))
             {
@@ -70,7 +70,7 @@ namespace SCPSLBot.Navigation.Mesh
             return targetVertex;
         }
 
-        public FormArea FindClosestAreaByCenter(Vector3 position, float radius = 1f)
+        public RoomFormArea FindClosestAreaByCenter(Vector3 position, float radius = 1f)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
@@ -96,7 +96,7 @@ namespace SCPSLBot.Navigation.Mesh
                 .area;
         }
 
-        public FormArea FindClosestAreaFacingAt(string roomForm, Vector3 localPosition, Vector3 localDirection)
+        public RoomFormArea FindClosestAreaFacingAt(string roomForm, Vector3 localPosition, Vector3 localDirection)
         {
             if (!NavigationMesh.Instance.AreasByRoomForm.TryGetValue(roomForm, out var roomFormAreas))
             {
@@ -113,7 +113,7 @@ namespace SCPSLBot.Navigation.Mesh
             return targetArea;
         }
 
-        public FormVertex CreateVertex(Vector3 position)
+        public RoomFormVertex CreateVertex(Vector3 position)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
@@ -238,7 +238,7 @@ namespace SCPSLBot.Navigation.Mesh
             AutoSelectModeEnabled = isEnabled;
         }
 
-        public FormArea MakeArea(Vector3 position)
+        public RoomFormArea MakeArea(Vector3 position)
         {
             if (SeletedRoomVertices.Count < 3)
             {
@@ -467,11 +467,11 @@ namespace SCPSLBot.Navigation.Mesh
             return projected;
         }
 
-        private void ConnectAdjacentAreas(FormArea formArea, List<FormArea> formAreas)
+        private void ConnectAdjacentAreas(RoomFormArea formArea, List<RoomFormArea> formAreas)
         {
             foreach (var edge in formArea.Edges)
             {
-                var inversedEdge = new FormEdge(edge.To, edge.From);
+                var inversedEdge = new RoomFormEdge(edge.To, edge.From);
                 var connectedArea = formAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
                 if (connectedArea != null)
                 {

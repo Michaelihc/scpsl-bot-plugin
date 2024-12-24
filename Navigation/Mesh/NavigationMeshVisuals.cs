@@ -17,14 +17,14 @@ namespace SCPSLBot.Navigation.Mesh
     {
         public Player PlayerEnabledVisualsFor { get; set; }
 
-        public FormVertex NearestRoomVertex { get; set; }
-        public FormVertex FacingRoomVertex { get; set; }
+        public RoomFormVertex NearestRoomVertex { get; set; }
+        public RoomFormVertex FacingRoomVertex { get; set; }
 
-        public List<FormVertex> SelectedRoomVertices { get; set; }
+        public List<RoomFormVertex> SelectedRoomVertices { get; set; }
 
-        public FormArea NearestRoomArea { get; set; }
-        public FormArea FacingRoomArea { get; set; }
-        public FormArea CachedRoomArea { get; set; }
+        public RoomFormArea NearestRoomArea { get; set; }
+        public RoomFormArea FacingRoomArea { get; set; }
+        public RoomFormArea CachedRoomArea { get; set; }
 
         public List<Area> Path { get; } = new ();
 
