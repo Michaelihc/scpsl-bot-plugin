@@ -17,6 +17,7 @@ namespace SCPSLBot.Navigation.Mesh
             .Append(new RoomFormEdge(Vertices.Last(), Vertices.First()));
 
         public List<RoomFormArea> ConnectedFormAreas { get; } = new();
+        public Dictionary<Vector3Int, Dictionary<string, List<RoomFormArea>>> ConnectedFormAreasByConnectorsByDirection { get; } = new();
 
         public event Action<RoomFormVertex> VertexAdded;
         public event Action<RoomFormVertex> VertexRemoved;

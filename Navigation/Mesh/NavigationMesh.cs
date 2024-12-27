@@ -31,7 +31,7 @@ namespace SCPSLBot.Navigation.Mesh
             RoomVertexCreated += (RoomFormVertex formVertex) => AddVertices(formVertex, VerticesByRoom, (formVertex, formInst) => new RoomVertex(formVertex, formInst));
             RoomVertexDeleted += (RoomFormVertex formVertex) => RemoveVertices(formVertex, VerticesByRoom);
 
-            RoomAreaCreated += (RoomFormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, areaGetter) => new RoomArea(formArea, room, areaGetter));
+            RoomAreaCreated += (RoomFormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, roomConnectors, areaGetter) => new RoomArea(formArea, room, roomConnectors, areaGetter));
             RoomAreaDeleted += (RoomFormArea formArea) => RemoveAreas(formArea, AreasByRoom);
         }
 
@@ -244,11 +244,11 @@ namespace SCPSLBot.Navigation.Mesh
             return newFormVertex;
         }
 
-        private void AddVertices<TFormInstance, TVertex>(
+        private void AddVertices<TRoomInstance, TVertex>(
             RoomFormVertex formVertex, 
-            Dictionary<TFormInstance, Dictionary<RoomFormVertex, TVertex>> verticesByFormInstance, 
-            Func<RoomFormVertex, TFormInstance, TVertex> vertexFactory)
-            where TFormInstance : MonoBehaviour
+            Dictionary<TRoomInstance, Dictionary<RoomFormVertex, TVertex>> verticesByFormInstance, 
+            Func<RoomFormVertex, TRoomInstance, TVertex> vertexFactory)
+            where TRoomInstance : MonoBehaviour
         {
             foreach (var verticesPair in verticesByFormInstance.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
@@ -283,10 +283,10 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        private void RemoveVertices<TFormInstance, TVertex>(
+        private void RemoveVertices<TRoomInstance, TVertex>(
             RoomFormVertex formVertex,
-            Dictionary<TFormInstance, Dictionary<RoomFormVertex, TVertex>> verticesByFormInstance)
-            where TFormInstance : MonoBehaviour
+            Dictionary<TRoomInstance, Dictionary<RoomFormVertex, TVertex>> verticesByFormInstance)
+            where TRoomInstance : MonoBehaviour
         {
             foreach (var connectorVerticesPair in verticesByFormInstance.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
@@ -323,16 +323,21 @@ namespace SCPSLBot.Navigation.Mesh
             return newFormArea;
         }
 
-        private void AddAreas<TFormInstance, TArea>(
+        private void AddAreas<TArea>(
             RoomFormArea formArea,
-            Dictionary<TFormInstance, List<TArea>> areasByFormInstance,
-            Func<RoomFormArea, TFormInstance, Func<RoomFormArea, Area>, TArea> areaFactory)
-            where TFormInstance : MonoBehaviour
+            Dictionary<RoomIdentifier, List<TArea>> areasByRoom,
+            Func<RoomFormArea, RoomIdentifier, Dictionary<Vector3Int, string>, Func<RoomFormArea, Area>, TArea> areaFactory)
             where TArea : Area
         {
-            foreach (var (formInstance, areas) in areasByFormInstance.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            foreach (var (room, areas) in areasByRoom.Where(p => StartsWithForm(p.Key, formArea.Form)))
             {
-                var newArea = areaFactory.Invoke(formArea, formInstance, formArea => areas.Find(a => a.FormArea == formArea));
+                var roomConnectorsByDirection = room.ConnectedRooms
+                    .ToDictionary(
+                        connectedRoom => connectedRoom.OccupiedCoords[0] - room.OccupiedCoords[0],
+                        connectedRoom => GetForm(RoomConnector.AllConnectors.SingleOrDefault(c => c.Rooms.Contains(connectedRoom) && c.Rooms.Contains(room))) ?? string.Empty
+                    );
+
+                var newArea = areaFactory.Invoke(formArea, room, roomConnectorsByDirection, formArea => areas.Find(a => a.FormArea == formArea));
                 areas.Add(newArea);
             }
         }
@@ -363,8 +368,8 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        private void RemoveAreas<TFormInstance, TArea>(RoomFormArea formArea, Dictionary<TFormInstance, List<TArea>> areasByFormInstance)
-            where TFormInstance : MonoBehaviour
+        private void RemoveAreas<TRoomInstance, TArea>(RoomFormArea formArea, Dictionary<TRoomInstance, List<TArea>> areasByFormInstance)
+            where TRoomInstance : MonoBehaviour
             where TArea : Area
         {
             foreach (var (_, areasOfForm) in areasByFormInstance.Where(p => StartsWithForm(p.Key, formArea.Form)))
@@ -655,8 +660,8 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static string GetForm(RoomConnector roomConnector)
         {
-            var gameObjectName = roomConnector.gameObject.name;
-            return gameObjectName.EndsWith("(Clone)") ? gameObjectName.Remove(gameObjectName.LastIndexOf("(Clone)")) : gameObjectName;
+            var gameObjectName = roomConnector?.gameObject.name;
+            return (gameObjectName?.EndsWith("(Clone)") ?? false) ? gameObjectName.Remove(gameObjectName.LastIndexOf("(Clone)")) : gameObjectName;
         }
 
         public static bool StartsWithForm<TBehaviour>(TBehaviour behaviour, string comparingForm)
