@@ -21,9 +21,17 @@ namespace SCPSLBot.Navigation.Mesh
         public event Action<RoomFormVertex> RoomVertexDeleted;
 
         public Dictionary<string, List<RoomFormArea>> AreasByRoomForm { get; } = new();
-        public Dictionary<RoomIdentifier, List<RoomArea>> AreasByRoom { get; } = new();
+        public Dictionary<string, Dictionary
+            <Vector3Int, Dictionary
+                <string, List<RoomFormArea>>>> AreasByConnectorByDirectionByRoomForm { get; } = new();
+
         public event Action<RoomFormArea> RoomAreaCreated;
         public event Action<RoomFormArea> RoomAreaDeleted;
+        public event Action<RoomFormArea, Vector3Int, string> RoomConnectorAreaCreated;
+        public event Action<RoomFormArea, Vector3Int, string> RoomConnectorAreaDeleted;
+
+        public Dictionary<RoomIdentifier, List<RoomArea>> AreasByRoom { get; } = new();
+        public Dictionary<RoomIdentifier, Dictionary<Vector3Int, string>> RoomConnectorsByRoom { get; } = new();
 
 
         private NavigationMesh()
@@ -33,6 +41,9 @@ namespace SCPSLBot.Navigation.Mesh
 
             RoomAreaCreated += (RoomFormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, roomConnectors, areaGetter) => new RoomArea(formArea, room, roomConnectors, areaGetter));
             RoomAreaDeleted += (RoomFormArea formArea) => RemoveAreas(formArea, AreasByRoom);
+
+            RoomConnectorAreaCreated += AddConnectorAreas;
+            RoomConnectorAreaDeleted += RemoveConnectorAreas;
         }
 
         #region Mesh querying
@@ -303,22 +314,42 @@ namespace SCPSLBot.Navigation.Mesh
 
         public RoomFormArea MakeRoomArea(IEnumerable<RoomFormVertex> roomFormVertices, string roomForm)
         {
-            var newFormArea = CreateFormArea(roomFormVertices, roomForm, AreasByRoomForm);
+            if (!AreasByRoomForm.TryGetValue(roomForm, out var formAreas))
+            {
+                formAreas = new List<RoomFormArea>();
+                AreasByRoomForm.Add(roomForm, formAreas);
+            }
+
+            var newFormArea = new RoomFormArea(roomFormVertices, roomForm);
+            formAreas.Add(newFormArea);
+
             RoomAreaCreated?.Invoke(newFormArea);
 
             return newFormArea;
         }
 
-        private RoomFormArea CreateFormArea(IEnumerable<RoomFormVertex> formVertices, string form, Dictionary<string, List<RoomFormArea>> areasByForm)
+        public RoomFormArea MakeRoomArea(IEnumerable<RoomFormVertex> roomFormVertices, string roomForm, Vector3Int direction, string connectorForm)
         {
-            if (!areasByForm.TryGetValue(form, out var formAreas))
+            if (!AreasByConnectorByDirectionByRoomForm.TryGetValue(roomForm, out var areasByConnectorByDirection))
             {
-                formAreas = new List<RoomFormArea>();
-                areasByForm.Add(form, formAreas);
+                areasByConnectorByDirection = new();
+                AreasByConnectorByDirectionByRoomForm.Add(roomForm, areasByConnectorByDirection);
+            }
+            if (!areasByConnectorByDirection.TryGetValue(direction, out var areasByConnector))
+            {
+                areasByConnector = new();
+                areasByConnectorByDirection.Add(direction, areasByConnector);
+            }
+            if (!areasByConnector.TryGetValue(connectorForm, out var formAreas))
+            {
+                formAreas = new();
+                areasByConnector.Add(connectorForm, formAreas);
             }
 
-            var newFormArea = new RoomFormArea(formVertices, form);
+            var newFormArea = new RoomFormArea(roomFormVertices, roomForm);
             formAreas.Add(newFormArea);
+
+            RoomConnectorAreaCreated?.Invoke(newFormArea, direction, connectorForm);
 
             return newFormArea;
         }
@@ -331,41 +362,60 @@ namespace SCPSLBot.Navigation.Mesh
         {
             foreach (var (room, areas) in areasByRoom.Where(p => StartsWithForm(p.Key, formArea.Form)))
             {
-                var roomConnectorsByDirection = room.ConnectedRooms
-                    .ToDictionary(
-                        connectedRoom => connectedRoom.OccupiedCoords[0] - room.OccupiedCoords[0],
-                        connectedRoom => GetForm(RoomConnector.AllConnectors.SingleOrDefault(c => c.Rooms.Contains(connectedRoom) && c.Rooms.Contains(room))) ?? string.Empty
-                    );
+                var roomConnectorsByDirection = RoomConnectorsByRoom[room];
 
                 var newArea = areaFactory.Invoke(formArea, room, roomConnectorsByDirection, formArea => areas.Find(a => a.FormArea == formArea));
                 areas.Add(newArea);
             }
         }
 
+        private void AddConnectorAreas(RoomFormArea formArea, Vector3Int direction, string connectorForm)
+        {
+            foreach (var (room, areas) in AreasByRoom.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            {
+                var roomConnectorsByDirection = RoomConnectorsByRoom[room];
+                if (roomConnectorsByDirection[direction] != connectorForm)
+                {
+                    continue;
+                }
+
+                var newArea = new RoomArea(formArea, room, roomConnectorsByDirection, formArea => areas.Find(a => a.FormArea == formArea));
+                areas.Add(newArea);
+            }
+        }
+
         public void RemoveRoomArea(RoomFormArea roomFormArea)
         {
-            if (!DeleteFormArea(roomFormArea, AreasByRoomForm[roomFormArea.Form]))
+            var formAreas = AreasByRoomForm[roomFormArea.Form];
+            if (!formAreas.Remove(roomFormArea))
             {
                 Log.Warning($"No areas at room {roomFormArea.Form} to remove area from.");
                 return;
             }
 
+            foreach (var otherFormArea in formAreas)
+            {
+                otherFormArea.RemoveConnection(roomFormArea);
+            }
+
             RoomAreaDeleted?.Invoke(roomFormArea);
         }
 
-        private bool DeleteFormArea(RoomFormArea formArea, List<RoomFormArea> formAreas)
+        public void RemoveRoomArea(RoomFormArea roomFormArea, Vector3Int direction, string connectorForm)
         {
-            if (!formAreas.Remove(formArea))
+            var formAreas = AreasByConnectorByDirectionByRoomForm[roomFormArea.Form][direction][connectorForm];
+            if (!formAreas.Remove(roomFormArea))
             {
-                return false;
+                Log.Warning($"No areas at room {roomFormArea.Form} direction {direction} connector {connectorForm} to remove area from.");
+                return;
             }
 
             foreach (var otherFormArea in formAreas)
             {
-                otherFormArea.RemoveConnection(formArea);
+                otherFormArea.RemoveConnection(roomFormArea);
             }
 
-            return true;
+            RoomConnectorAreaDeleted?.Invoke(roomFormArea, direction, connectorForm);
         }
 
         private void RemoveAreas<TRoomInstance, TArea>(RoomFormArea formArea, Dictionary<TRoomInstance, List<TArea>> areasByFormInstance)
@@ -376,6 +426,20 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var areaToRemove = areasOfForm.Find(n => n.FormArea == formArea);
                 areasOfForm.Remove(areaToRemove);
+            }
+        }
+
+        private void RemoveConnectorAreas(RoomFormArea formArea, Vector3Int direction, string connectorForm)
+        {
+            foreach (var (room, areasOfRoom) in AreasByRoom.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            {
+                if (RoomConnectorsByRoom[room][direction] != connectorForm)
+                {
+                    continue;
+                }
+
+                var areaToRemove = areasOfRoom.Find(n => n.FormArea == formArea);
+                areasOfRoom.Remove(areaToRemove);
             }
         }
 
@@ -576,16 +640,24 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void InitRoomAreas()
         {
-            foreach (var room in Facility.Rooms)
+            foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier))
             {
                 var areas = new List<RoomArea>();
-                AreasByRoom.Add(room.Identifier, areas);
+                AreasByRoom.Add(room, areas);
+
+                var roomConnectorsByDirection = room.ConnectedRooms
+                    .ToDictionary(
+                        connectedRoom => connectedRoom.OccupiedCoords[0] - room.OccupiedCoords[0],
+                        connectedRoom => GetForm(RoomConnector.AllConnectors.SingleOrDefault(c => c.Rooms.Contains(connectedRoom) && c.Rooms.Contains(room))) ?? string.Empty
+                    );
+                RoomConnectorsByRoom.Add(room, roomConnectorsByDirection);
             }
         }
 
         public void ResetAreas()
         {
             AreasByRoom.Clear();
+            RoomConnectorsByRoom.Clear();
         }
 
         #endregion
