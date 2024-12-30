@@ -384,38 +384,62 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public void RemoveRoomArea(RoomFormArea roomFormArea)
+        public bool RemoveRoomArea(RoomFormArea roomFormArea)
         {
             var formAreas = AreasByRoomForm[roomFormArea.Form];
             if (!formAreas.Remove(roomFormArea))
             {
                 Log.Warning($"No areas at room {roomFormArea.Form} to remove area from.");
-                return;
+                return false;
             }
 
-            foreach (var otherFormArea in formAreas)
+            foreach (var otherFormArea in AreasByRoomForm[roomFormArea.Form])
             {
                 otherFormArea.RemoveConnection(roomFormArea);
             }
+            foreach (var (_, areasByConnector) in AreasByConnectorByDirectionByRoomForm[roomFormArea.Form])
+            {
+                foreach (var (_, connectedFormAreas) in areasByConnector)
+                {
+                    foreach (var otherFormArea in connectedFormAreas)
+                    {
+                        otherFormArea.RemoveConnection(roomFormArea);
+                    }
+                }
+            }
 
             RoomAreaDeleted?.Invoke(roomFormArea);
+
+            return true;
         }
 
-        public void RemoveRoomArea(RoomFormArea roomFormArea, Vector3Int direction, string connectorForm)
+        public bool RemoveRoomArea(RoomFormArea roomFormArea, Vector3Int direction, string connectorForm)
         {
             var formAreas = AreasByConnectorByDirectionByRoomForm[roomFormArea.Form][direction][connectorForm];
             if (!formAreas.Remove(roomFormArea))
             {
-                Log.Warning($"No areas at room {roomFormArea.Form} direction {direction} connector {connectorForm} to remove area from.");
-                return;
+                Log.Warning($"No areas at {roomFormArea.Form} {direction} {connectorForm} to remove area from.");
+                return false;
             }
 
-            foreach (var otherFormArea in formAreas)
+            foreach (var otherFormArea in AreasByRoomForm[roomFormArea.Form])
             {
-                otherFormArea.RemoveConnection(roomFormArea);
+                otherFormArea.RemoveConnection(roomFormArea, direction, connectorForm);
+            }
+            foreach (var (_, areasByConnector) in AreasByConnectorByDirectionByRoomForm[roomFormArea.Form])
+            {
+                foreach (var (_, connectedFormAreas) in areasByConnector)
+                {
+                    foreach (var otherFormArea in connectedFormAreas)
+                    {
+                        otherFormArea.RemoveConnection(roomFormArea, direction, connectorForm);
+                    }
+                }
             }
 
             RoomConnectorAreaDeleted?.Invoke(roomFormArea, direction, connectorForm);
+
+            return true;
         }
 
         private void RemoveAreas<TRoomInstance, TArea>(RoomFormArea formArea, Dictionary<TRoomInstance, List<TArea>> areasByFormInstance)

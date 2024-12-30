@@ -3,10 +3,6 @@ using PlayerRoles;
 using RemoteAdmin;
 using SCPSLBot.Navigation.Mesh;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SCPSLBot.Navigation.Commands
 {
@@ -17,7 +13,7 @@ namespace SCPSLBot.Navigation.Commands
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Makes new navigation mesh area from selection.";
+        public string Description { get; } = "Makes new navigation mesh area from selected vertices.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,9 +29,27 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            var area = NavigationMeshEditor.Instance.MakeArea(playerCommandSender.ReferenceHub.transform.position);
+            var formType = "room";
+            if (arguments.Count > 0)
+            {
+                formType = arguments[0];
+            }
 
-            response = $"Area at local center position {area.LocalCenterPosition} created.";
+            RoomFormArea formArea;
+            switch (formType)
+            {
+                case "room": 
+                    formArea = NavigationMeshEditor.Instance.MakeArea(playerCommandSender.ReferenceHub.transform.position);
+                    break;
+                case "connector":
+                    formArea = NavigationMeshEditor.Instance.MakeArea(playerCommandSender.ReferenceHub.transform.position, connector: true);
+                    break;
+                default:
+                    response = "Unrecognized form type argument!";
+                    return false;
+            }
+
+            response = $"Area at local center position {formArea.LocalCenterPosition} created.";
             return true;
         }
     }

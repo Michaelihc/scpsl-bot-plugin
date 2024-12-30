@@ -1,6 +1,8 @@
-﻿using MapGeneration;
+﻿using Interactables.Interobjects;
+using MapGeneration;
 using MEC;
 using PluginAPI.Core;
+using PluginAPI.Core.Zones.Entrance;
 using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
@@ -238,7 +240,7 @@ namespace SCPSLBot.Navigation.Mesh
             AutoSelectModeEnabled = isEnabled;
         }
 
-        public RoomFormArea MakeArea(Vector3 position)
+        public RoomFormArea MakeArea(Vector3 position, bool connector = false)
         {
             if (SeletedRoomVertices.Count < 3)
             {
@@ -249,16 +251,39 @@ namespace SCPSLBot.Navigation.Mesh
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
-            var newArea = NavigationMesh.MakeRoomArea(SeletedRoomVertices, roomForm);
-            ConnectAdjacentAreas(newArea, NavigationMesh.AreasByRoomForm[roomForm]);
+            RoomFormArea newArea;
+            if (connector)
+            {
+                var connectorForm = GetClosestConnectorForm(position, out var direction, room);
+                newArea = NavigationMesh.MakeRoomArea(SeletedRoomVertices, roomForm, direction, connectorForm);
+                ConnectAdjacentAreas(newArea, direction, connectorForm, roomForm);
 
-            Log.Info($"Area #{NavigationMesh.AreasByRoomForm[roomForm].IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under room {roomForm}.");
+                Log.Info($"{roomForm} {direction} {connectorForm} area #{NavigationMesh.AreasByConnectorByDirectionByRoomForm[roomForm][direction][connectorForm].IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added.");
+            }
+            else
+            {
+                newArea = NavigationMesh.MakeRoomArea(SeletedRoomVertices, roomForm);
+                ConnectAdjacentAreas(newArea, roomForm);
+                
+                Log.Info($"Area #{NavigationMesh.AreasByRoomForm[roomForm].IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under room {roomForm}.");
+            }
 
             SeletedRoomVertices.Clear();
             AutoSelectModeEnabled = false;
             PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on area creation.", 3f);
 
             return newArea;
+        }
+
+        public static string GetClosestConnectorForm(Vector3 position, out Vector3Int direction, RoomIdentifier room = null)
+        {
+            room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
+
+            var nearestRoom = room.ConnectedRooms.OrderBy(connectedRoom => connectedRoom.SubBounds.Select(b => b.SqrDistance(position)).OrderBy(d => d).First()).First();
+            direction = nearestRoom.OccupiedCoords[0] - room.OccupiedCoords[0];
+
+            var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
+            return NavigationMesh.GetForm(closestConnector) ?? string.Empty;
         }
 
         public bool DissolveArea(Vector3 position)
@@ -274,9 +299,25 @@ namespace SCPSLBot.Navigation.Mesh
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
 
-            NavigationMesh.RemoveRoomArea(area);
+            if (!NavigationMesh.RemoveRoomArea(area))
+            {
+                Log.Warning($"Area already does not exist in collection by room.");
 
-            Log.Info($"Area at local center position {area.LocalCenterPosition} removed under room {roomForm}.");
+                foreach (var (direction, areasByConnector) in NavigationMesh.AreasByConnectorByDirectionByRoomForm[roomForm])
+                {
+                    foreach (var (connectorForm, _) in areasByConnector)
+                    {
+                        if (NavigationMesh.RemoveRoomArea(area, direction, connectorForm))
+                        {
+                            Log.Info($"Area removed from {roomForm} {direction} {connectorForm}.");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Log.Info($"Area at local center position {area.LocalCenterPosition} removed under room {roomForm}.");
+            }
 
             return true;
         }
@@ -467,8 +508,11 @@ namespace SCPSLBot.Navigation.Mesh
             return projected;
         }
 
-        private void ConnectAdjacentAreas(RoomFormArea formArea, List<RoomFormArea> formAreas)
+        private void ConnectAdjacentAreas(RoomFormArea formArea, string roomForm)
         {
+            var formAreas = NavigationMesh.AreasByRoomForm[roomForm];
+            var formAreasByConnectorByDirection = NavigationMesh.AreasByConnectorByDirectionByRoomForm[roomForm];
+
             foreach (var edge in formArea.Edges)
             {
                 var inversedEdge = new RoomFormEdge(edge.To, edge.From);
@@ -477,6 +521,50 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     formArea.AddConnection(connectedArea);
                     connectedArea.AddConnection(formArea);
+                }
+
+                foreach (var (connectedDirection, formAreasByConnector) in formAreasByConnectorByDirection)
+                {
+                    foreach (var (connectedConnectorForm, connectedFormAreas) in formAreasByConnector)
+                    {
+                        var connectedConnectorArea = connectedFormAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
+                        if (connectedConnectorArea != null)
+                        {
+                            formArea.AddConnection(connectedConnectorArea, connectedDirection, connectedConnectorForm);
+                            connectedConnectorArea.AddConnection(formArea);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ConnectAdjacentAreas(RoomFormArea formConnectorArea, Vector3Int direction, string connectorForm, string roomForm)
+        {
+            var formAreas = NavigationMesh.AreasByRoomForm[roomForm];
+            var formAreasByConnectorByDirection = NavigationMesh.AreasByConnectorByDirectionByRoomForm[roomForm];
+
+            foreach (var edge in formConnectorArea.Edges)
+            {
+                var inversedEdge = new RoomFormEdge(edge.To, edge.From);
+
+                var connectedArea = formAreas.Find(a => a != formConnectorArea && a.Edges.Contains(inversedEdge));
+                if (connectedArea != null)
+                {
+                    formConnectorArea.AddConnection(connectedArea);
+                    connectedArea.AddConnection(formConnectorArea, direction, connectorForm);
+                }
+
+                foreach (var (connectedDirection, formAreasByConnector) in formAreasByConnectorByDirection)
+                {
+                    foreach (var (connectedConnectorForm, connectedFormAreas) in formAreasByConnector)
+                    {
+                        var connectedConnectorArea = connectedFormAreas.Find(a => a != formConnectorArea && a.Edges.Contains(inversedEdge));
+                        if (connectedConnectorArea != null)
+                        {
+                            formConnectorArea.AddConnection(connectedConnectorArea, connectedDirection, connectedConnectorForm);
+                            connectedConnectorArea.AddConnection(formConnectorArea, direction, connectorForm);
+                        }
+                    }
                 }
             }
         }
