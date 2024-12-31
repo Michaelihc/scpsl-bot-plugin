@@ -16,9 +16,12 @@ namespace SCPSLBot.Navigation.Mesh
 
 
         public Dictionary<string, List<RoomFormVertex>> VerticesByRoomForm { get; } = new();
-        public Dictionary<RoomIdentifier, Dictionary<RoomFormVertex, RoomVertex>> VerticesByRoom { get; } = new();
+        public Dictionary<RoomFormVertex, Dictionary<Vector3Int, List<string>>> ConnectorFormsByDirectionByRoomFormVertex { get; } = new();
         public event Action<RoomFormVertex> RoomVertexCreated;
         public event Action<RoomFormVertex> RoomVertexDeleted;
+
+        public Dictionary<RoomIdentifier, Dictionary<RoomFormVertex, RoomVertex>> VerticesByRoom { get; } = new();
+
 
         public Dictionary<string, List<RoomFormArea>> AreasByRoomForm { get; } = new();
         public Dictionary<string, Dictionary
@@ -36,9 +39,11 @@ namespace SCPSLBot.Navigation.Mesh
 
         private NavigationMesh()
         {
-            RoomVertexCreated += (RoomFormVertex formVertex) => AddVertices(formVertex, VerticesByRoom, (formVertex, formInst) => new RoomVertex(formVertex, formInst));
-            RoomVertexDeleted += (RoomFormVertex formVertex) => RemoveVertices(formVertex, VerticesByRoom);
+            RoomVertexCreated += AddVerticesToRooms;
+            
+            RoomVertexDeleted += RemoveVertexFromRoomConnectors;
             RoomVertexDeleted += RemoveVertexFromAreas;
+            RoomVertexDeleted += RemoveVerticesFromRooms;
 
             RoomAreaCreated += (RoomFormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, roomConnectors, areaGetter) => new RoomArea(formArea, room, roomConnectors, areaGetter));
             RoomAreaDeleted += (RoomFormArea formArea) => RemoveAreas(formArea, AreasByRoom);
@@ -242,6 +247,22 @@ namespace SCPSLBot.Navigation.Mesh
             return newFormVertex;
         }
 
+        public void AddVertexToConnectorRoom(RoomFormVertex formVertex, Vector3Int direction, string connectorForm)
+        {
+            if (!ConnectorFormsByDirectionByRoomFormVertex.TryGetValue(formVertex, out var connectorFormsByDirection))
+            {
+                connectorFormsByDirection = new();
+                ConnectorFormsByDirectionByRoomFormVertex.Add(formVertex, connectorFormsByDirection);
+            }
+            if (!connectorFormsByDirection.TryGetValue(direction, out var connectorForms))
+            {
+                connectorForms = new();
+                connectorFormsByDirection.Add(direction, connectorForms);
+            }
+
+            connectorForms.Add(connectorForm);
+        }
+
         private RoomFormVertex CreateFormVertex(Vector3 localPosition, string form, Dictionary<string, List<RoomFormVertex>> verticesByForm)
         {
             if (!verticesByForm.TryGetValue(form, out var formVertices))
@@ -256,15 +277,11 @@ namespace SCPSLBot.Navigation.Mesh
             return newFormVertex;
         }
 
-        private void AddVertices<TRoomInstance, TVertex>(
-            RoomFormVertex formVertex, 
-            Dictionary<TRoomInstance, Dictionary<RoomFormVertex, TVertex>> verticesByFormInstance, 
-            Func<RoomFormVertex, TRoomInstance, TVertex> vertexFactory)
-            where TRoomInstance : MonoBehaviour
+        private void AddVerticesToRooms(RoomFormVertex formVertex)
         {
-            foreach (var verticesPair in verticesByFormInstance.Where(p => StartsWithForm(p.Key, formVertex.Form)))
+            foreach (var verticesPair in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
-                verticesPair.Value.Add(formVertex, vertexFactory.Invoke(formVertex, verticesPair.Key));
+                verticesPair.Value.Add(formVertex, new RoomVertex(formVertex, verticesPair.Key));
             }
         }
 
@@ -303,12 +320,14 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        private void RemoveVertices<TRoomInstance, TVertex>(
-            RoomFormVertex formVertex,
-            Dictionary<TRoomInstance, Dictionary<RoomFormVertex, TVertex>> verticesByFormInstance)
-            where TRoomInstance : MonoBehaviour
+        private void RemoveVertexFromRoomConnectors(RoomFormVertex formVertex)
         {
-            foreach (var connectorVerticesPair in verticesByFormInstance.Where(p => StartsWithForm(p.Key, formVertex.Form)))
+            ConnectorFormsByDirectionByRoomFormVertex.Remove(formVertex);
+        }
+
+        private void RemoveVerticesFromRooms(RoomFormVertex formVertex)
+        {
+            foreach (var connectorVerticesPair in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
                 connectorVerticesPair.Value.Remove(formVertex);
             }
