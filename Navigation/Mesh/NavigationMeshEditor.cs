@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static UnityEngine.RectTransform;
 
 namespace SCPSLBot.Navigation.Mesh
 {
@@ -256,7 +257,7 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var connectorForm = GetClosestConnectorForm(position, out var direction, room);
                 newArea = NavigationMesh.MakeRoomArea(SeletedRoomVertices, roomForm, direction, connectorForm);
-                ConnectAdjacentAreas(newArea, direction, connectorForm, roomForm);
+                ConnectAdjacentAreas(newArea, roomForm, direction, connectorForm);
 
                 Log.Info($"{roomForm} {direction} {connectorForm} area #{NavigationMesh.AreasByConnectorByDirectionByRoomForm[roomForm][direction][connectorForm].IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added.");
             }
@@ -510,61 +511,43 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void ConnectAdjacentAreas(RoomFormArea formArea, string roomForm)
         {
+            ConnectAdjacentAreas(formArea, roomForm, (connectedArea, formArea) => connectedArea.AddConnection(formArea));
+        }
+
+        private void ConnectAdjacentAreas(RoomFormArea formConnectorArea, string roomForm, Vector3Int direction, string connectorForm)
+        {
+            ConnectAdjacentAreas(formConnectorArea, roomForm, (connectedArea, formArea) => connectedArea.AddConnection(formArea, direction, connectorForm));
+        }
+
+        private void ConnectAdjacentAreas(RoomFormArea formArea, string roomForm, Action<RoomFormArea, RoomFormArea> addIncomingConnectionAction)
+        {
             var formAreas = NavigationMesh.AreasByRoomForm[roomForm];
+            ConnectAdjacentAreas(formArea, addIncomingConnectionAction, (RoomFormArea formArea, RoomFormArea connectedArea) => formArea.AddConnection(connectedArea), formAreas);
+            
             var formAreasByConnectorByDirection = NavigationMesh.AreasByConnectorByDirectionByRoomForm[roomForm];
-
-            foreach (var edge in formArea.Edges)
+            foreach (var (connectedDirection, formAreasByConnector) in formAreasByConnectorByDirection)
             {
-                var inversedEdge = new RoomFormEdge(edge.To, edge.From);
-                var connectedArea = formAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
-                if (connectedArea != null)
+                foreach (var (connectedConnectorForm, connectedFormAreas) in formAreasByConnector)
                 {
-                    formArea.AddConnection(connectedArea);
-                    connectedArea.AddConnection(formArea);
-                }
-
-                foreach (var (connectedDirection, formAreasByConnector) in formAreasByConnectorByDirection)
-                {
-                    foreach (var (connectedConnectorForm, connectedFormAreas) in formAreasByConnector)
-                    {
-                        var connectedConnectorArea = connectedFormAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
-                        if (connectedConnectorArea != null)
-                        {
-                            formArea.AddConnection(connectedConnectorArea, connectedDirection, connectedConnectorForm);
-                            connectedConnectorArea.AddConnection(formArea);
-                        }
-                    }
+                    ConnectAdjacentAreas(formArea, addIncomingConnectionAction, (RoomFormArea formArea, RoomFormArea connectedArea) => formArea.AddConnection(connectedArea, connectedDirection, connectedConnectorForm), connectedFormAreas);
                 }
             }
         }
 
-        private void ConnectAdjacentAreas(RoomFormArea formConnectorArea, Vector3Int direction, string connectorForm, string roomForm)
+        private void ConnectAdjacentAreas(
+            RoomFormArea formArea,
+            Action<RoomFormArea, RoomFormArea> addIncomingConnectionAction, Action<RoomFormArea, RoomFormArea> addOutgoingConnectionAction, 
+            List<RoomFormArea> formAreas)
         {
-            var formAreas = NavigationMesh.AreasByRoomForm[roomForm];
-            var formAreasByConnectorByDirection = NavigationMesh.AreasByConnectorByDirectionByRoomForm[roomForm];
-
-            foreach (var edge in formConnectorArea.Edges)
+            foreach (var edge in formArea.Edges)
             {
                 var inversedEdge = new RoomFormEdge(edge.To, edge.From);
 
-                var connectedArea = formAreas.Find(a => a != formConnectorArea && a.Edges.Contains(inversedEdge));
+                var connectedArea = formAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
                 if (connectedArea != null)
                 {
-                    formConnectorArea.AddConnection(connectedArea);
-                    connectedArea.AddConnection(formConnectorArea, direction, connectorForm);
-                }
-
-                foreach (var (connectedDirection, formAreasByConnector) in formAreasByConnectorByDirection)
-                {
-                    foreach (var (connectedConnectorForm, connectedFormAreas) in formAreasByConnector)
-                    {
-                        var connectedConnectorArea = connectedFormAreas.Find(a => a != formConnectorArea && a.Edges.Contains(inversedEdge));
-                        if (connectedConnectorArea != null)
-                        {
-                            formConnectorArea.AddConnection(connectedConnectorArea, connectedDirection, connectedConnectorForm);
-                            connectedConnectorArea.AddConnection(formConnectorArea, direction, connectorForm);
-                        }
-                    }
+                    addOutgoingConnectionAction.Invoke(formArea, connectedArea);
+                    addIncomingConnectionAction.Invoke(connectedArea, formArea);
                 }
             }
         }

@@ -393,20 +393,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            foreach (var otherFormArea in AreasByRoomForm[roomFormArea.Form])
-            {
-                otherFormArea.RemoveConnection(roomFormArea);
-            }
-            foreach (var (_, areasByConnector) in AreasByConnectorByDirectionByRoomForm[roomFormArea.Form])
-            {
-                foreach (var (_, connectedFormAreas) in areasByConnector)
-                {
-                    foreach (var otherFormArea in connectedFormAreas)
-                    {
-                        otherFormArea.RemoveConnection(roomFormArea);
-                    }
-                }
-            }
+            RemoveConnectionsToArea(roomFormArea, (otherFormArea, formArea) => otherFormArea.RemoveConnection(formArea));
 
             RoomAreaDeleted?.Invoke(roomFormArea);
 
@@ -422,24 +409,22 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            foreach (var otherFormArea in AreasByRoomForm[roomFormArea.Form])
-            {
-                otherFormArea.RemoveConnection(roomFormArea, direction, connectorForm);
-            }
-            foreach (var (_, areasByConnector) in AreasByConnectorByDirectionByRoomForm[roomFormArea.Form])
-            {
-                foreach (var (_, connectedFormAreas) in areasByConnector)
-                {
-                    foreach (var otherFormArea in connectedFormAreas)
-                    {
-                        otherFormArea.RemoveConnection(roomFormArea, direction, connectorForm);
-                    }
-                }
-            }
+            RemoveConnectionsToArea(roomFormArea, (otherFormArea, formArea) => otherFormArea.RemoveConnection(formArea, direction, connectorForm));
 
             RoomConnectorAreaDeleted?.Invoke(roomFormArea, direction, connectorForm);
 
             return true;
+        }
+
+        private void RemoveConnectionsToArea(RoomFormArea roomFormArea, Action<RoomFormArea, RoomFormArea> removeConnectionAction)
+        {
+            foreach (var otherFormArea in AreasByRoomForm[roomFormArea.Form]
+                .Concat(AreasByConnectorByDirectionByRoomForm[roomFormArea.Form]
+                    .SelectMany(p => p.Value)
+                    .SelectMany(p => p.Value)))
+            {
+                removeConnectionAction.Invoke(otherFormArea, roomFormArea);
+            }
         }
 
         private void RemoveAreas<TRoomInstance, TArea>(RoomFormArea formArea, Dictionary<TRoomInstance, List<TArea>> areasByFormInstance)
