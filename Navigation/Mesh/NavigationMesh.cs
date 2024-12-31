@@ -38,6 +38,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             RoomVertexCreated += (RoomFormVertex formVertex) => AddVertices(formVertex, VerticesByRoom, (formVertex, formInst) => new RoomVertex(formVertex, formInst));
             RoomVertexDeleted += (RoomFormVertex formVertex) => RemoveVertices(formVertex, VerticesByRoom);
+            RoomVertexDeleted += RemoveVertexFromAreas;
 
             RoomAreaCreated += (RoomFormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, roomConnectors, areaGetter) => new RoomArea(formArea, room, roomConnectors, areaGetter));
             RoomAreaDeleted += (RoomFormArea formArea) => RemoveAreas(formArea, AreasByRoom);
@@ -292,6 +293,14 @@ namespace SCPSLBot.Navigation.Mesh
             connectorFormVertices.Remove(formVertex);
 
             return true;
+        }
+
+        private void RemoveVertexFromAreas(RoomFormVertex formVertex)
+        {
+            foreach (var area in AreasByRoomForm[formVertex.Form])
+            {
+                area.RemoveVertex(formVertex);
+            }
         }
 
         private void RemoveVertices<TRoomInstance, TVertex>(

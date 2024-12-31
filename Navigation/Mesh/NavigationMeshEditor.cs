@@ -156,7 +156,6 @@ namespace SCPSLBot.Navigation.Mesh
 
             foreach (var area in NavigationMesh.AreasByRoomForm[vertex.Form].ToArray())
             {
-                area.RemoveVertex(vertex);
                 if (area.Vertices.Count < 3)
                 {
                     NavigationMesh.RemoveRoomArea(area);
