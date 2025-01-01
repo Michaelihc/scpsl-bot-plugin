@@ -815,7 +815,8 @@ namespace SCPSLBot.Navigation.Mesh
             return roomObjectName.EndsWith("(Clone)") ? roomObjectName.Remove(roomObjectName.LastIndexOf("(Clone)")) : roomObjectName;
         }
 
-        public static string GetForm(RoomConnector roomConnector)
+        public static string GetForm<TBehaviour>(TBehaviour roomConnector)
+            where TBehaviour : MonoBehaviour
         {
             var gameObjectName = roomConnector?.gameObject.name;
             return (gameObjectName?.EndsWith("(Clone)") ?? false) ? gameObjectName.Remove(gameObjectName.LastIndexOf("(Clone)")) : gameObjectName;

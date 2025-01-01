@@ -1,4 +1,5 @@
 ﻿using Interactables.Interobjects;
+using Interactables.Interobjects.DoorUtils;
 using MapGeneration;
 using MEC;
 using PluginAPI.Core;
@@ -280,7 +281,13 @@ namespace SCPSLBot.Navigation.Mesh
             direction = nearestRoom.OccupiedCoords[0] - room.OccupiedCoords[0];
 
             var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
-            return NavigationMesh.GetForm(closestConnector) ?? string.Empty;
+            if (closestConnector != null)
+            {
+                return NavigationMesh.GetForm(closestConnector);
+            }
+
+            var closestDoorConnector = DoorVariant.AllDoors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
+            return NavigationMesh.GetForm(closestDoorConnector) ?? string.Empty;
         }
 
         public bool DissolveArea(Vector3 position)
