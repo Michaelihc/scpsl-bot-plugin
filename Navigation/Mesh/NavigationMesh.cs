@@ -505,21 +505,16 @@ namespace SCPSLBot.Navigation.Mesh
         public void ReadMesh(BinaryReader binaryReader)
         {
             var version = binaryReader.ReadByte();
-            if (version < 2)
+            if (version < 3)
             {
                 Log.Error($"Version in navmesh file is newer or older than supported.");
                 return;
             }
 
-            ReadRooms(binaryReader);
-
-            if (version < 3)
-            {
-                return;
-            }
+            ReadRooms(binaryReader, version);
         }
 
-        private void ReadRooms(BinaryReader binaryReader)
+        private void ReadRooms(BinaryReader binaryReader, byte version)
         {
             var roomFormCount = binaryReader.ReadInt32();
 
@@ -553,6 +548,34 @@ namespace SCPSLBot.Navigation.Mesh
                     };
 
                     var newRoomFormVertex = AddRoomVertex(vertexLocalPosition, roomForm);
+                }
+
+                if (version > 3)
+                {
+                    var connectorVertexCount = binaryReader.ReadInt32();
+                    for (var j = 0; j < connectorVertexCount; j++)
+                    {
+                        var idxConnectorVertex = binaryReader.ReadInt32();
+                        var formVertex = VerticesByRoomForm[roomForm][idxConnectorVertex];
+
+                        var directionCount = binaryReader.ReadInt32();
+                        for (var k = 0; k < directionCount; k++)
+                        {
+                            var direction = new Vector3Int()
+                            {
+                                x = binaryReader.ReadInt32(),
+                                y = binaryReader.ReadInt32(),
+                                z = binaryReader.ReadInt32()
+                            };
+
+                            var connectorCount = binaryReader.ReadInt32();
+                            for (var l = 0; l < connectorCount; l++)
+                            {
+                                var connectorForm = binaryReader.ReadString();
+                                AddVertexToRoomConnector(formVertex, direction, connectorForm);
+                            }
+                        }
+                    }
                 }
 
                 ///
@@ -615,7 +638,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void WriteMesh(BinaryWriter binaryWriter)
         {
-            byte version = 3;
+            byte version = 4;
             binaryWriter.Write(version);
             
             ///
@@ -624,7 +647,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             binaryWriter.Write(VerticesByRoomForm.Count);
 
-            foreach (var (roomForm, vertices) in VerticesByRoomForm.Select(p => (p.Key, p.Value)))
+            foreach (var (roomForm, vertices) in VerticesByRoomForm)
             {
                 binaryWriter.Write(roomForm);
 
@@ -634,6 +657,27 @@ namespace SCPSLBot.Navigation.Mesh
                     binaryWriter.Write(vertex.LocalPosition.x);
                     binaryWriter.Write(vertex.LocalPosition.y);
                     binaryWriter.Write(vertex.LocalPosition.z);
+                }
+
+                binaryWriter.Write(ConnectorFormsByDirectionByRoomFormVertex.Count);
+                foreach (var (vertex, connectorFormsByDirection) in ConnectorFormsByDirectionByRoomFormVertex)
+                {
+                    var vertexIdx = vertices.IndexOf(vertex);
+                    binaryWriter.Write(vertexIdx);
+
+                    binaryWriter.Write(connectorFormsByDirection.Count);
+                    foreach (var (direction, connectorForms) in connectorFormsByDirection)
+                    {
+                        binaryWriter.Write(direction.x);
+                        binaryWriter.Write(direction.y);
+                        binaryWriter.Write(direction.z);
+
+                        binaryWriter.Write(connectorForms.Count);
+                        foreach (var connectorForm in connectorForms)
+                        {
+                            binaryWriter.Write(connectorForm);
+                        }
+                    }
                 }
 
                 if (!AreasByRoomForm.TryGetValue(roomForm, out var areas))
