@@ -276,7 +276,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
 
-            var nearestRoom = room.ConnectedRooms.OrderBy(connectedRoom => connectedRoom.SubBounds.Select(b => b.SqrDistance(position)).OrderBy(d => d).First()).First();
+            var nearestRoom = room.ConnectedRooms.OrderBy(connectedRoom => Vector3.SqrMagnitude(connectedRoom.transform.position - position)).First();
             direction = nearestRoom.OccupiedCoords[0] - room.OccupiedCoords[0];
 
             var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
