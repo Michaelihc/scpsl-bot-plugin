@@ -3,10 +3,6 @@ using PlayerRoles;
 using RemoteAdmin;
 using SCPSLBot.Navigation.Mesh;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SCPSLBot.Navigation.Commands
 {
@@ -33,9 +29,29 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            var vertex = NavigationMeshEditor.Instance.CreateVertex(playerCommandSender.ReferenceHub.transform.position);
+            var formType = "room";
+            if (arguments.Count > 0)
+            {
+                formType = arguments[0];
+            }
 
-            response = $"Vertex at local position {vertex.LocalPosition} added.";
+            var playerPosition = playerCommandSender.ReferenceHub.transform.position;
+
+            RoomFormVertex formVertex;
+            switch (formType)
+            {
+                case "room":
+                    formVertex = NavigationMeshEditor.Instance.CreateVertex(playerPosition);
+                    break;
+                case "connector":
+                    formVertex = NavigationMeshEditor.Instance.CreateVertex(playerPosition, connector: true);
+                    break;
+                default:
+                    response = "Unrecognized form type argument!";
+                    return false;
+            }
+
+            response = $"Vertex at local position {formVertex.LocalPosition} created.";
             return true;
         }
     }

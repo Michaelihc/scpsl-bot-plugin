@@ -2,15 +2,11 @@
 using MapGeneration;
 using MEC;
 using PluginAPI.Core;
-using PluginAPI.Core.Zones.Entrance;
 using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using static UnityEngine.RectTransform;
 
 namespace SCPSLBot.Navigation.Mesh
 {
@@ -38,6 +34,7 @@ namespace SCPSLBot.Navigation.Mesh
             Visuals.Init();
 
             Timing.RunCoroutine(RunEachFrame(UpdateEditing));
+            Timing.RunCoroutine(RunEachFrame(UpdateMeshEventLogging));
 
             Timing.RunCoroutine(RunEachFrame(UpdateNearestVertex));
             Timing.RunCoroutine(RunEachFrame(UpdateFacingVertex));
@@ -116,7 +113,7 @@ namespace SCPSLBot.Navigation.Mesh
             return targetArea;
         }
 
-        public RoomFormVertex CreateVertex(Vector3 position)
+        public RoomFormVertex CreateVertex(Vector3 position, bool connector = false)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
@@ -128,11 +125,15 @@ namespace SCPSLBot.Navigation.Mesh
                 localPosition = GetProjectedPosition(localPosition);
             }
 
-            var newVertex = NavigationMesh.AddRoomVertex(localPosition, roomForm);
+            var newFormVertex = NavigationMesh.AddRoomVertex(localPosition, roomForm);
 
-            Log.Info($"Vertex #{NavigationMesh.VerticesByRoomForm[roomForm].IndexOf(newVertex)} at local position {newVertex.LocalPosition} added under room {roomForm}.");
+            if (connector)
+            {
+                var connectorForm = GetClosestConnectorForm(position, out var direction, room);
+                NavigationMesh.AddVertexToRoomConnector(newFormVertex, direction, connectorForm);
+            }
 
-            return newVertex;
+            return newFormVertex;
         }
 
         public bool DeleteVertex(Vector3 position)
@@ -144,8 +145,6 @@ namespace SCPSLBot.Navigation.Mesh
 
                 return false;
             }
-
-            var roomForm = vertex.Form;
 
             SeletedRoomVertices.Remove(vertex);
 
@@ -160,11 +159,9 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     NavigationMesh.RemoveRoomArea(area);
 
-                    Log.Warning($"Area at local center position {area.LocalCenterPosition} removed under room {vertex.Form}.");
+                    Log.Warning($"Area at local center position {area.LocalCenterPosition} dissolved under room {vertex.Form}.");
                 }
             }
-
-            Log.Info($"Vertex at local position {vertex.LocalPosition} removed under room {roomForm}.");
 
             return true;
         }
@@ -193,7 +190,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            Log.Info($"Vertex #{NavigationMesh.VerticesByRoomForm[roomForm].IndexOf(vertex)} of room kind {roomForm} moved to new local position {vertex.LocalPosition}.");
+            Log.Info($"Vertex #{NavigationMesh.VerticesByRoomForm[roomForm].IndexOf(vertex)} of room {roomForm} moved to new local position {vertex.LocalPosition}.");
 
             return true;
         }
@@ -561,6 +558,49 @@ namespace SCPSLBot.Navigation.Mesh
 
                 Log.Debug($"Visuals.PlayerEnabledVisualsFor.DisplayNickname = {Visuals.PlayerEnabledVisualsFor?.DisplayNickname}");
             }
+        }
+
+        private void UpdateMeshEventLogging()
+        {
+            if (PlayerEditing == LastPlayerEditing)
+            {
+                return;
+            }
+
+            if (PlayerEditing != null)
+            {
+                NavigationMesh.RoomVertexCreated += LogVertexCreated;
+                NavigationMesh.RoomVertexDeleted += LogVertexDeleted;
+                NavigationMesh.RoomVertexAddedToConnector += LogVertexAddedToRoomConnector;
+                NavigationMesh.RoomVertexRemovedFromConnectors += LogVertexRemovedFromRoomConnectors;
+            }
+            else
+            {
+                NavigationMesh.RoomVertexCreated -= LogVertexCreated;
+                NavigationMesh.RoomVertexDeleted -= LogVertexDeleted;
+                NavigationMesh.RoomVertexAddedToConnector -= LogVertexAddedToRoomConnector;
+                NavigationMesh.RoomVertexRemovedFromConnectors -= LogVertexRemovedFromRoomConnectors;
+            }
+        }
+
+        private void LogVertexCreated(RoomFormVertex formVertex)
+        {
+            Log.Info($"Vertex #{NavigationMesh.VerticesByRoomForm[formVertex.Form].IndexOf(formVertex)} at local position {formVertex.LocalPosition} added under room {formVertex.Form}.");
+        }
+
+        private void LogVertexDeleted(RoomFormVertex formVertex)
+        {
+            Log.Info($"Vertex at local position {formVertex.LocalPosition} deleted under room {formVertex.Form}.");
+        }
+
+        private void LogVertexAddedToRoomConnector(RoomFormVertex formVertex, Vector3Int direction, string connectorForm)
+        {
+            Log.Info($"Vertex #{NavigationMesh.VerticesByRoomForm[formVertex.Form].IndexOf(formVertex)} added to connector {connectorForm} at direction {direction}");
+        }
+
+        private void LogVertexRemovedFromRoomConnectors(RoomFormVertex formVertex)
+        {
+            Log.Info($"Vertex at local position {formVertex.LocalPosition} removed from all connectors under room {formVertex.Form}.");
         }
 
         private void UpdateNearestVertex()

@@ -19,6 +19,8 @@ namespace SCPSLBot.Navigation.Mesh
         public Dictionary<RoomFormVertex, Dictionary<Vector3Int, List<string>>> ConnectorFormsByDirectionByRoomFormVertex { get; } = new();
         public event Action<RoomFormVertex> RoomVertexCreated;
         public event Action<RoomFormVertex> RoomVertexDeleted;
+        public event Action<RoomFormVertex, Vector3Int, string> RoomVertexAddedToConnector;
+        public event Action<RoomFormVertex> RoomVertexRemovedFromConnectors;
 
         public Dictionary<RoomIdentifier, Dictionary<RoomFormVertex, RoomVertex>> VerticesByRoom { get; } = new();
 
@@ -247,7 +249,7 @@ namespace SCPSLBot.Navigation.Mesh
             return newFormVertex;
         }
 
-        public void AddVertexToConnectorRoom(RoomFormVertex formVertex, Vector3Int direction, string connectorForm)
+        public void AddVertexToRoomConnector(RoomFormVertex formVertex, Vector3Int direction, string connectorForm)
         {
             if (!ConnectorFormsByDirectionByRoomFormVertex.TryGetValue(formVertex, out var connectorFormsByDirection))
             {
@@ -261,6 +263,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             connectorForms.Add(connectorForm);
+            RoomVertexAddedToConnector?.Invoke(formVertex, direction, connectorForm);
         }
 
         private RoomFormVertex CreateFormVertex(Vector3 localPosition, string form, Dictionary<string, List<RoomFormVertex>> verticesByForm)
@@ -323,6 +326,7 @@ namespace SCPSLBot.Navigation.Mesh
         private void RemoveVertexFromRoomConnectors(RoomFormVertex formVertex)
         {
             ConnectorFormsByDirectionByRoomFormVertex.Remove(formVertex);
+            RoomVertexRemovedFromConnectors?.Invoke(formVertex);
         }
 
         private void RemoveVerticesFromRooms(RoomFormVertex formVertex)
