@@ -11,9 +11,6 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class NavigationMesh
     {
-        [Obsolete]
-        public static NavigationMesh Instance { get; } = new();
-
         public static Dictionary<string, NavigationMesh> MeshesByRoomForm { get; } = new();
 
 
