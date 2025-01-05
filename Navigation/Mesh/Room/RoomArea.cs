@@ -39,6 +39,16 @@ namespace SCPSLBot.Navigation.Mesh.Room
             return FormArea.Edges.Contains(new FormEdge(from!.RoomFormVertex, to!.RoomFormVertex));
         }
 
+        public override void AddConnection(Area otherArea)
+        {
+            ForeignConnectedAreas.Add(otherArea);
+        }
+
+        public override void RemoveConnection(Area otherArea)
+        {
+            ForeignConnectedAreas.Remove(otherArea);
+        }
+
         public override string ToString()
         {
             return FormArea.Form;

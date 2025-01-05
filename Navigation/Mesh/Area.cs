@@ -17,23 +17,26 @@ namespace SCPSLBot.Navigation.Mesh
         {
             FormArea = formArea;
 
-            FormArea.ConnectionAdded += (FormArea otherFormArea) => AddConnection(otherFormArea, areaGetter.Invoke(otherFormArea));
-            FormArea.ConnectionRemoved += RemoveConnection;
+            FormArea.ConnectionAdded += (FormArea otherFormArea) => AddConnectionOfForm(otherFormArea, areaGetter.Invoke(otherFormArea));
+            FormArea.ConnectionRemoved += RemoveConnectionOfForm;
 
             foreach (var connectedFormArea in FormArea.ConnectedFormAreas)
             {
-                AddConnection(connectedFormArea, areaGetter.Invoke(connectedFormArea));
+                AddConnectionOfForm(connectedFormArea, areaGetter.Invoke(connectedFormArea));
             }
         }
 
         public abstract bool ContainsEdge(Edge edge);
 
-        private void AddConnection(FormArea otherFormArea, Area otherArea)
+        public abstract void AddConnection(Area otherArea);
+        public abstract void RemoveConnection(Area otherArea);
+
+        private void AddConnectionOfForm(FormArea otherFormArea, Area otherArea)
         {
             ConnectedAreasOfForm.Add(otherFormArea, otherArea);
         }
 
-        private void RemoveConnection(FormArea otherFormArea)
+        private void RemoveConnectionOfForm(FormArea otherFormArea)
         {
             ConnectedAreasOfForm.Remove(otherFormArea);
         }

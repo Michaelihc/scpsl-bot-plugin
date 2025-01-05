@@ -419,7 +419,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool CacheArea(Vector3 position)
         {
-            CachedRoomArea = NavigationMesh.GetAreaWithin(position);
+            CachedRoomArea = NavigationMesh.GetRoomAreaWithin(position);
 
             return CachedRoomArea != null;
         }

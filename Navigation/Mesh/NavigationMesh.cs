@@ -41,7 +41,18 @@ namespace SCPSLBot.Navigation.Mesh
 
         #region Mesh querying
 
-        public static RoomArea GetAreaWithin(Vector3 position)
+        public static Area GetAreaWithin(Vector3 position)
+        {
+            var roomArea = GetRoomAreaWithin(position);
+            if (roomArea != null)
+            {
+                return roomArea;
+            }
+
+            return null;    // TODO: GetConnectorAreaWithin
+        }
+
+        public static RoomArea GetRoomAreaWithin(Vector3 position)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
 
