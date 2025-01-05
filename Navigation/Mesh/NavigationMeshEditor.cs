@@ -130,6 +130,7 @@ namespace SCPSLBot.Navigation.Mesh
                 mesh = new NavigationMesh();
                 NavigationMesh.MeshesByRoomForm.Add(roomForm, mesh);
 
+                AddLoggingHandlers(mesh);
             }
             var newFormVertex = mesh.AddVertex(localPosition, roomForm);
 
@@ -551,18 +552,28 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 foreach (var mesh in NavigationMesh.MeshesByRoomForm.Values)
                 {
-                    mesh.FormVertexCreated += LogVertexCreated;
-                    mesh.FormVertexDeleted += LogVertexDeleted;
+                    AddLoggingHandlers(mesh);
                 }
             }
             else
             {
                 foreach (var mesh in NavigationMesh.MeshesByRoomForm.Values)
                 {
-                    mesh.FormVertexCreated -= LogVertexCreated;
-                    mesh.FormVertexDeleted -= LogVertexDeleted;
+                    RemoveLoggingHandlers(mesh);
                 }
             }
+        }
+
+        private void AddLoggingHandlers(NavigationMesh mesh)
+        {
+            mesh.FormVertexCreated += LogVertexCreated;
+            mesh.FormVertexDeleted += LogVertexDeleted;
+        }
+
+        private void RemoveLoggingHandlers(NavigationMesh mesh)
+        {
+            mesh.FormVertexCreated -= LogVertexCreated;
+            mesh.FormVertexDeleted -= LogVertexDeleted;
         }
 
         private void LogVertexCreated(FormVertex formVertex)

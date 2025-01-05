@@ -245,7 +245,7 @@ namespace SCPSLBot.Navigation.Mesh
             return newFormVertex;
         }
 
-        private void AddVerticesToRooms(FormVertex formVertex)
+        private static void AddVerticesToRooms(FormVertex formVertex)
         {
             foreach (var verticesPair in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
@@ -283,7 +283,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        private void RemoveVerticesFromRooms(FormVertex formVertex)
+        private static void RemoveVerticesFromRooms(FormVertex formVertex)
         {
             foreach (var (_, vertices) in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
