@@ -5,43 +5,43 @@ using UnityEngine;
 
 namespace SCPSLBot.Navigation.Mesh
 {
-    internal class RoomFormArea
+    internal class FormArea
     {
         public string Form { get; private set; }
-        public List<RoomFormVertex> Vertices { get; } = new();
+        public List<FormVertex> Vertices { get; } = new();
 
         public Vector3 LocalCenterPosition => Vertices.Select(v => v.LocalPosition)
             .Aggregate(Vector3.zero, (a, u) => a + u) / Vertices.Count;
 
-        public IEnumerable<RoomFormEdge> Edges => Vertices.Zip(Vertices.Skip(1), (v1, v2) => new RoomFormEdge(v1, v2))
-            .Append(new RoomFormEdge(Vertices.Last(), Vertices.First()));
+        public IEnumerable<FormEdge> Edges => Vertices.Zip(Vertices.Skip(1), (v1, v2) => new FormEdge(v1, v2))
+            .Append(new FormEdge(Vertices.Last(), Vertices.First()));
 
-        public List<RoomFormArea> ConnectedFormAreas { get; } = new();
+        public List<FormArea> ConnectedFormAreas { get; } = new();
 
-        public event Action<RoomFormVertex> VertexAdded;
-        public event Action<RoomFormVertex> VertexRemoved;
+        public event Action<FormVertex> VertexAdded;
+        public event Action<FormVertex> VertexRemoved;
 
-        public event Action<RoomFormArea> ConnectionAdded;
-        public event Action<RoomFormArea> ConnectionRemoved;
+        public event Action<FormArea> ConnectionAdded;
+        public event Action<FormArea> ConnectionRemoved;
 
-        public RoomFormArea(string form)
+        public FormArea(string form)
         {
             Form = form;
         }
 
-        public RoomFormArea(IEnumerable<RoomFormVertex> vertices, string form)
+        public FormArea(IEnumerable<FormVertex> vertices, string form)
         {
             Form = form;
             Vertices.AddRange(vertices);
         }
 
-        public void AddVertex(RoomFormVertex vertex)
+        public void AddVertex(FormVertex vertex)
         {
             Vertices.Add(vertex);
             VertexAdded?.Invoke(vertex);
         }
 
-        public void AddVertex(RoomFormVertex vertex, RoomFormVertex beforeVertex)
+        public void AddVertex(FormVertex vertex, FormVertex beforeVertex)
         {
             var atIdx = Vertices.IndexOf(beforeVertex);
             Vertices.Insert(atIdx, vertex);
@@ -49,7 +49,7 @@ namespace SCPSLBot.Navigation.Mesh
             VertexAdded?.Invoke(vertex);
         }
 
-        public void RemoveVertex(RoomFormVertex vertex)
+        public void RemoveVertex(FormVertex vertex)
         {
             if (Vertices.Remove(vertex))
             {
@@ -57,13 +57,13 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public void AddConnection(RoomFormArea connectingArea)
+        public void AddConnection(FormArea connectingArea)
         {
             ConnectedFormAreas.Add(connectingArea);
             ConnectionAdded?.Invoke(connectingArea);
         }
 
-        public void RemoveConnection(RoomFormArea connectedArea)
+        public void RemoveConnection(FormArea connectedArea)
         {
             if (ConnectedFormAreas.Remove(connectedArea))
             {

@@ -12,14 +12,14 @@ namespace SCPSLBot.Navigation.Mesh.Room
 {
     internal class RoomVertex : Vertex
     {
-        public RoomFormVertex RoomFormVertex { get; }
+        public FormVertex RoomFormVertex { get; }
         public RoomIdentifier Room { get; }
 
         public override Vector3 Position => Room.transform.TransformPoint(RoomFormVertex.LocalPosition);
 
         public Vector3 LocalPosition => RoomFormVertex.LocalPosition;
 
-        public RoomVertex(RoomFormVertex roomFormVertex, RoomIdentifier room)
+        public RoomVertex(FormVertex roomFormVertex, RoomIdentifier room)
         {
             RoomFormVertex = roomFormVertex;
             Room = room;

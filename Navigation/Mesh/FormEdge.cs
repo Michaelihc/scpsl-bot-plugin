@@ -1,18 +1,18 @@
 ﻿namespace SCPSLBot.Navigation.Mesh
 {
-    internal struct RoomFormEdge
+    internal struct FormEdge
     {
-        public RoomFormVertex From;
-        public RoomFormVertex To;
+        public FormVertex From;
+        public FormVertex To;
 
-        public RoomFormEdge(RoomFormVertex from, RoomFormVertex to)
+        public FormEdge(FormVertex from, FormVertex to)
         {
             From = from;
             To = to;
         }
         public override bool Equals(object obj)
         {
-            return obj is RoomFormEdge edge && (From, To).Equals((edge.From, edge.To));
+            return obj is FormEdge edge && (From, To).Equals((edge.From, edge.To));
         }
 
         public override int GetHashCode()
@@ -20,12 +20,12 @@
             return (From, To).GetHashCode();
         }
 
-        public static bool operator ==(RoomFormEdge left, RoomFormEdge right)
+        public static bool operator ==(FormEdge left, FormEdge right)
         {
             return (left.From, left.To) == (right.From, right.To);
         }
 
-        public static bool operator !=(RoomFormEdge left, RoomFormEdge right)
+        public static bool operator !=(FormEdge left, FormEdge right)
         {
             return !(left == right);
         }

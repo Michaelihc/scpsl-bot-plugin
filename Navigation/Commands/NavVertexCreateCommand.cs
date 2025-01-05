@@ -37,7 +37,7 @@ namespace SCPSLBot.Navigation.Commands
 
             var playerPosition = playerCommandSender.ReferenceHub.transform.position;
 
-            RoomFormVertex formVertex;
+            FormVertex formVertex;
             switch (formType)
             {
                 case "room":

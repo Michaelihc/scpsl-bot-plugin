@@ -1,5 +1,4 @@
-﻿using Interactables.Interobjects;
-using MapGeneration;
+﻿using MapGeneration;
 using PluginAPI.Core;
 using SCPSLBot.Navigation.Mesh.Room;
 using System;
@@ -15,29 +14,29 @@ namespace SCPSLBot.Navigation.Mesh
         public static NavigationMesh Instance { get; } = new();
 
 
-        public Dictionary<string, List<RoomFormVertex>> VerticesByRoomForm { get; } = new();
-        public event Action<RoomFormVertex> RoomVertexCreated;
-        public event Action<RoomFormVertex> RoomVertexDeleted;
+        public Dictionary<string, List<FormVertex>> VerticesByRoomForm { get; } = new();
+        public event Action<FormVertex> FormVertexCreated;
+        public event Action<FormVertex> FormVertexDeleted;
 
-        public Dictionary<RoomIdentifier, Dictionary<RoomFormVertex, RoomVertex>> VerticesByRoom { get; } = new();
+        public Dictionary<RoomIdentifier, Dictionary<FormVertex, RoomVertex>> VerticesByRoom { get; } = new();
 
 
-        public Dictionary<string, List<RoomFormArea>> AreasByRoomForm { get; } = new();
-        public event Action<RoomFormArea> RoomAreaCreated;
-        public event Action<RoomFormArea> RoomAreaDeleted;
+        public Dictionary<string, List<FormArea>> AreasByRoomForm { get; } = new();
+        public event Action<FormArea> FormAreaCreated;
+        public event Action<FormArea> FormAreaDeleted;
 
         public Dictionary<RoomIdentifier, List<RoomArea>> AreasByRoom { get; } = new();
 
 
         private NavigationMesh()
         {
-            RoomVertexCreated += AddVerticesToRooms;
+            FormVertexCreated += AddVerticesToRooms;
             
-            RoomVertexDeleted += RemoveVertexFromAreas;
-            RoomVertexDeleted += RemoveVerticesFromRooms;
+            FormVertexDeleted += RemoveVertexFromAreas;
+            FormVertexDeleted += RemoveVerticesFromRooms;
 
-            RoomAreaCreated += (RoomFormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, areaGetter) => new RoomArea(formArea, room, areaGetter));
-            RoomAreaDeleted += (RoomFormArea formArea) => RemoveAreas(formArea, AreasByRoom);
+            FormAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, areaGetter) => new RoomArea(formArea, room, areaGetter));
+            FormAreaDeleted += (FormArea formArea) => RemoveAreas(formArea, AreasByRoom);
         }
 
         #region Mesh querying
@@ -84,7 +83,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 .Where(t => IsEdgeCenterWithinVertically(t.edge, localPosition))
                 .OrderByDescending(t => t.dist)
-                .Select(t => new (RoomFormEdge, float, Vector3)?(t))
+                .Select(t => new (FormEdge, float, Vector3)?(t))
                 .DefaultIfEmpty(null)
                 .First();
 
@@ -204,7 +203,7 @@ namespace SCPSLBot.Navigation.Mesh
             return IsLocalPointWithinArea(area, pointLocalPosition);
         }
 
-        private Vector3 ClampWithinEdgePoints(RoomFormEdge edge, Vector3 planeClosestPoint)
+        private Vector3 ClampWithinEdgePoints(FormEdge edge, Vector3 planeClosestPoint)
         {
             var dir1To2 = edge.To.LocalPosition - edge.From.LocalPosition;
             var dir1ToPoint = planeClosestPoint - edge.From.LocalPosition;
@@ -227,29 +226,29 @@ namespace SCPSLBot.Navigation.Mesh
         #endregion
         #region Mesh manipulation
 
-        public RoomFormVertex AddRoomVertex(Vector3 localPosition, string roomForm)
+        public FormVertex AddVertex(Vector3 localPosition, string roomForm)
         {
             var newFormVertex = CreateFormVertex(localPosition, roomForm, VerticesByRoomForm);
-            RoomVertexCreated?.Invoke(newFormVertex);
+            FormVertexCreated?.Invoke(newFormVertex);
 
             return newFormVertex;
         }
 
-        private RoomFormVertex CreateFormVertex(Vector3 localPosition, string form, Dictionary<string, List<RoomFormVertex>> verticesByForm)
+        private FormVertex CreateFormVertex(Vector3 localPosition, string form, Dictionary<string, List<FormVertex>> verticesByForm)
         {
             if (!verticesByForm.TryGetValue(form, out var formVertices))
             {
-                formVertices = new List<RoomFormVertex>();
+                formVertices = new List<FormVertex>();
                 verticesByForm.Add(form, formVertices);
             }
 
-            var newFormVertex = new RoomFormVertex(localPosition, form);
+            var newFormVertex = new FormVertex(localPosition, form);
             formVertices.Add(newFormVertex);
 
             return newFormVertex;
         }
 
-        private void AddVerticesToRooms(RoomFormVertex formVertex)
+        private void AddVerticesToRooms(FormVertex formVertex)
         {
             foreach (var verticesPair in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
@@ -257,34 +256,34 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public bool DeleteRoomVertex(RoomFormVertex roomFormVertex)
+        public bool DeleteVertex(FormVertex formVertex)
         {
-            var roomForm = roomFormVertex.Form;
+            var form = formVertex.Form;
 
-            if (!DeleteFormVertex(roomFormVertex, VerticesByRoomForm))
+            if (!DeleteFormVertex(formVertex, VerticesByRoomForm))
             {
-                Log.Warning($"No vertices at room {roomForm} to remove vertex from.");
+                Log.Warning($"No vertices at {form} to remove vertex from.");
                 return false;
             }
 
-            RoomVertexDeleted?.Invoke(roomFormVertex);
+            FormVertexDeleted?.Invoke(formVertex);
 
             return true;
         }
 
-        private bool DeleteFormVertex(RoomFormVertex formVertex, Dictionary<string, List<RoomFormVertex>> verticesByForm)
+        private bool DeleteFormVertex(FormVertex formVertex, Dictionary<string, List<FormVertex>> verticesByForm)
         {
-            if (!verticesByForm.TryGetValue(formVertex.Form, out var connectorFormVertices))
+            if (!verticesByForm.TryGetValue(formVertex.Form, out var formVertices))
             {
                 return false;
             }
 
-            connectorFormVertices.Remove(formVertex);
+            formVertices.Remove(formVertex);
 
             return true;
         }
 
-        private void RemoveVertexFromAreas(RoomFormVertex formVertex)
+        private void RemoveVertexFromAreas(FormVertex formVertex)
         {
             foreach (var area in AreasByRoomForm[formVertex.Form])
             {
@@ -292,42 +291,42 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        private void RemoveVerticesFromRooms(RoomFormVertex formVertex)
+        private void RemoveVerticesFromRooms(FormVertex formVertex)
         {
-            foreach (var connectorVerticesPair in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
+            foreach (var (_, vertices) in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
-                connectorVerticesPair.Value.Remove(formVertex);
+                vertices.Remove(formVertex);
             }
         }
 
-        public bool MoveRoomVertex(RoomFormVertex roomFormVertex, Vector3 newLocalPosition)
+        public bool MoveVertex(FormVertex formVertex, Vector3 newLocalPosition)
         {
-            roomFormVertex.LocalPosition = newLocalPosition;
+            formVertex.LocalPosition = newLocalPosition;
 
             return true;
         }
 
-        public RoomFormArea MakeRoomArea(IEnumerable<RoomFormVertex> roomFormVertices, string roomForm)
+        public FormArea MakeArea(IEnumerable<FormVertex> formVertices, string form)
         {
-            if (!AreasByRoomForm.TryGetValue(roomForm, out var formAreas))
+            if (!AreasByRoomForm.TryGetValue(form, out var formAreas))
             {
-                formAreas = new List<RoomFormArea>();
-                AreasByRoomForm.Add(roomForm, formAreas);
+                formAreas = new List<FormArea>();
+                AreasByRoomForm.Add(form, formAreas);
             }
 
-            var newFormArea = new RoomFormArea(roomFormVertices, roomForm);
+            var newFormArea = new FormArea(formVertices, form);
             formAreas.Add(newFormArea);
 
-            RoomAreaCreated?.Invoke(newFormArea);
+            FormAreaCreated?.Invoke(newFormArea);
 
             return newFormArea;
         }
 
 
         private void AddAreas<TArea>(
-            RoomFormArea formArea,
+            FormArea formArea,
             Dictionary<RoomIdentifier, List<TArea>> areasByRoom,
-            Func<RoomFormArea, RoomIdentifier, Func<RoomFormArea, Area>, TArea> areaFactory)
+            Func<FormArea, RoomIdentifier, Func<FormArea, Area>, TArea> areaFactory)
             where TArea : Area
         {
             foreach (var (room, areas) in areasByRoom.Where(p => StartsWithForm(p.Key, formArea.Form)))
@@ -337,52 +336,52 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public bool RemoveRoomArea(RoomFormArea roomFormArea)
+        public bool RemoveArea(FormArea formArea)
         {
-            var formAreas = AreasByRoomForm[roomFormArea.Form];
-            if (!formAreas.Remove(roomFormArea))
+            var formAreas = AreasByRoomForm[formArea.Form];
+            if (!formAreas.Remove(formArea))
             {
-                Log.Warning($"No areas at room {roomFormArea.Form} to remove area from.");
+                Log.Warning($"No areas at {formArea.Form} to remove area from.");
                 return false;
             }
 
-            RemoveConnectionsToArea(roomFormArea, (otherFormArea, formArea) => otherFormArea.RemoveConnection(formArea));
+            RemoveConnectionsToArea(formArea);
 
-            RoomAreaDeleted?.Invoke(roomFormArea);
+            FormAreaDeleted?.Invoke(formArea);
 
             return true;
         }
 
-        private void RemoveConnectionsToArea(RoomFormArea roomFormArea, Action<RoomFormArea, RoomFormArea> removeConnectionAction)
+        private void RemoveConnectionsToArea(FormArea formArea)
         {
-            foreach (var otherFormArea in AreasByRoomForm[roomFormArea.Form])
+            foreach (var otherFormArea in AreasByRoomForm[formArea.Form])
             {
-                removeConnectionAction.Invoke(otherFormArea, roomFormArea);
+                otherFormArea.RemoveConnection(formArea);
             }
         }
 
-        private void RemoveAreas<TRoomInstance, TArea>(RoomFormArea formArea, Dictionary<TRoomInstance, List<TArea>> areasByFormInstance)
+        private void RemoveAreas<TRoomInstance, TArea>(FormArea formArea, Dictionary<TRoomInstance, List<TArea>> areasByFormInstance)
             where TRoomInstance : MonoBehaviour
             where TArea : Area
         {
-            foreach (var (_, areasOfForm) in areasByFormInstance.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            foreach (var (_, areas) in areasByFormInstance.Where(p => StartsWithForm(p.Key, formArea.Form)))
             {
-                var areaToRemove = areasOfForm.Find(n => n.FormArea == formArea);
-                areasOfForm.Remove(areaToRemove);
+                var areaToRemove = areas.Find(n => n.FormArea == formArea);
+                areas.Remove(areaToRemove);
             }
         }
 
-        public void CreateRoomAreaConnection(RoomFormArea fromFormArea, RoomFormArea toFormArea)
+        public void CreateAreaConnection(FormArea fromFormArea, FormArea toFormArea)
         {
             fromFormArea.AddConnection(toFormArea);
         }
 
-        public void DeleteRoomAreaConnection(RoomFormArea fromFormArea, RoomFormArea toFormArea)
+        public void DeleteAreaConnection(FormArea fromFormArea, FormArea toFormArea)
         {
             fromFormArea.RemoveConnection(toFormArea);;
         }
 
-        public void AddRoomVertexToArea(RoomFormArea area, RoomFormVertex vertex, RoomFormVertex beforeVertex)
+        public void AddVertexToArea(FormArea area, FormVertex vertex, FormVertex beforeVertex)
         {
             area.AddVertex(vertex, beforeVertex);
         }
@@ -416,7 +415,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (!VerticesByRoomForm.TryGetValue(roomForm, out var roomFormVertices))
                 {
-                    roomFormVertices = new List<RoomFormVertex>();
+                    roomFormVertices = new List<FormVertex>();
                     VerticesByRoomForm.Add(roomForm, roomFormVertices);
                 }
                 else
@@ -435,7 +434,7 @@ namespace SCPSLBot.Navigation.Mesh
                         z = binaryReader.ReadSingle()
                     };
 
-                    var newRoomFormVertex = AddRoomVertex(vertexLocalPosition, roomForm);
+                    var newRoomFormVertex = AddVertex(vertexLocalPosition, roomForm);
                 }
 
                 ///
@@ -444,7 +443,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (!AreasByRoomForm.TryGetValue(roomForm, out var roomFormAreas))
                 {
-                    roomFormAreas = new List<RoomFormArea>();
+                    roomFormAreas = new List<FormArea>();
                     AreasByRoomForm.Add(roomForm, roomFormAreas);
                 }
                 else
@@ -459,7 +458,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 for (var j = 0; j < areasCount; j++)
                 {
-                    var newRoomFormArea = MakeRoomArea(Enumerable.Empty<RoomFormVertex>(), roomForm);
+                    var newRoomFormArea = MakeArea(Enumerable.Empty<FormVertex>(), roomForm);
 
                     var areaVerticesCount = binaryReader.ReadInt32();
                     var areaVertices = new int[areaVerticesCount];
@@ -552,7 +551,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             foreach (var room in Facility.Rooms)
             {
-                var vertices = new Dictionary<RoomFormVertex, RoomVertex>();
+                var vertices = new Dictionary<FormVertex, RoomVertex>();
                 VerticesByRoom.Add(room.Identifier, vertices);
             }
         }
@@ -616,8 +615,8 @@ namespace SCPSLBot.Navigation.Mesh
             return dist;
         }
 
-        private float GetPointDistToEdgePlane(RoomFormEdge roomEdge, Vector3 localPoint) => GetPointDistToEdgePlane(roomEdge, localPoint, out _);
-        private float GetPointDistToEdgePlane(RoomFormEdge roomEdge, Vector3 localPoint, out Vector3 closestLocalPoint)
+        private float GetPointDistToEdgePlane(FormEdge roomEdge, Vector3 localPoint) => GetPointDistToEdgePlane(roomEdge, localPoint, out _);
+        private float GetPointDistToEdgePlane(FormEdge roomEdge, Vector3 localPoint, out Vector3 closestLocalPoint)
         {
             var dirTo2 = roomEdge.To.LocalPosition - roomEdge.From.LocalPosition;
             var dirToPoint = localPoint - roomEdge.From.LocalPosition;
@@ -631,7 +630,7 @@ namespace SCPSLBot.Navigation.Mesh
             return dist;
         }
 
-        private bool IsEdgeCenterWithinVertically(RoomFormEdge edge, Vector3 localPoint)
+        private bool IsEdgeCenterWithinVertically(FormEdge edge, Vector3 localPoint)
         {
             var localPointYLowest = localPoint.y - 1f;
             var localPointYHighest = localPoint.y + 1f;
