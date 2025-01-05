@@ -34,8 +34,6 @@ namespace SCPSLBot.Navigation.Mesh
 
         private Dictionary<Area, PrimitiveObjectToy> AreaVisuals { get; } = new ();
 
-        private NavigationMesh NavigationMesh { get; } = NavigationMesh.Instance;
-
         private string[] VisualsMessages { get; } = new string[2];
 
         private string SentBroadcastMessage;
@@ -87,7 +85,8 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 if (NearestRoomVertex != null)
                 {
-                    var nearestVertexId = NavigationMesh.VerticesByRoomForm[NearestRoomVertex.Form].IndexOf(NearestRoomVertex);
+                    var mesh = NavigationMesh.MeshesByRoomForm[NearestRoomVertex.Form];
+                    var nearestVertexId = mesh.FormVertices.IndexOf(NearestRoomVertex);
                     VisualsMessages[0] = $"Vertex #{nearestVertexId} in {NearestRoomVertex.Form}";
 
                     var selectedIdx = SelectedRoomVertices.IndexOf(NearestRoomVertex);
@@ -99,7 +98,8 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (FacingRoomVertex != null)
                 {
-                    var facingVertexId = NavigationMesh.VerticesByRoomForm[FacingRoomVertex.Form].IndexOf(FacingRoomVertex);
+                    var mesh = NavigationMesh.MeshesByRoomForm[FacingRoomVertex.Form];
+                    var facingVertexId = mesh.FormVertices.IndexOf(FacingRoomVertex);
                     VisualsMessages[1] = $"Facing vertex #{facingVertexId} in {FacingRoomVertex.Form}";
 
                     var selectedIdx = SelectedRoomVertices.IndexOf(FacingRoomVertex);
@@ -118,13 +118,15 @@ namespace SCPSLBot.Navigation.Mesh
                 if (NearestRoomArea != null)
                 {
                     //var connectedIdsStr = string.Join(", ", NearestArea.ConnectedAreas.Select(c => $"#{c.Id}"));
-                    var NearestAreaId = NavigationMesh.AreasByRoomForm[NearestRoomArea.Form].IndexOf(NearestRoomArea);
+                    var mesh = NavigationMesh.MeshesByRoomForm[NearestRoomArea.Form];
+                    var NearestAreaId = mesh.FormAreas.IndexOf(NearestRoomArea);
                     VisualsMessages[0] = $"Area #{NearestAreaId} in {NearestRoomArea.Form}";
                 }
 
                 if (CachedRoomArea != null)
                 {
-                    var cachedAreaId = NavigationMesh.AreasByRoomForm[CachedRoomArea.Form].IndexOf(CachedRoomArea);
+                    var mesh = NavigationMesh.MeshesByRoomForm[CachedRoomArea.Form];
+                    var cachedAreaId = mesh.FormAreas.IndexOf(CachedRoomArea);
                     VisualsMessages[1] = $"Cached area #{cachedAreaId} in {CachedRoomArea.Form}";
 
                     if (NearestRoomArea != null)
@@ -146,7 +148,8 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (FacingRoomArea != null)
                 {
-                    var facingAreaId = NavigationMesh.AreasByRoomForm[FacingRoomArea.Form].IndexOf(FacingRoomArea);
+                    var mesh = NavigationMesh.MeshesByRoomForm[FacingRoomArea.Form];
+                    var facingAreaId = mesh.FormAreas.IndexOf(FacingRoomArea);
                     VisualsMessages[1] = $"Facing area #{facingAreaId} in {FacingRoomArea.Form}";
 
                     if (NearestRoomArea != null)

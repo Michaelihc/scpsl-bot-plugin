@@ -25,8 +25,6 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private bool isGoalOutside;
         private Vector3 targetAreaClosestPositionToGoal;
-        
-        private readonly NavigationMesh navMesh = NavigationMesh.Instance;
 
         private readonly FpcBotPlayer botPlayer;
 

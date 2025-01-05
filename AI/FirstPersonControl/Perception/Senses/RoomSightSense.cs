@@ -63,7 +63,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
             if (RoomWithin)
             {
                 ForeignRoomsAreas.Clear();
-                foreach (var a in NavigationMesh.Instance.AreasByRoom[RoomWithin])
+                foreach (var a in NavigationMesh.AreasByRoom[RoomWithin])
                 {
                     foreach (var fa in a.ForeignConnectedRoomAreas)
                     {

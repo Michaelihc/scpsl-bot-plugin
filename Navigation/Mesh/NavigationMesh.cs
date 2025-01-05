@@ -11,28 +11,27 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class NavigationMesh
     {
+        [Obsolete]
         public static NavigationMesh Instance { get; } = new();
-
-
-        public Dictionary<string, List<FormVertex>> VerticesByRoomForm { get; } = new();
 
         public static Dictionary<string, NavigationMesh> MeshesByRoomForm { get; } = new();
 
-        public List<FormVertex> Vertices { get; } = new();
+
+        public List<FormVertex> FormVertices { get; } = new();
         public event Action<FormVertex> FormVertexCreated;
         public event Action<FormVertex> FormVertexDeleted;
 
         public static Dictionary<RoomIdentifier, Dictionary<FormVertex, RoomVertex>> VerticesByRoom { get; } = new();
 
 
-        public Dictionary<string, List<FormArea>> AreasByRoomForm { get; } = new();
+        public List<FormArea> FormAreas { get; } = new();
         public event Action<FormArea> FormAreaCreated;
         public event Action<FormArea> FormAreaDeleted;
 
         public static Dictionary<RoomIdentifier, List<RoomArea>> AreasByRoom { get; } = new();
 
 
-        private NavigationMesh()
+        public NavigationMesh()
         {
             FormVertexCreated += AddVerticesToRooms;
             
@@ -230,24 +229,18 @@ namespace SCPSLBot.Navigation.Mesh
         #endregion
         #region Mesh manipulation
 
-        public FormVertex AddVertex(Vector3 localPosition, string roomForm)
+        public FormVertex AddVertex(Vector3 localPosition, string form)
         {
-            var newFormVertex = CreateFormVertex(localPosition, roomForm, VerticesByRoomForm);
+            var newFormVertex = CreateFormVertex(localPosition, form);
             FormVertexCreated?.Invoke(newFormVertex);
 
             return newFormVertex;
         }
 
-        private FormVertex CreateFormVertex(Vector3 localPosition, string form, Dictionary<string, List<FormVertex>> verticesByForm)
+        private FormVertex CreateFormVertex(Vector3 localPosition, string form)
         {
-            if (!verticesByForm.TryGetValue(form, out var formVertices))
-            {
-                formVertices = new List<FormVertex>();
-                verticesByForm.Add(form, formVertices);
-            }
-
             var newFormVertex = new FormVertex(localPosition, form);
-            formVertices.Add(newFormVertex);
+            FormVertices.Add(newFormVertex);
 
             return newFormVertex;
         }
@@ -264,7 +257,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             var form = formVertex.Form;
 
-            if (!DeleteFormVertex(formVertex, VerticesByRoomForm))
+            if (!DeleteFormVertex(formVertex))
             {
                 Log.Warning($"No vertices at {form} to remove vertex from.");
                 return false;
@@ -275,21 +268,16 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        private bool DeleteFormVertex(FormVertex formVertex, Dictionary<string, List<FormVertex>> verticesByForm)
+        private bool DeleteFormVertex(FormVertex formVertex)
         {
-            if (!verticesByForm.TryGetValue(formVertex.Form, out var formVertices))
-            {
-                return false;
-            }
-
-            formVertices.Remove(formVertex);
+            FormVertices.Remove(formVertex);
 
             return true;
         }
 
         private void RemoveVertexFromAreas(FormVertex formVertex)
         {
-            foreach (var area in AreasByRoomForm[formVertex.Form])
+            foreach (var area in FormAreas)
             {
                 area.RemoveVertex(formVertex);
             }
@@ -312,14 +300,8 @@ namespace SCPSLBot.Navigation.Mesh
 
         public FormArea MakeArea(IEnumerable<FormVertex> formVertices, string form)
         {
-            if (!AreasByRoomForm.TryGetValue(form, out var formAreas))
-            {
-                formAreas = new List<FormArea>();
-                AreasByRoomForm.Add(form, formAreas);
-            }
-
             var newFormArea = new FormArea(formVertices, form);
-            formAreas.Add(newFormArea);
+            FormAreas.Add(newFormArea);
 
             FormAreaCreated?.Invoke(newFormArea);
 
@@ -342,7 +324,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool RemoveArea(FormArea formArea)
         {
-            var formAreas = AreasByRoomForm[formArea.Form];
+            var formAreas = FormAreas;
             if (!formAreas.Remove(formArea))
             {
                 Log.Warning($"No areas at {formArea.Form} to remove area from.");
@@ -358,7 +340,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void RemoveConnectionsToArea(FormArea formArea)
         {
-            foreach (var otherFormArea in AreasByRoomForm[formArea.Form])
+            foreach (var otherFormArea in FormAreas)
             {
                 otherFormArea.RemoveConnection(formArea);
             }
@@ -393,7 +375,7 @@ namespace SCPSLBot.Navigation.Mesh
         #endregion
         #region Mesh reading/writing
 
-        public void ReadMesh(BinaryReader binaryReader)
+        public static void ReadMeshes(BinaryReader binaryReader)
         {
             var version = binaryReader.ReadByte();
             if (version < 3)
@@ -402,104 +384,94 @@ namespace SCPSLBot.Navigation.Mesh
                 return;
             }
 
-            ReadRooms(binaryReader, version);
-        }
+            ///
+            /// Rooms reading
+            ///
 
-        private void ReadRooms(BinaryReader binaryReader, byte version)
-        {
             var roomFormCount = binaryReader.ReadInt32();
 
             for (var i = 0; i < roomFormCount; i++)
             {
                 string roomForm = binaryReader.ReadString();
 
-                ///
-                /// Vertices reading
-                /// 
-
-                if (!VerticesByRoomForm.TryGetValue(roomForm, out var roomFormVertices))
+                if (!MeshesByRoomForm.TryGetValue(roomForm, out var formMesh))
                 {
-                    roomFormVertices = new List<FormVertex>();
-                    VerticesByRoomForm.Add(roomForm, roomFormVertices);
-                }
-                else
-                {
-                    roomFormVertices.Clear();
+                    formMesh = new NavigationMesh();
+                    MeshesByRoomForm.Add(roomForm, formMesh);
                 }
 
-                var vertexCount = binaryReader.ReadInt32();
+                formMesh.ReadMesh(binaryReader, roomForm);
+            }
+        }
 
-                for (var j = 0; j < vertexCount; j++)
+        public void ReadMesh(BinaryReader binaryReader, string form)
+        {
+            ///
+            /// Vertices reading
+            /// 
+
+            var vertexCount = binaryReader.ReadInt32();
+
+            for (var j = 0; j < vertexCount; j++)
+            {
+                var vertexLocalPosition = new Vector3()
                 {
-                    var vertexLocalPosition = new Vector3()
-                    {
-                        x = binaryReader.ReadSingle(),
-                        y = binaryReader.ReadSingle(),
-                        z = binaryReader.ReadSingle()
-                    };
+                    x = binaryReader.ReadSingle(),
+                    y = binaryReader.ReadSingle(),
+                    z = binaryReader.ReadSingle()
+                };
 
-                    var newRoomFormVertex = AddVertex(vertexLocalPosition, roomForm);
+                var newRoomFormVertex = AddVertex(vertexLocalPosition, form);
+            }
+
+            ///
+            /// Areas reading
+            ///
+
+            var areasCount = binaryReader.ReadInt32();
+
+            var areasVertices = new int[areasCount][];
+            var areasConnections = new int[areasCount][];
+
+            for (var j = 0; j < areasCount; j++)
+            {
+                var newRoomFormArea = MakeArea(Enumerable.Empty<FormVertex>(), form);
+
+                var areaVerticesCount = binaryReader.ReadInt32();
+                var areaVertices = new int[areaVerticesCount];
+                for (var k = 0; k < areaVerticesCount; k++)
+                {
+                    areaVertices[k] = binaryReader.ReadInt32();
                 }
+                areasVertices[j] = areaVertices;
 
-                ///
-                /// Areas reading
-                /// 
-
-                if (!AreasByRoomForm.TryGetValue(roomForm, out var roomFormAreas))
+                var connectedAreasCount = binaryReader.ReadInt32();
+                var connectedAreas = new int[connectedAreasCount];
+                for (var k = 0; k < connectedAreasCount; k++)
                 {
-                    roomFormAreas = new List<FormArea>();
-                    AreasByRoomForm.Add(roomForm, roomFormAreas);
+                    connectedAreas[k] = binaryReader.ReadInt32();
                 }
-                else
+                areasConnections[j] = connectedAreas;
+            }
+
+            foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (FormAreas[areaIndex], vertices)))
+            {
+                foreach (var areaVertex in vertices.Select(vertexIdx => FormVertices[vertexIdx]))
                 {
-                    roomFormAreas.Clear();
+                    area.AddVertex(areaVertex);
                 }
+            }
 
-                var areasCount = binaryReader.ReadInt32();
-
-                var areasVertices = new int[areasCount][];
-                var areasConnections = new int[areasCount][];
-
-                for (var j = 0; j < areasCount; j++)
+            foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (FormAreas[areaIndex], conns)))
+            {
+                foreach (var connectingArea in conns.Select(connectedIndex => FormAreas[connectedIndex]))
                 {
-                    var newRoomFormArea = MakeArea(Enumerable.Empty<FormVertex>(), roomForm);
-
-                    var areaVerticesCount = binaryReader.ReadInt32();
-                    var areaVertices = new int[areaVerticesCount];
-                    for (var k = 0; k < areaVerticesCount; k++)
-                    {
-                        areaVertices[k] = binaryReader.ReadInt32();
-                    }
-                    areasVertices[j] = areaVertices;
-
-                    var connectedAreasCount = binaryReader.ReadInt32();
-                    var connectedAreas = new int[connectedAreasCount];
-                    for (var k = 0; k < connectedAreasCount; k++)
-                    {
-                        connectedAreas[k] = binaryReader.ReadInt32();
-                    }
-                    areasConnections[j] = connectedAreas;
-                }
-
-                foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (roomFormAreas[areaIndex], vertices)))
-                {
-                    foreach (var areaVertex in vertices.Select(vertexIdx => roomFormVertices[vertexIdx]))
-                    {
-                        area.AddVertex(areaVertex);
-                    }
-                }
-
-                foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (roomFormAreas[areaIndex], conns)))
-                {
-                    foreach (var connectingArea in conns.Select(connectedIndex => roomFormAreas[connectedIndex]))
-                    {
-                        area.AddConnection(connectingArea);
-                    }
+                    area.AddConnection(connectingArea);
                 }
             }
         }
 
-        public void WriteMesh(BinaryWriter binaryWriter)
+        public static void WriteMeshes(BinaryWriter binaryWriter)
         {
             byte version = 4;
             binaryWriter.Write(version);
@@ -508,39 +480,44 @@ namespace SCPSLBot.Navigation.Mesh
             /// Rooms writing
             ///
 
-            binaryWriter.Write(VerticesByRoomForm.Count);
+            binaryWriter.Write(MeshesByRoomForm.Count);
 
-            foreach (var (roomForm, vertices) in VerticesByRoomForm)
+            foreach (var (roomForm, mesh) in MeshesByRoomForm)
             {
                 binaryWriter.Write(roomForm);
 
-                binaryWriter.Write(vertices.Count);
-                foreach (var vertex in vertices)
+                mesh.WriteMesh(binaryWriter);
+            }
+        }
+
+        public void WriteMesh(BinaryWriter binaryWriter)
+        {
+            FormVertices.Clear();
+
+            binaryWriter.Write(FormVertices.Count);
+            foreach (var vertex in FormVertices)
+            {
+                binaryWriter.Write(vertex.LocalPosition.x);
+                binaryWriter.Write(vertex.LocalPosition.y);
+                binaryWriter.Write(vertex.LocalPosition.z);
+            }
+
+
+            FormAreas.Clear();
+
+            binaryWriter.Write(FormAreas.Count);
+            foreach (var area in FormAreas)
+            {
+                binaryWriter.Write(area.Vertices.Count);
+                foreach (var vertexIdx in area.Vertices.Select(areaVertex => FormVertices.IndexOf(areaVertex)))
                 {
-                    binaryWriter.Write(vertex.LocalPosition.x);
-                    binaryWriter.Write(vertex.LocalPosition.y);
-                    binaryWriter.Write(vertex.LocalPosition.z);
+                    binaryWriter.Write(vertexIdx);
                 }
 
-                if (!AreasByRoomForm.TryGetValue(roomForm, out var areas))
+                binaryWriter.Write(area.ConnectedFormAreas.Count);
+                foreach (var connIdx in area.ConnectedFormAreas.Select(connArea => FormAreas.IndexOf(connArea)))
                 {
-                    areas = new();
-                }
-
-                binaryWriter.Write(areas.Count);
-                foreach (var area in areas)
-                {
-                    binaryWriter.Write(area.Vertices.Count);
-                    foreach (var vertexIdx in area.Vertices.Select(areaVertex => VerticesByRoomForm[roomForm].IndexOf(areaVertex)))
-                    {
-                        binaryWriter.Write(vertexIdx);
-                    }
-
-                    binaryWriter.Write(area.ConnectedFormAreas.Count);
-                    foreach (var connIdx in area.ConnectedFormAreas.Select(connArea => AreasByRoomForm[roomForm].IndexOf(connArea)))
-                    {
-                        binaryWriter.Write(connIdx);
-                    }
+                    binaryWriter.Write(connIdx);
                 }
             }
         }
@@ -551,7 +528,7 @@ namespace SCPSLBot.Navigation.Mesh
         public void Init()
         { }
 
-        public void InitRoomVertices()
+        public static void InitRoomVertices()
         {
             foreach (var room in Facility.Rooms)
             {
@@ -560,12 +537,12 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public void ResetVertices()
+        public static void ResetVertices()
         {
             VerticesByRoom.Clear();
         }
 
-        public void InitRoomAreas()
+        public static void InitRoomAreas()
         {
             foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier))
             {
@@ -574,7 +551,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public void ResetAreas()
+        public static void ResetAreas()
         {
             AreasByRoom.Clear();
         }

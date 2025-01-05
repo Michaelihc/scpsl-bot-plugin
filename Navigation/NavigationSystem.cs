@@ -21,8 +21,6 @@ namespace SCPSLBot.Navigation
 
         public string BaseDir { get; set; }
 
-        private NavigationMesh NavigationMesh { get; } = NavigationMesh.Instance;
-
         public void Init()
         {
             EventManager.RegisterEvents(this);
@@ -42,7 +40,7 @@ namespace SCPSLBot.Navigation
 
             NavigationMesh.InitRoomVertices();
             NavigationMesh.InitRoomAreas();
-            LoadMesh();
+            LoadMeshes();
             
             Log.Info($"Connecting areas between elevator destinations.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
@@ -75,7 +73,7 @@ namespace SCPSLBot.Navigation
             Log.Info($"Connecting areas finished.");
         }
 
-        public void LoadMesh()
+        public void LoadMeshes()
         {
             var fileName = "navmesh.slnmf";
             var path = Path.Combine(BaseDir, fileName);
@@ -88,10 +86,10 @@ namespace SCPSLBot.Navigation
             using var fileStream = File.OpenRead(path);
             using var binaryReader = new BinaryReader(fileStream);
 
-            NavigationMesh.ReadMesh(binaryReader);
+            NavigationMesh.ReadMeshes(binaryReader);
         }
 
-        public void SaveMesh()
+        public void SaveMeshes()
         {
             var fileName = "navmesh.slnmf";
             var path = Path.Combine(BaseDir, fileName);
@@ -99,7 +97,7 @@ namespace SCPSLBot.Navigation
             using var fileStream = File.OpenWrite(path);
             using var binaryWriter = new BinaryWriter(fileStream);
 
-            NavigationMesh.WriteMesh(binaryWriter);
+            NavigationMesh.WriteMeshes(binaryWriter);
         }        
 
         #region Private constructor

@@ -29,12 +29,12 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            NavigationMesh.Instance.ResetAreas();
-            NavigationMesh.Instance.ResetVertices();
+            NavigationMesh.ResetAreas();
+            NavigationMesh.ResetVertices();
 
-            NavigationMesh.Instance.InitRoomVertices();
-            NavigationMesh.Instance.InitRoomAreas();
-            NavigationSystem.Instance.LoadMesh();
+            NavigationMesh.InitRoomVertices();
+            NavigationMesh.InitRoomAreas();
+            NavigationSystem.Instance.LoadMeshes();
 
             response = $"Navigation mesh re-loaded.";
             return true;

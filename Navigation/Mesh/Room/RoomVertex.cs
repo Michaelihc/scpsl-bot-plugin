@@ -27,8 +27,7 @@ namespace SCPSLBot.Navigation.Mesh.Room
 
         public override string ToString()
         {
-            var idx = NavigationMesh.Instance.VerticesByRoomForm[RoomFormVertex.Form].IndexOf(RoomFormVertex);
-            return $"#{idx} {RoomFormVertex.Form}";
+            return RoomFormVertex.Form;
         }
     }
 }

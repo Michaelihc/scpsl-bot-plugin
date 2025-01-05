@@ -30,7 +30,6 @@ namespace SCPSLBot
 
             NavigationSystem.Instance.BaseDir = PluginHandler.Get(this).PluginDirectoryPath;
 
-            NavigationMesh.Instance.Init();
             NavigationSystem.Instance.Init();
             NavigationMeshEditor.Instance.Init();
 
