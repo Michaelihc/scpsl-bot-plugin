@@ -17,7 +17,6 @@ namespace SCPSLBot.Navigation.Mesh
             .Append(new RoomFormEdge(Vertices.Last(), Vertices.First()));
 
         public List<RoomFormArea> ConnectedFormAreas { get; } = new();
-        public Dictionary<Vector3Int, Dictionary<string, List<RoomFormArea>>> ConnectedFormAreasByConnectorsByDirection { get; } = new();
 
         public event Action<RoomFormVertex> VertexAdded;
         public event Action<RoomFormVertex> VertexRemoved;
@@ -64,23 +63,9 @@ namespace SCPSLBot.Navigation.Mesh
             ConnectionAdded?.Invoke(connectingArea);
         }
 
-        public void AddConnection(RoomFormArea connectingArea, Vector3Int connectingDirection, string connectingConnectorForm)
-        {
-            ConnectedFormAreasByConnectorsByDirection[connectingDirection][connectingConnectorForm].Add(connectingArea);
-            ConnectionAdded?.Invoke(connectingArea);
-        }
-
         public void RemoveConnection(RoomFormArea connectedArea)
         {
             if (ConnectedFormAreas.Remove(connectedArea))
-            {
-                ConnectionRemoved?.Invoke(connectedArea);
-            }
-        }
-
-        public void RemoveConnection(RoomFormArea connectedArea, Vector3Int connectedDirection, string connectedConnectorForm)
-        {
-            if (ConnectedFormAreasByConnectorsByDirection[connectedDirection][connectedConnectorForm].Remove(connectedArea))
             {
                 ConnectionRemoved?.Invoke(connectedArea);
             }

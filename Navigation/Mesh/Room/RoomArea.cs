@@ -9,7 +9,6 @@ namespace SCPSLBot.Navigation.Mesh.Room
     internal class RoomArea : Area
     {
         public RoomIdentifier Room { get; }
-        public Dictionary<Vector3Int, string> RoomConnectorsByDirection { get; } = new();
 
         public override Vector3 CenterPosition => Room.transform.TransformPoint(FormArea.LocalCenterPosition);
         public Vector3 LocalCenterPosition => FormArea.LocalCenterPosition;
@@ -24,17 +23,14 @@ namespace SCPSLBot.Navigation.Mesh.Room
         public IEnumerable<RoomArea> ConnectedRoomAreas => ConnectedAreas.OfType<RoomArea>();
 
         public RoomArea(
-            RoomFormArea formArea, RoomIdentifier room, Dictionary<Vector3Int, string> roomConnectorsByDirection, Func<RoomFormArea, Area> areaGetter)
+            RoomFormArea formArea, RoomIdentifier room, Func<RoomFormArea, Area> areaGetter)
             : base(formArea, areaGetter)
         {
             Room = room;
-            RoomConnectorsByDirection = roomConnectorsByDirection;
 
             ConnectedAreas = FormArea.ConnectedFormAreas
-                .Concat(FormArea.ConnectedFormAreasByConnectorsByDirection
-                    .SelectMany(p => p.Value.TryGetValue(RoomConnectorsByDirection[p.Key], out var roomFormAreas) ? roomFormAreas : Enumerable.Empty<RoomFormArea>())
-                )
-                .Select(f => ConnectedAreasOfForm[f]).Concat(ForeignConnectedAreas);
+                .Select(f => ConnectedAreasOfForm[f])
+                .Concat(ForeignConnectedAreas);
         }
 
         public override bool ContainsEdge(Edge edge)
