@@ -70,7 +70,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                     var nextTargetArea = this.AreasPath[this.currentPathIdx + 1];
                     var nextTargetAreaEdge = currentArea.ConnectedAreaEdges[nextTargetArea];
 
-                    isEdgeReached = navMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetAreaEdge);
+                    isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetAreaEdge);
                     if (isEdgeReached)
                     {
                         this.currentArea = this.AreasPath[++this.currentPathIdx];
@@ -81,17 +81,17 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             var withinArea = GetAreaWithin();
-            var targetArea = navMesh.GetAreaWithin(goalPosition);
+            var targetArea = NavigationMesh.GetAreaWithin(goalPosition);
 
             if (targetArea == null)
             {
                 var goalRoom = RoomIdUtils.RoomAtPositionRaycasts(goalPosition);
 
-                var nearestEdge = navMesh.GetNearestEdge(goalPosition, out var closestPoint, goalRoom);
+                var nearestEdge = NavigationMesh.GetNearestEdge(goalPosition, out var closestPoint, goalRoom);
                 if (nearestEdge.HasValue)
                 {
                     var nearestRoomFormEdge = new FormEdge(nearestEdge.Value.From.RoomFormVertex, nearestEdge.Value.To.RoomFormVertex);
-                    targetArea = navMesh.AreasByRoom[goalRoom].Find(a => a.FormArea.Edges.Any(e => e == nearestRoomFormEdge));
+                    targetArea = NavigationMesh.AreasByRoom[goalRoom].Find(a => a.FormArea.Edges.Any(e => e == nearestRoomFormEdge));
                     targetAreaClosestPositionToGoal = closestPoint;
                 }
                 else
@@ -113,7 +113,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 //Log.Debug($"New start area {withinArea}.");
                 //Log.Debug($"New goal area {targetArea}.");
 
-                navMesh.FindShortestPath(this.currentArea, this.goalArea, this.AreasPath);
+                NavigationMesh.FindShortestPath(this.currentArea, this.goalArea, this.AreasPath);
                 this.currentPathIdx = 0;
 
                 //Log.Debug($"New path of {this.AreasPath.Count} areas:");
@@ -150,7 +150,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             var playerPosition = botPlayer.PlayerPosition;
             if (playerPosition != lastPlayerPosition)
             {
-                areaWithin = navMesh.GetAreaWithin(playerPosition);
+                areaWithin = NavigationMesh.GetAreaWithin(playerPosition);
                 lastPlayerPosition = playerPosition;
             }
 

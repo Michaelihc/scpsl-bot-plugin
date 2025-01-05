@@ -15,17 +15,21 @@ namespace SCPSLBot.Navigation.Mesh
 
 
         public Dictionary<string, List<FormVertex>> VerticesByRoomForm { get; } = new();
+
+        public static Dictionary<string, NavigationMesh> MeshesByRoomForm { get; } = new();
+
+        public List<FormVertex> Vertices { get; } = new();
         public event Action<FormVertex> FormVertexCreated;
         public event Action<FormVertex> FormVertexDeleted;
 
-        public Dictionary<RoomIdentifier, Dictionary<FormVertex, RoomVertex>> VerticesByRoom { get; } = new();
+        public static Dictionary<RoomIdentifier, Dictionary<FormVertex, RoomVertex>> VerticesByRoom { get; } = new();
 
 
         public Dictionary<string, List<FormArea>> AreasByRoomForm { get; } = new();
         public event Action<FormArea> FormAreaCreated;
         public event Action<FormArea> FormAreaDeleted;
 
-        public Dictionary<RoomIdentifier, List<RoomArea>> AreasByRoom { get; } = new();
+        public static Dictionary<RoomIdentifier, List<RoomArea>> AreasByRoom { get; } = new();
 
 
         private NavigationMesh()
@@ -41,7 +45,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         #region Mesh querying
 
-        public RoomArea GetAreaWithin(Vector3 position)
+        public static RoomArea GetAreaWithin(Vector3 position)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
 
@@ -55,13 +59,13 @@ namespace SCPSLBot.Navigation.Mesh
             return roomAreas.Find(a => IsLocalPointWithinArea(a, localPosition));
         }
 
-        public bool IsAtPositiveEdgeSide(Vector3 position, Edge edge)
+        public static bool IsAtPositiveEdgeSide(Vector3 position, Edge edge)
         {
             return GetPointDistToEdgePlane(edge, position) > 0f;
         }
 
-        public (RoomVertex From, RoomVertex To)? GetNearestEdge(Vector3 position, RoomIdentifier room = null) => GetNearestEdge(position, out _, room);
-        public (RoomVertex From, RoomVertex To)? GetNearestEdge(Vector3 position, out Vector3 closestPoint, RoomIdentifier room = null)
+        public static (RoomVertex From, RoomVertex To)? GetNearestEdge(Vector3 position, RoomIdentifier room = null) => GetNearestEdge(position, out _, room);
+        public static (RoomVertex From, RoomVertex To)? GetNearestEdge(Vector3 position, out Vector3 closestPoint, RoomIdentifier room = null)
         {
             closestPoint = Vector3.zero;
 
@@ -102,7 +106,7 @@ namespace SCPSLBot.Navigation.Mesh
             return (roomEdgeFrom, roomEdgeTo);
         }
 
-        public void FindShortestPath(Area startingArea, Area endArea, List<Area> results)
+        public static void FindShortestPath(Area startingArea, Area endArea, List<Area> results)
         {
             var areasWithPriorityToEvaluate = new Dictionary<Area, float>();
             var cameFromAreas = new Dictionary<Area, Area>();
@@ -170,7 +174,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public RoomVertex GetRoomVertexNearby(Vector3 position, float radius = 1f)
+        public static RoomVertex GetRoomVertexNearby(Vector3 position, float radius = 1f)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
 
@@ -195,7 +199,7 @@ namespace SCPSLBot.Navigation.Mesh
                 .vertex;
         }
 
-        public bool IsPointWithinArea(RoomArea area, Vector3 pointPosition)
+        public static bool IsPointWithinArea(RoomArea area, Vector3 pointPosition)
         {
             var room = area.Room;
             var pointLocalPosition = room.transform.InverseTransformPoint(pointPosition);
@@ -203,7 +207,7 @@ namespace SCPSLBot.Navigation.Mesh
             return IsLocalPointWithinArea(area, pointLocalPosition);
         }
 
-        private Vector3 ClampWithinEdgePoints(FormEdge edge, Vector3 planeClosestPoint)
+        private static Vector3 ClampWithinEdgePoints(FormEdge edge, Vector3 planeClosestPoint)
         {
             var dir1To2 = edge.To.LocalPosition - edge.From.LocalPosition;
             var dir1ToPoint = planeClosestPoint - edge.From.LocalPosition;
@@ -577,7 +581,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         #endregion
 
-        private bool IsLocalPointWithinArea(RoomArea area, Vector3 pointLocalPosition)
+        private static bool IsLocalPointWithinArea(RoomArea area, Vector3 pointLocalPosition)
         {
             var areaRoomFormEdges = area.FormArea.Edges;
 
@@ -600,8 +604,8 @@ namespace SCPSLBot.Navigation.Mesh
             return isAnyVertexWithinVerticalRange;
         }
 
-        private float GetPointDistToEdgePlane(Edge edge, Vector3 point) => GetPointDistToEdgePlane(edge, point, out _);
-        private float GetPointDistToEdgePlane(Edge edge, Vector3 point, out Vector3 closestPoint)
+        private static float GetPointDistToEdgePlane(Edge edge, Vector3 point) => GetPointDistToEdgePlane(edge, point, out _);
+        private static float GetPointDistToEdgePlane(Edge edge, Vector3 point, out Vector3 closestPoint)
         {
             var dirTo2 = edge.To.Position - edge.From.Position;
             var dirToPoint = point - edge.From.Position;
@@ -615,8 +619,8 @@ namespace SCPSLBot.Navigation.Mesh
             return dist;
         }
 
-        private float GetPointDistToEdgePlane(FormEdge roomEdge, Vector3 localPoint) => GetPointDistToEdgePlane(roomEdge, localPoint, out _);
-        private float GetPointDistToEdgePlane(FormEdge roomEdge, Vector3 localPoint, out Vector3 closestLocalPoint)
+        private static float GetPointDistToEdgePlane(FormEdge roomEdge, Vector3 localPoint) => GetPointDistToEdgePlane(roomEdge, localPoint, out _);
+        private static float GetPointDistToEdgePlane(FormEdge roomEdge, Vector3 localPoint, out Vector3 closestLocalPoint)
         {
             var dirTo2 = roomEdge.To.LocalPosition - roomEdge.From.LocalPosition;
             var dirToPoint = localPoint - roomEdge.From.LocalPosition;
@@ -630,7 +634,7 @@ namespace SCPSLBot.Navigation.Mesh
             return dist;
         }
 
-        private bool IsEdgeCenterWithinVertically(FormEdge edge, Vector3 localPoint)
+        private static bool IsEdgeCenterWithinVertically(FormEdge edge, Vector3 localPoint)
         {
             var localPointYLowest = localPoint.y - 1f;
             var localPointYHighest = localPoint.y + 1f;
