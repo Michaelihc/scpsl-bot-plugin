@@ -38,7 +38,7 @@ namespace SCPSLBot.Navigation
 
             Log.Info($"Initializing vertices and areas from room kind counterparts.");
 
-            NavigationMesh.InitRoomVertices();
+            NavigationMesh.InitVertices();
             NavigationMesh.InitRoomAreas();
             LoadMeshes();
             

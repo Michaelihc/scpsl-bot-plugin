@@ -35,8 +35,8 @@ namespace SCPSLBot.Navigation.Mesh.Room
 
         public override bool ContainsEdge(Edge edge)
         {
-            var (from, to) = (edge.From as RoomVertex, edge.To as RoomVertex);
-            return FormArea.Edges.Contains(new FormEdge(from!.RoomFormVertex, to!.RoomFormVertex));
+            var (from, to) = (edge.From, edge.To);
+            return FormArea.Edges.Contains(new FormEdge(from.FormVertex, to.FormVertex));
         }
 
         public override void AddConnection(Area otherArea)

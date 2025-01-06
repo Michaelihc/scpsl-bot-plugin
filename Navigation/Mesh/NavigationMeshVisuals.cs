@@ -179,17 +179,15 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var vertexPosChanged = vertexVisual.Value.transform.position != vertexVisual.Key.Position;
 
-                    if (!NavigationMesh.VerticesByRoom.Values.Any(l => l.Values.Contains(vertexVisual.Key)) || vertexPosChanged)
+                    if (!NavigationMesh.VerticesByRoomOrConnector.Values.Any(l => l.Values.Contains(vertexVisual.Key)) || vertexPosChanged)
                     {
                         NetworkServer.Destroy(vertexVisual.Value.gameObject);
                         VertexVisuals.Remove(vertexVisual.Key);
                     }
                 }
 
-                foreach (var vertex in NavigationMesh.VerticesByRoom.Values.SelectMany(l => l.Values))
+                foreach (var vertex in NavigationMesh.VerticesByRoomOrConnector.Values.SelectMany(l => l.Values))
                 {
-                    var room = vertex.Room;
-
                     if (!VertexVisuals.TryGetValue(vertex, out var visual))
                     {
                         visual = UnityEngine.Object.Instantiate(this.primPrefab);
@@ -219,11 +217,11 @@ namespace SCPSLBot.Navigation.Mesh
 
                     if (visual.gameObject.activeSelf)
                     {
-                        if (NearestRoomArea?.Vertices.Contains(vertex.RoomFormVertex) ?? false)
+                        if (NearestRoomArea?.Vertices.Contains(vertex.FormVertex) ?? false)
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
-                        else if (SelectedRoomVertices.Contains(vertex.RoomFormVertex))
+                        else if (SelectedRoomVertices.Contains(vertex.FormVertex))
                         {
                             visual.NetworkMaterialColor = Color.green;
                         }
@@ -355,8 +353,8 @@ namespace SCPSLBot.Navigation.Mesh
                     foreach (var roomFormEdge in area.FormArea.Edges)
                     {
                         var edge = (
-                            From: NavigationMesh.VerticesByRoom[room][roomFormEdge.From],
-                            To: NavigationMesh.VerticesByRoom[room][roomFormEdge.To]
+                            From: NavigationMesh.VerticesByRoomOrConnector[room.gameObject][roomFormEdge.From],
+                            To: NavigationMesh.VerticesByRoomOrConnector[room.gameObject][roomFormEdge.To]
                         );
 
                         if (!EdgeVisuals.TryGetValue(edge, out var edgeVisualArea))

@@ -144,7 +144,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool DeleteVertex(Vector3 position)
         {
-            var vertex = NavigationMesh.GetRoomVertexNearby(position)?.RoomFormVertex;
+            var vertex = NavigationMesh.GetVertexNearby(position)?.FormVertex;
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby to remove.");
@@ -175,7 +175,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool MoveVertex(Vector3 position)
         {
-            var vertex = NavigationMesh.GetRoomVertexNearby(position)?.RoomFormVertex;
+            var vertex = NavigationMesh.GetVertexNearby(position)?.FormVertex;
             if (vertex == null)
             {
                 Log.Info($"No vertex found nearby to move.");
@@ -205,32 +205,32 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool AddVertexToSelection(Vector3 position)
         {
-            var vertex = NavigationMesh.GetRoomVertexNearby(position);
+            var vertex = NavigationMesh.GetVertexNearby(position);
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby for selection.");
                 return false;
             }
 
-            SeletedRoomVertices.Add(vertex.RoomFormVertex);
+            SeletedRoomVertices.Add(vertex.FormVertex);
 
-            Log.Info($"Vertex at local position {vertex.RoomFormVertex.LocalPosition} added to selection under room {vertex.RoomFormVertex.Form}.");
+            Log.Info($"Vertex at local position {vertex.FormVertex.LocalPosition} added to selection under room {vertex.FormVertex.Form}.");
 
             return true;
         }
 
         public bool RemoveVertexFromSelection(Vector3 position)
         {
-            var vertex = NavigationMesh.GetRoomVertexNearby(position);
+            var vertex = NavigationMesh.GetVertexNearby(position);
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby to remove from selection.");
                 return false;
             }
 
-            SeletedRoomVertices.Remove(vertex.RoomFormVertex);
+            SeletedRoomVertices.Remove(vertex.FormVertex);
 
-            Log.Info($"Vertex at local position {vertex.RoomFormVertex.LocalPosition} removed from selection under room {vertex.RoomFormVertex.Form}.");
+            Log.Info($"Vertex at local position {vertex.FormVertex.LocalPosition} removed from selection under room {vertex.FormVertex.Form}.");
 
             return true;
         }
@@ -590,7 +590,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                Visuals.NearestRoomVertex = NavigationMesh.GetRoomVertexNearby(PlayerEditing.Position, .125f)?.RoomFormVertex;
+                Visuals.NearestRoomVertex = NavigationMesh.GetVertexNearby(PlayerEditing.Position, .125f)?.FormVertex;
             }
         }
 

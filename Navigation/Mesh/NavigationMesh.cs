@@ -12,13 +12,15 @@ namespace SCPSLBot.Navigation.Mesh
     internal class NavigationMesh
     {
         public static Dictionary<string, NavigationMesh> MeshesByRoomForm { get; } = new();
+        public static Dictionary<string, NavigationMesh> MeshesByConnectorForm { get; } = new();
 
 
         public List<FormVertex> FormVertices { get; } = new();
         public event Action<FormVertex> FormVertexCreated;
         public event Action<FormVertex> FormVertexDeleted;
 
-        public static Dictionary<RoomIdentifier, Dictionary<FormVertex, RoomVertex>> VerticesByRoom { get; } = new();
+        public static Dictionary<GameObject, Dictionary<FormVertex, Vertex>> VerticesByRoomOrConnector { get; } = new();
+        public static Dictionary<GameObject, List<Transform>> ConnectorsByRoom { get; } = new();
 
 
         public List<FormArea> FormAreas { get; } = new();
@@ -30,10 +32,10 @@ namespace SCPSLBot.Navigation.Mesh
 
         public NavigationMesh()
         {
-            FormVertexCreated += AddVerticesToRooms;
+            FormVertexCreated += AddVerticesToRoomsOrConnectors;
             
             FormVertexDeleted += RemoveVertexFromAreas;
-            FormVertexDeleted += RemoveVerticesFromRooms;
+            FormVertexDeleted += RemoveVerticesFromRoomsOrConnectors;
 
             FormAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, areaGetter) => new RoomArea(formArea, room, areaGetter));
             FormAreaDeleted += (FormArea formArea) => RemoveAreas(formArea, AreasByRoom);
@@ -71,8 +73,8 @@ namespace SCPSLBot.Navigation.Mesh
             return GetPointDistToEdgePlane(edge, position) > 0f;
         }
 
-        public static (RoomVertex From, RoomVertex To)? GetNearestEdge(Vector3 position, RoomIdentifier room = null) => GetNearestEdge(position, out _, room);
-        public static (RoomVertex From, RoomVertex To)? GetNearestEdge(Vector3 position, out Vector3 closestPoint, RoomIdentifier room = null)
+        public static (Vertex From, Vertex To)? GetNearestEdge(Vector3 position, RoomIdentifier room = null) => GetNearestEdge(position, out _, room);
+        public static (Vertex From, Vertex To)? GetNearestEdge(Vector3 position, out Vector3 closestPoint, RoomIdentifier room = null)
         {
             closestPoint = Vector3.zero;
 
@@ -105,8 +107,8 @@ namespace SCPSLBot.Navigation.Mesh
 
             var (roomFormEdge, dist, closestLocalPoint) = hit.Value;
                 
-            RoomVertex roomEdgeFrom = VerticesByRoom[room][roomFormEdge.From],
-                       roomEdgeTo = VerticesByRoom[room][roomFormEdge.To];
+            Vertex roomEdgeFrom = VerticesByRoomOrConnector[room.gameObject][roomFormEdge.From],
+                   roomEdgeTo = VerticesByRoomOrConnector[room.gameObject][roomFormEdge.To];
 
             closestPoint = room.transform.TransformPoint(closestLocalPoint);
 
@@ -181,11 +183,11 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public static RoomVertex GetRoomVertexNearby(Vector3 position, float radius = 1f)
+        public static Vertex GetVertexNearby(Vector3 position, float radius = 1f)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
 
-            if (!room || !VerticesByRoom.TryGetValue(room, out var roomVertexs))
+            if (!room || !VerticesByRoomOrConnector.TryGetValue(room.gameObject, out var roomVertexs))
             {
                 return null;
             }
@@ -193,7 +195,7 @@ namespace SCPSLBot.Navigation.Mesh
             var radiusSqr = Mathf.Pow(radius, 2);
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var verticesWithinRadius = roomVertexs.Values.Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.RoomFormVertex.LocalPosition - localPosition)))
+            var verticesWithinRadius = roomVertexs.Values.Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.FormVertex.LocalPosition - localPosition)))
                 .Where(t => t.distSqr < radiusSqr);
 
             if (!verticesWithinRadius.Any())
@@ -253,11 +255,11 @@ namespace SCPSLBot.Navigation.Mesh
             return newFormVertex;
         }
 
-        private static void AddVerticesToRooms(FormVertex formVertex)
+        private static void AddVerticesToRoomsOrConnectors(FormVertex formVertex)
         {
-            foreach (var verticesPair in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
+            foreach (var verticesPair in VerticesByRoomOrConnector.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
-                verticesPair.Value.Add(formVertex, new RoomVertex(formVertex, verticesPair.Key));
+                verticesPair.Value.Add(formVertex, new Vertex(formVertex, verticesPair.Key.transform));
             }
         }
 
@@ -291,9 +293,9 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        private static void RemoveVerticesFromRooms(FormVertex formVertex)
+        private static void RemoveVerticesFromRoomsOrConnectors(FormVertex formVertex)
         {
-            foreach (var (_, vertices) in VerticesByRoom.Where(p => StartsWithForm(p.Key, formVertex.Form)))
+            foreach (var (_, vertices) in VerticesByRoomOrConnector.Where(p => StartsWithForm(p.Key, formVertex.Form)))
             {
                 vertices.Remove(formVertex);
             }
@@ -536,18 +538,18 @@ namespace SCPSLBot.Navigation.Mesh
         public void Init()
         { }
 
-        public static void InitRoomVertices()
+        public static void InitVertices()
         {
             foreach (var room in Facility.Rooms)
             {
-                var vertices = new Dictionary<FormVertex, RoomVertex>();
-                VerticesByRoom.Add(room.Identifier, vertices);
+                var vertices = new Dictionary<FormVertex, Vertex>();
+                VerticesByRoomOrConnector.Add(room.GameObject, vertices);
             }
         }
 
         public static void ResetVertices()
         {
-            VerticesByRoom.Clear();
+            VerticesByRoomOrConnector.Clear();
         }
 
         public static void InitRoomAreas()
@@ -645,6 +647,12 @@ namespace SCPSLBot.Navigation.Mesh
             where TBehaviour : MonoBehaviour
         {
             var gameObjectName = behaviour.gameObject.name;
+            return gameObjectName.Equals(gameObjectName.EndsWith("(Clone)") ? $"{comparingForm}(Clone)" : comparingForm);
+        }
+
+        public static bool StartsWithForm(GameObject gameObject, string comparingForm)
+        {
+            var gameObjectName = gameObject.name;
             return gameObjectName.Equals(gameObjectName.EndsWith("(Clone)") ? $"{comparingForm}(Clone)" : comparingForm);
         }
     }
