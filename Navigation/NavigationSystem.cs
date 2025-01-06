@@ -6,7 +6,6 @@ using PluginAPI.Core;
 using PluginAPI.Core.Attributes;
 using PluginAPI.Events;
 using SCPSLBot.Navigation.Mesh;
-using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -39,7 +38,7 @@ namespace SCPSLBot.Navigation
             Log.Info($"Initializing vertices and areas from room kind counterparts.");
 
             NavigationMesh.InitVertices();
-            NavigationMesh.InitRoomAreas();
+            NavigationMesh.InitAreas();
             LoadMeshes();
             
             Log.Info($"Connecting areas between elevator destinations.");

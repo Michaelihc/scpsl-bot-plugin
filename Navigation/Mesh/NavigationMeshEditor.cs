@@ -3,7 +3,6 @@ using Interactables.Interobjects.DoorUtils;
 using MapGeneration;
 using MEC;
 using PluginAPI.Core;
-using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,8 +21,8 @@ namespace SCPSLBot.Navigation.Mesh
 
         private Player LastPlayerEditing { get; set; }
 
-        private RoomArea CachedRoomArea { get; set; }
-        private RoomArea TracingEndingArea { get; set; }
+        private Area CachedRoomArea { get; set; }
+        private Area TracingEndingArea { get; set; }
 
         private List<FormVertex> SeletedRoomVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;

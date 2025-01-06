@@ -1,19 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace SCPSLBot.Navigation.Mesh
 {
-    internal abstract class Area
+    internal class Area
     {
         public FormArea FormArea { get; }
+        public Transform Transform { get; }
 
-        public abstract Vector3 CenterPosition { get; }
-        public abstract Dictionary<Area, Edge> ConnectedAreaEdges { get; }
-        public abstract IEnumerable<Area> ConnectedAreas { get; }
-        public abstract Dictionary<FormArea, Area> ConnectedAreasOfForm { get; }
+        public Vector3 CenterPosition => Transform.transform.TransformPoint(FormArea.LocalCenterPosition);
+        public Vector3 LocalCenterPosition => FormArea.LocalCenterPosition;
 
-        public Area(FormArea formArea, Func<FormArea, Area> areaGetter)
+        public Dictionary<FormArea, Area> ConnectedAreasOfForm { get; } = new();
+        public List<Area> ForeignConnectedAreas { get; } = new();
+
+        public IEnumerable<Area> ConnectedAreas { get; }
+        public Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
+
+        public Area(
+            FormArea formArea, Transform transform, Func<FormArea, Area> areaGetter)
+            : this(formArea, areaGetter)
+        {
+            Transform = transform;
+
+            ConnectedAreas = FormArea.ConnectedFormAreas
+                .Select(f => ConnectedAreasOfForm[f])
+                .Concat(ForeignConnectedAreas);
+        }
+
+        private Area(FormArea formArea, Func<FormArea, Area> areaGetter)
         {
             FormArea = formArea;
 
@@ -26,11 +43,6 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public abstract bool ContainsEdge(Edge edge);
-
-        public abstract void AddConnection(Area otherArea);
-        public abstract void RemoveConnection(Area otherArea);
-
         private void AddConnectionOfForm(FormArea otherFormArea, Area otherArea)
         {
             ConnectedAreasOfForm.Add(otherFormArea, otherArea);
@@ -39,6 +51,27 @@ namespace SCPSLBot.Navigation.Mesh
         private void RemoveConnectionOfForm(FormArea otherFormArea)
         {
             ConnectedAreasOfForm.Remove(otherFormArea);
+        }
+
+        public bool ContainsEdge(Edge edge)
+        {
+            var (from, to) = (edge.From, edge.To);
+            return FormArea.Edges.Contains(new FormEdge(from.FormVertex, to.FormVertex));
+        }
+
+        public void AddConnection(Area otherArea)
+        {
+            ForeignConnectedAreas.Add(otherArea);
+        }
+
+        public void RemoveConnection(Area otherArea)
+        {
+            ForeignConnectedAreas.Remove(otherArea);
+        }
+
+        public override string ToString()
+        {
+            return FormArea.Form;
         }
     }
 }

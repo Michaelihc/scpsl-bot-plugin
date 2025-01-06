@@ -1,7 +1,6 @@
 ﻿using Interactables.Interobjects;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Navigation.Mesh;
-using SCPSLBot.Navigation.Mesh.Room;
 using System.Linq;
 using UnityEngine;
 

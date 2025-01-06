@@ -1,10 +1,10 @@
 ﻿using AdminToys;
+using MapGeneration;
 using Mirror;
 using PluginAPI.Core;
 using PluginAPI.Core.Attributes;
 using PluginAPI.Core.Zones;
 using PluginAPI.Events;
-using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -248,16 +248,16 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 foreach (var areaVisual in AreaVisuals.Where(p => p.Value.gameObject.activeInHierarchy).ToArray())
                 {
-                    if (!NavigationMesh.AreasByRoom.Values.Any(l => l.Contains(areaVisual.Key)))
+                    if (!NavigationMesh.AreasByRoomOrConnector.Values.Any(l => l.Contains(areaVisual.Key)))
                     {
                         NetworkServer.Destroy(areaVisual.Value.gameObject);
                         AreaVisuals.Remove(areaVisual.Key);
                     }
                 }
 
-                foreach (var area in NavigationMesh.AreasByRoom.Values.SelectMany(l => l))
+                foreach (var area in NavigationMesh.AreasByRoomOrConnector.Values.SelectMany(l => l))
                 {
-                    var room = area.Room;
+                    var room = area.Transform;
 
                     if (!AreaVisuals.TryGetValue(area, out var visual))
                     {
@@ -332,7 +332,7 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var isAreaRemoved = area switch
                     {
-                        RoomArea roomArea => !NavigationMesh.AreasByRoom[roomArea.Room].Contains(roomArea),
+                        Area roomArea => !NavigationMesh.AreasByRoomOrConnector[roomArea.Transform.gameObject].Contains(roomArea),
                         _ => throw new NotImplementedException()
                     };
 
@@ -346,9 +346,9 @@ namespace SCPSLBot.Navigation.Mesh
                     }
                 }
 
-                foreach (var area in NavigationMesh.AreasByRoom.Values.SelectMany(l => l))
+                foreach (var area in NavigationMesh.AreasByRoomOrConnector.Values.SelectMany(l => l))
                 {
-                    var room = area.Room;
+                    var room = area.Transform;
 
                     foreach (var roomFormEdge in area.FormArea.Edges)
                     {
@@ -439,13 +439,13 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var isAreaFromRemoved = areaFrom switch
                     {
-                        RoomArea roomArea => !NavigationMesh.AreasByRoom[roomArea.Room].Contains(roomArea),
+                        Area roomArea => !NavigationMesh.AreasByRoomOrConnector[roomArea.Transform.gameObject].Contains(roomArea),
                         _ => throw new NotImplementedException()
                     };
 
                     var containsForeignArea = areaFrom switch
                     {
-                        RoomArea roomArea => roomArea.ForeignConnectedAreas.Contains(areaTo),
+                        Area roomArea => roomArea.ForeignConnectedAreas.Contains(areaTo),
                         _ => throw new NotImplementedException()
                     };
 
@@ -456,13 +456,21 @@ namespace SCPSLBot.Navigation.Mesh
                     }
                 }
 
-                foreach (var areaFrom in NavigationMesh.AreasByRoom.Values.SelectMany(l => l))
+                foreach (var areaFrom in NavigationMesh.AreasByRoomOrConnector.Values.SelectMany(l => l))
                 {
-                    var roomFrom = areaFrom.Room;
-
-                    foreach (var (areaTo, i) in areaFrom.ForeignConnectedRoomAreas.Select((a, i) => (a, i)))
+                    var roomFrom = areaFrom.Transform.GetComponent<RoomIdentifier>();
+                    if (!roomFrom)
                     {
-                        var roomTo = areaTo.Room;
+                        continue;
+                    }
+
+                    foreach (var (areaTo, i) in areaFrom.ForeignConnectedAreas.Select((a, i) => (a, i)))
+                    {
+                        var roomTo = areaTo.Transform.GetComponent<RoomIdentifier>();
+                        if (!roomTo)
+                        {
+                            continue;
+                        }
 
                         if (!ConnectionVisuals.TryGetValue((areaFrom, areaTo), out var connectionVisual))
                         {

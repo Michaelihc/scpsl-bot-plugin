@@ -33,7 +33,7 @@ namespace SCPSLBot.Navigation.Commands
             NavigationMesh.ResetVertices();
 
             NavigationMesh.InitVertices();
-            NavigationMesh.InitRoomAreas();
+            NavigationMesh.InitAreas();
             NavigationSystem.Instance.LoadMeshes();
 
             response = $"Navigation mesh re-loaded.";

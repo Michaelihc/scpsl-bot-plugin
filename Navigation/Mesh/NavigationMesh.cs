@@ -1,6 +1,5 @@
 ﻿using MapGeneration;
 using PluginAPI.Core;
-using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,14 +19,16 @@ namespace SCPSLBot.Navigation.Mesh
         public event Action<FormVertex> FormVertexDeleted;
 
         public static Dictionary<GameObject, Dictionary<FormVertex, Vertex>> VerticesByRoomOrConnector { get; } = new();
-        public static Dictionary<GameObject, List<Transform>> ConnectorsByRoom { get; } = new();
 
 
         public List<FormArea> FormAreas { get; } = new();
         public event Action<FormArea> FormAreaCreated;
         public event Action<FormArea> FormAreaDeleted;
 
-        public static Dictionary<RoomIdentifier, List<RoomArea>> AreasByRoom { get; } = new();
+        public static Dictionary<GameObject, List<Area>> AreasByRoomOrConnector { get; } = new();
+
+
+        public static Dictionary<GameObject, List<Transform>> ConnectorsByRoom { get; } = new();
 
 
         public NavigationMesh()
@@ -37,8 +38,8 @@ namespace SCPSLBot.Navigation.Mesh
             FormVertexDeleted += RemoveVertexFromAreas;
             FormVertexDeleted += RemoveVerticesFromRoomsOrConnectors;
 
-            FormAreaCreated += (FormArea formArea) => AddAreas(formArea, AreasByRoom, (formArea, room, areaGetter) => new RoomArea(formArea, room, areaGetter));
-            FormAreaDeleted += (FormArea formArea) => RemoveAreas(formArea, AreasByRoom);
+            FormAreaCreated += AddAreas;
+            FormAreaDeleted += RemoveAreas;
         }
 
         #region Mesh querying
@@ -54,11 +55,11 @@ namespace SCPSLBot.Navigation.Mesh
             return null;    // TODO: GetConnectorAreaWithin
         }
 
-        public static RoomArea GetRoomAreaWithin(Vector3 position)
+        public static Area GetRoomAreaWithin(Vector3 position)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
 
-            if (!room || !AreasByRoom.TryGetValue(room, out var roomAreas))
+            if (!room || !AreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
             {
                 return null;
             }
@@ -80,7 +81,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
 
-            if (!room || !AreasByRoom.TryGetValue(room, out var roomAreas))
+            if (!room || !AreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
             {
                 return null;
             }
@@ -208,10 +209,9 @@ namespace SCPSLBot.Navigation.Mesh
                 .vertex;
         }
 
-        public static bool IsPointWithinArea(RoomArea area, Vector3 pointPosition)
+        public static bool IsPointWithinArea(Area area, Vector3 pointPosition)
         {
-            var room = area.Room;
-            var pointLocalPosition = room.transform.InverseTransformPoint(pointPosition);
+            var pointLocalPosition = area.Transform.InverseTransformPoint(pointPosition);
 
             return IsLocalPointWithinArea(area, pointLocalPosition);
         }
@@ -319,15 +319,11 @@ namespace SCPSLBot.Navigation.Mesh
         }
 
 
-        private void AddAreas<TArea>(
-            FormArea formArea,
-            Dictionary<RoomIdentifier, List<TArea>> areasByRoom,
-            Func<FormArea, RoomIdentifier, Func<FormArea, Area>, TArea> areaFactory)
-            where TArea : Area
+        private void AddAreas(FormArea formArea)
         {
-            foreach (var (room, areas) in areasByRoom.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            foreach (var (roomOrConnector, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, formArea.Form)))
             {
-                var newArea = areaFactory.Invoke(formArea, room, formArea => areas.Find(a => a.FormArea == formArea));
+                var newArea = new Area(formArea, roomOrConnector.transform, formArea => areas.Find(a => a.FormArea == formArea));
                 areas.Add(newArea);
             }
         }
@@ -356,11 +352,9 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        private void RemoveAreas<TRoomInstance, TArea>(FormArea formArea, Dictionary<TRoomInstance, List<TArea>> areasByFormInstance)
-            where TRoomInstance : MonoBehaviour
-            where TArea : Area
+        private void RemoveAreas(FormArea formArea)
         {
-            foreach (var (_, areas) in areasByFormInstance.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            foreach (var (_, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, formArea.Form)))
             {
                 var areaToRemove = areas.Find(n => n.FormArea == formArea);
                 areas.Remove(areaToRemove);
@@ -552,23 +546,23 @@ namespace SCPSLBot.Navigation.Mesh
             VerticesByRoomOrConnector.Clear();
         }
 
-        public static void InitRoomAreas()
+        public static void InitAreas()
         {
             foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier))
             {
-                var areas = new List<RoomArea>();
-                AreasByRoom.Add(room, areas);
+                var areas = new List<Area>();
+                AreasByRoomOrConnector.Add(room.gameObject, areas);
             }
         }
 
         public static void ResetAreas()
         {
-            AreasByRoom.Clear();
+            AreasByRoomOrConnector.Clear();
         }
 
         #endregion
 
-        private static bool IsLocalPointWithinArea(RoomArea area, Vector3 pointLocalPosition)
+        private static bool IsLocalPointWithinArea(Area area, Vector3 pointLocalPosition)
         {
             var areaRoomFormEdges = area.FormArea.Edges;
 

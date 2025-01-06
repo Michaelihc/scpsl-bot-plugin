@@ -3,7 +3,7 @@ using MapGeneration;
 using Scp914;
 using SCPSLBot.AI.FirstPersonControl.Mind.Spacial;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
-using SCPSLBot.Navigation.Mesh.Room;
+using SCPSLBot.Navigation.Mesh;
 using System.Linq;
 using UnityEngine;
 
@@ -16,9 +16,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
             roomSightSense.OnSensedForeignRoomArea += OnSensedRoom;
         }
 
-        private void OnSensedRoom(RoomArea foreignRoomArea)
+        private void OnSensedRoom(Area foreignRoomArea)
         {
-            var foreignRoom = foreignRoomArea.Room;
+            var foreignRoom = foreignRoomArea.Transform.GetComponent<RoomIdentifier>();
             if (foreignRoom.Name != RoomName.Lcz914)
             {
                 return;

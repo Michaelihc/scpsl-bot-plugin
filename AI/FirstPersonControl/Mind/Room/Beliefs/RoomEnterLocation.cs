@@ -58,10 +58,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
 
                 var foreignRoomAreas = this.roomSightSense.ForeignRoomsAreas;
                 var enteringAreas = foreignRoomAreas
-                    .Where(fa => fa.Room.Zone == roomWithin.Identifier.Zone)
-                    .Where(fa => fa.Room.Name == RoomName.Unnamed || fa.Room.Name != roomWithin.Identifier.Name)
+                    .Where(fa => fa.Transform.GetComponent<RoomIdentifier>().Zone == roomWithin.Identifier.Zone)
+                    .Where(fa => fa.Transform.GetComponent<RoomIdentifier>().Name == RoomName.Unnamed
+                                    || fa.Transform.GetComponent<RoomIdentifier>().Name != roomWithin.Identifier.Name)
                     //.Where(fa => fa.Room.Identifier.Shape != RoomShape.Endroom || zoneTransitionRoomNames.Contains(fa.Room.Identifier.Name))
-                    .OrderBy(fa => roomsLastVisitTime.TryGetValue(fa.Room.ApiRoom, out var time) ? time : -Random.Range(0f, 4f));
+                    .OrderBy(fa => roomsLastVisitTime.TryGetValue(fa.Transform.GetComponent<RoomIdentifier>().ApiRoom, out var time) ? time : -Random.Range(0f, 4f));
 
                 SetPositions(enteringAreas.Select(a => a.CenterPosition));
 

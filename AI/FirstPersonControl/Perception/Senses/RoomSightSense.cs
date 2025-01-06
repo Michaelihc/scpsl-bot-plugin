@@ -2,7 +2,6 @@
 using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Navigation.Mesh;
-using SCPSLBot.Navigation.Mesh.Room;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,11 +12,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 {
     internal class RoomSightSense : SightSense, ISense
     {
-        public List<RoomArea> ForeignRoomsAreas { get; } = new();
+        public List<Area> ForeignRoomsAreas { get; } = new();
         public IEnumerable<RoomIdentifier> ForeignRooms { get; }
         public RoomIdentifier RoomWithin { get; private set; }
 
-        public event Action<RoomArea> OnSensedForeignRoomArea;
+        public event Action<Area> OnSensedForeignRoomArea;
         public event Action OnAfterSensedForeignRooms;
 
         public event Action<RoomIdentifier> OnSensedRoomWithin;
@@ -28,7 +27,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
         {
             _fpcBotPlayer = botPlayer;
 
-            ForeignRooms = ForeignRoomsAreas.Select(fa => fa.Room).Distinct();
+            ForeignRooms = ForeignRoomsAreas.Select(fa => fa.Transform.GetComponent<RoomIdentifier>()).Distinct();
         }
 
         public override void ProcessSightSensedItems()
@@ -63,11 +62,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
             if (RoomWithin)
             {
                 ForeignRoomsAreas.Clear();
-                foreach (var a in NavigationMesh.AreasByRoom[RoomWithin])
+                foreach (var a in NavigationMesh.AreasByRoomOrConnector[RoomWithin.gameObject])
                 {
-                    foreach (var fa in a.ForeignConnectedRoomAreas)
+                    foreach (var fa in a.ForeignConnectedAreas.Where(fa => fa.Transform.GetComponent<RoomIdentifier>()))
                     {
-                        var faa = fa.ConnectedRoomAreas.First();
+                        var faa = fa.ConnectedAreas.First();
                         ForeignRoomsAreas.Add(faa);
                     }
                 }

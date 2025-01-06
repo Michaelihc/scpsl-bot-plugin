@@ -31,8 +31,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
                 return;
             }
 
-            var foreignRoomAreaOfTargetZone = this.roomSightSense.ForeignRoomsAreas.Find(r => r.Room.Zone == Zone);
-            if (foreignRoomAreaOfTargetZone != null && foreignRoomAreaOfTargetZone.Room.Zone != this.roomSightSense.RoomWithin.Zone)
+            var foreignRoomAreaOfTargetZone = this.roomSightSense.ForeignRoomsAreas.Find(r => r.Transform.GetComponent<RoomIdentifier>().Zone == Zone);
+            if (foreignRoomAreaOfTargetZone != null && foreignRoomAreaOfTargetZone.Transform.GetComponent<RoomIdentifier>().Zone != this.roomSightSense.RoomWithin.Zone)
             {
                 var enterPosition = foreignRoomAreaOfTargetZone.CenterPosition;
                 AddPosition(enterPosition);

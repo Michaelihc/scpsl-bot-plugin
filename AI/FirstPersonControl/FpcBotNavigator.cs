@@ -1,7 +1,6 @@
 ﻿using MapGeneration;
 using PluginAPI.Core;
 using SCPSLBot.Navigation.Mesh;
-using SCPSLBot.Navigation.Mesh.Room;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -89,7 +88,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 if (nearestEdge.HasValue)
                 {
                     var nearestFormEdge = new FormEdge(nearestEdge.Value.From.FormVertex, nearestEdge.Value.To.FormVertex);
-                    targetArea = NavigationMesh.AreasByRoom[goalRoom].Find(a => a.FormArea.Edges.Any(e => e == nearestFormEdge));
+                    targetArea = NavigationMesh.AreasByRoomOrConnector[goalRoom.gameObject].Find(a => a.FormArea.Edges.Any(e => e == nearestFormEdge));
                     targetAreaClosestPositionToGoal = closestPoint;
                 }
                 else
