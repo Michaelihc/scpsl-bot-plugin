@@ -49,6 +49,12 @@ namespace SCPSLBot.Navigation.Commands
                     return false;
             }
 
+            if (formArea == null)
+            {
+                response = $"Failed to create {formType} form area!";
+                return false;
+            }
+
             response = $"Area at local center position {formArea.LocalCenterPosition} created.";
             return true;
         }

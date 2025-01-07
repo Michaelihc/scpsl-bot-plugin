@@ -51,6 +51,12 @@ namespace SCPSLBot.Navigation.Commands
                     return false;
             }
 
+            if (formVertex == null)
+            {
+                response = $"Failed to create {formType} form vertex.";
+                return false;
+            }
+
             response = $"Vertex at local position {formVertex.LocalPosition} created.";
             return true;
         }

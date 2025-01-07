@@ -1,4 +1,5 @@
-﻿using MapGeneration;
+﻿using Interactables.Interobjects;
+using MapGeneration;
 using PluginAPI.Core;
 using System;
 using System.Collections.Generic;
@@ -195,7 +196,12 @@ namespace SCPSLBot.Navigation.Mesh
             var radiusSqr = Mathf.Pow(radius, 2);
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var verticesWithinRadius = roomVertexs.Values.Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.FormVertex.LocalPosition - localPosition)))
+            var connectors = ConnectorsByRoom[room.gameObject];
+            var connectorVertices = connectors.SelectMany(c => VerticesByRoomOrConnector[c.gameObject].Values);
+
+            var verticesWithinRadius = roomVertexs.Values
+                .Concat(connectorVertices)
+                .Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.FormVertex.LocalPosition - localPosition)))
                 .Where(t => t.distSqr < radiusSqr);
 
             if (!verticesWithinRadius.Any())
@@ -213,6 +219,15 @@ namespace SCPSLBot.Navigation.Mesh
             var pointLocalPosition = area.Transform.InverseTransformPoint(pointPosition);
 
             return IsLocalPointWithinArea(area, pointLocalPosition);
+        }
+
+        public static NavigationMesh GetMesh(string form)
+        {
+            if (!MeshesByRoomForm.TryGetValue(form, out var mesh))
+            {
+                mesh = MeshesByConnectorForm[form];
+            }
+            return mesh;
         }
 
         private static Vector3 ClampWithinEdgePoints(FormEdge edge, Vector3 planeClosestPoint)
@@ -558,43 +573,38 @@ namespace SCPSLBot.Navigation.Mesh
         #endregion
         #region Mesh initiation/resetting
 
-        public void Init()
-        { }
-
-        public static void InitVertices()
-        {
-            foreach (var room in Facility.Rooms)
-            {
-                var vertices = new Dictionary<FormVertex, Vertex>();
-                VerticesByRoomOrConnector.Add(room.GameObject, vertices);
-            }
-        }
-
-        public static void ResetVertices()
-        {
-            VerticesByRoomOrConnector.Clear();
-            foreach (var (_, mesh) in MeshesByRoomForm)
-            {
-                mesh.FormVertices.Clear();
-            }
-        }
-
-        public static void InitAreas()
+        public static void InitMeshes()
         {
             foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier))
             {
-                var areas = new List<Area>();
-                AreasByRoomOrConnector.Add(room.gameObject, areas);
+                VerticesByRoomOrConnector.Add(room.gameObject, new());
+                AreasByRoomOrConnector.Add(room.gameObject, new());
+
+                ConnectorsByRoom.Add(room.gameObject, new());
+            }
+
+            foreach (var connector in RoomConnector.AllConnectors)
+            {
+                VerticesByRoomOrConnector.Add(connector.gameObject, new());
+                foreach (var connectedRoom in connector.Rooms)
+                {
+                    ConnectorsByRoom[connectedRoom.gameObject].Add(connector.transform);
+                }
             }
         }
 
-        public static void ResetAreas()
+        public static void ResetMeshes()
         {
+            VerticesByRoomOrConnector.Clear();
             AreasByRoomOrConnector.Clear();
-            foreach (var (_, mesh) in MeshesByRoomForm)
+
+            foreach (var mesh in MeshesByRoomForm.Values.Concat(MeshesByConnectorForm.Values))
             {
+                mesh.FormVertices.Clear();
                 mesh.FormAreas.Clear();
             }
+
+            ConnectorsByRoom.Clear();
         }
 
         #endregion
@@ -670,7 +680,12 @@ namespace SCPSLBot.Navigation.Mesh
         public static string GetForm<TBehaviour>(TBehaviour roomConnector)
             where TBehaviour : MonoBehaviour
         {
-            var gameObjectName = roomConnector?.gameObject.name;
+            return GetForm(roomConnector?.gameObject);
+        }
+
+        public static string GetForm(GameObject gameObject)
+        {
+            var gameObjectName = gameObject?.name;
             return (gameObjectName?.EndsWith("(Clone)") ?? false) ? gameObjectName.Remove(gameObjectName.LastIndexOf("(Clone)")) : gameObjectName;
         }
 

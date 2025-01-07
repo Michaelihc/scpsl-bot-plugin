@@ -35,12 +35,17 @@ namespace SCPSLBot.Navigation
         {
             yield return Timing.WaitUntilTrue(() => SeedSynchronizer.MapGenerated);
 
-            Log.Info($"Initializing vertices and areas from room kind counterparts.");
+            ConnectForeignAreas();
+        }
 
-            NavigationMesh.InitVertices();
-            NavigationMesh.InitAreas();
+        private void ConnectForeignAreas()
+        {
+            Log.Info($"Initializing meshes.");
+            NavigationMesh.InitMeshes();
+
+            Log.Info($"Loading meshes.");
             LoadMeshes();
-            
+
             Log.Info($"Connecting areas between elevator destinations.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
             foreach (ElevatorGroup group in elevatorGroups)
@@ -55,18 +60,18 @@ namespace SCPSLBot.Navigation
                 var doorTransform = elevatorDoors[0].transform;
                 var doorPosition = doorTransform.position;
                 var doorForward = doorTransform.forward;
-                var area0InShaft = NavigationMesh.GetAreaWithin(doorPosition - doorForward + Vector3.up);
+                var areaAt0InShaft = NavigationMesh.GetAreaWithin(doorPosition - doorForward + Vector3.up);
 
                 doorTransform = elevatorDoors[1].transform;
                 doorPosition = doorTransform.position;
                 doorForward = doorTransform.forward;
-                var area1InShaft = NavigationMesh.GetAreaWithin(doorPosition - doorForward + Vector3.up);
+                var areaAt1InShaft = NavigationMesh.GetAreaWithin(doorPosition - doorForward + Vector3.up);
 
-                if (area0InShaft != null && area1InShaft != null)
+                if (areaAt0InShaft != null && areaAt1InShaft != null)
                 {
                     // Connect
-                    area0InShaft.AddConnection(area1InShaft);
-                    area1InShaft.AddConnection(area0InShaft);
+                    areaAt0InShaft.AddConnection(areaAt1InShaft);
+                    areaAt1InShaft.AddConnection(areaAt0InShaft);
                 }
             }
             Log.Info($"Connecting areas finished.");
