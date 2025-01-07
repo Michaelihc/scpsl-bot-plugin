@@ -24,12 +24,12 @@ namespace SCPSLBot.Navigation.Mesh
         private Area CachedArea { get; set; }
         private Area TracingEndingArea { get; set; }
 
-        private List<FormVertex> SeletedFormVertices { get; } = new();
+        private List<FormVertex> SelectedFormVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
 
         public void Init()
         {
-            Visuals.SelectedRoomVertices = SeletedFormVertices;
+            Visuals.SelectedRoomVertices = SelectedFormVertices;
             Visuals.Init();
 
             Timing.RunCoroutine(RunEachFrame(UpdateEditing));
@@ -165,7 +165,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             var localPosition = transform.InverseTransformPoint(position);
-            if (SeletedFormVertices.Count == 2)
+            if (SelectedFormVertices.Count == 2)
             {
                 localPosition = GetProjectedPosition(localPosition);
             }
@@ -184,7 +184,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            SeletedFormVertices.Remove(formVertex);
+            SelectedFormVertices.Remove(formVertex);
 
             var mesh = NavigationMesh.GetMesh(formVertex.Form);
             if (!mesh.DeleteVertex(formVertex))
@@ -216,7 +216,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var newLocalPosition = vertex.Transform.InverseTransformPoint(position);
 
-            if (SeletedFormVertices.Count == 2)
+            if (SelectedFormVertices.Count == 2)
             {
                 newLocalPosition = GetProjectedPosition(newLocalPosition);
             }
@@ -243,7 +243,12 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            SeletedFormVertices.Add(vertex.FormVertex);
+            if (SelectedFormVertices.Any() && SelectedFormVertices.First().Form != vertex.FormVertex.Form)
+            {
+                Log.Warning($"Form of the vertex for selection is different than of first selected vertex.");
+            }
+
+            SelectedFormVertices.Add(vertex.FormVertex);
 
             Log.Info($"Vertex at local position {vertex.FormVertex.LocalPosition} added to selection under {vertex.FormVertex.Form}.");
 
@@ -259,7 +264,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            SeletedFormVertices.Remove(vertex.FormVertex);
+            SelectedFormVertices.Remove(vertex.FormVertex);
 
             Log.Info($"Vertex at local position {vertex.FormVertex.LocalPosition} removed from selection under {vertex.FormVertex.Form}.");
 
@@ -268,7 +273,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void ClearVertexSelection()
         {
-            SeletedFormVertices.Clear();
+            SelectedFormVertices.Clear();
         }
 
         public void ToggleAutoSelectingVertices(bool isEnabled)
@@ -278,7 +283,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public FormArea MakeArea(Vector3 position, bool createConnector = false)
         {
-            if (SeletedFormVertices.Count < 3)
+            if (SelectedFormVertices.Count < 3)
             {
                 Log.Warning($"Not enough vertices (min 3) selected.");
                 return null;
@@ -308,12 +313,12 @@ namespace SCPSLBot.Navigation.Mesh
                 form = NavigationMesh.GetForm(room.gameObject);
                 mesh = NavigationMesh.MeshesByRoomForm[form];
             }
-            var newArea = mesh.MakeArea(SeletedFormVertices, form);
+            var newArea = mesh.MakeArea(SelectedFormVertices, form);
             ConnectAdjacentAreas(newArea, form);
 
             Log.Info($"Area #{mesh.FormAreas.IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under {newArea.Form}.");
 
-            SeletedFormVertices.Clear();
+            SelectedFormVertices.Clear();
             AutoSelectModeEnabled = false;
             PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on area creation.", 3f);
 
@@ -545,7 +550,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         private Vector3 GetProjectedPosition(Vector3 position)
         {
-            var lineSegment = (from: SeletedFormVertices.First(), to: SeletedFormVertices.Last());
+            var lineSegment = (from: SelectedFormVertices.First(), to: SelectedFormVertices.Last());
 
             var dirTo2 = (lineSegment.to.LocalPosition - lineSegment.from.LocalPosition);
             var dirToPoint = (position - lineSegment.from.LocalPosition);
@@ -689,11 +694,16 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestRoomVertex != null)
             {
-                if (!SeletedFormVertices.Contains(Visuals.NearestRoomVertex))
+                if (SelectedFormVertices.Any() && SelectedFormVertices.First().Form != Visuals.NearestRoomVertex.Form)
                 {
-                    SeletedFormVertices.Add(Visuals.NearestRoomVertex);
+                    return;
                 }
-                else if (SeletedFormVertices.Count > 1 && SeletedFormVertices.FirstOrDefault() == Visuals.NearestRoomVertex)
+
+                if (!SelectedFormVertices.Contains(Visuals.NearestRoomVertex))
+                {
+                    SelectedFormVertices.Add(Visuals.NearestRoomVertex);
+                }
+                else if (SelectedFormVertices.Count > 1 && SelectedFormVertices.FirstOrDefault() == Visuals.NearestRoomVertex)
                 {
                     AutoSelectModeEnabled = false;
                     PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);
