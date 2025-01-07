@@ -72,9 +72,13 @@ namespace SCPSLBot.Navigation.Mesh
         public FormArea FindClosestAreaByCenter(Vector3 position, float radius = 1f)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
+            if (!room)
+            {
+                return null;
+            }
 
-            if (!room || !NavigationMesh.MeshesByRoomForm.TryGetValue(roomForm, out var mesh))
+            var roomForm = NavigationMesh.GetRoomForm(room.gameObject.name);
+            if (!NavigationMesh.MeshesByRoomForm.TryGetValue(roomForm, out var mesh))
             {
                 return null;
             }
@@ -600,7 +604,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void UpdateFacingVertex()
         {
-            if (PlayerEditing != null)
+            if (PlayerEditing != null && PlayerEditing.Camera)
             {
                 var room = RoomIdUtils.RoomAtPositionRaycasts(PlayerEditing.Position);
 
@@ -613,7 +617,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void UpdateNearestArea()
         {
-            if (PlayerEditing != null)
+            if (PlayerEditing != null && PlayerEditing.Camera)
             {
                 var playerPosition = PlayerEditing.Position;
                 Visuals.NearestRoomArea = NavigationMesh.GetAreaWithin(playerPosition)?.FormArea ?? FindClosestAreaByCenter(playerPosition, .25f);

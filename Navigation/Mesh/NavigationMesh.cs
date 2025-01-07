@@ -187,7 +187,6 @@ namespace SCPSLBot.Navigation.Mesh
         public static Vertex GetVertexNearby(Vector3 position, float radius = 1f)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-
             if (!room || !VerticesByRoomOrConnector.TryGetValue(room.gameObject, out var roomVertexs))
             {
                 return null;
