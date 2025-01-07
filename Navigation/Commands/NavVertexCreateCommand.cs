@@ -44,7 +44,7 @@ namespace SCPSLBot.Navigation.Commands
                     formVertex = NavigationMeshEditor.Instance.CreateVertex(playerPosition);
                     break;
                 case "connector":
-                    formVertex = NavigationMeshEditor.Instance.CreateVertex(playerPosition, connector: true);
+                    formVertex = NavigationMeshEditor.Instance.CreateVertex(playerPosition, createConnector: true);
                     break;
                 default:
                     response = "Unrecognized form type argument!";

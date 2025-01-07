@@ -116,7 +116,7 @@ namespace SCPSLBot.Navigation.Mesh
             return targetArea;
         }
 
-        public FormVertex CreateVertex(Vector3 position, bool connector = false)
+        public FormVertex CreateVertex(Vector3 position, bool createConnector = false)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             if (!room)
@@ -124,17 +124,18 @@ namespace SCPSLBot.Navigation.Mesh
                 return null;
             }
 
-            var localPosition = room.transform.InverseTransformPoint(position);
-            if (SeletedFormVertices.Count == 2)
-            {
-                localPosition = GetProjectedPosition(localPosition);
-            }
-
             NavigationMesh mesh;
             string form;
-            if (connector)
+            Transform transform;
+            if (createConnector)
             {
-                var connectorForm = GetClosestConnectorForm(position, out _, room);
+                var connector = GetClosestConnector(position, out _, room);
+                if (!connector)
+                {
+                    return null;
+                }
+
+                var connectorForm = NavigationMesh.GetForm(connector);
 
                 if (!NavigationMesh.MeshesByConnectorForm.TryGetValue(connectorForm, out mesh))
                 {
@@ -145,6 +146,7 @@ namespace SCPSLBot.Navigation.Mesh
                 }
 
                 form = connectorForm;
+                transform = connector.transform;
             }
             else
             {
@@ -159,6 +161,13 @@ namespace SCPSLBot.Navigation.Mesh
                 }
 
                 form = roomForm;
+                transform = room.transform;
+            }
+
+            var localPosition = transform.InverseTransformPoint(position);
+            if (SeletedFormVertices.Count == 2)
+            {
+                localPosition = GetProjectedPosition(localPosition);
             }
 
             var newFormVertex = mesh.AddVertex(localPosition, form);
@@ -267,7 +276,7 @@ namespace SCPSLBot.Navigation.Mesh
             AutoSelectModeEnabled = isEnabled;
         }
 
-        public FormArea MakeArea(Vector3 position, bool connector = false)
+        public FormArea MakeArea(Vector3 position, bool createConnector = false)
         {
             if (SeletedFormVertices.Count < 3)
             {
@@ -283,9 +292,15 @@ namespace SCPSLBot.Navigation.Mesh
 
             NavigationMesh mesh;
             string form;
-            if (connector)
+            if (createConnector)
             {
-                form = GetClosestConnectorForm(position, out _, room);
+                var connector = GetClosestConnector(position, out _, room);
+                if (!connector)
+                {
+                    return null;
+                }
+
+                form = NavigationMesh.GetForm(connector);
                 mesh = NavigationMesh.MeshesByConnectorForm[form];
             }
             else
@@ -293,7 +308,6 @@ namespace SCPSLBot.Navigation.Mesh
                 form = NavigationMesh.GetForm(room.gameObject);
                 mesh = NavigationMesh.MeshesByRoomForm[form];
             }
-            
             var newArea = mesh.MakeArea(SeletedFormVertices, form);
             ConnectAdjacentAreas(newArea, form);
 
@@ -306,7 +320,7 @@ namespace SCPSLBot.Navigation.Mesh
             return newArea;
         }
 
-        public static string GetClosestConnectorForm(Vector3 position, out Vector3Int direction, RoomIdentifier room = null)
+        public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, RoomIdentifier room = null)
         {
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
 
@@ -316,11 +330,11 @@ namespace SCPSLBot.Navigation.Mesh
             var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
             if (closestConnector != null)
             {
-                return NavigationMesh.GetForm(closestConnector);
+                return closestConnector.gameObject;
             }
 
             var closestDoorConnector = DoorVariant.AllDoors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
-            return NavigationMesh.GetForm(closestDoorConnector) ?? string.Empty;
+            return closestDoorConnector?.gameObject;
         }
 
         public bool DissolveArea(Vector3 position)

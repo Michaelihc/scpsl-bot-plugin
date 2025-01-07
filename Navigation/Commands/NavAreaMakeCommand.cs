@@ -42,7 +42,7 @@ namespace SCPSLBot.Navigation.Commands
                     formArea = NavigationMeshEditor.Instance.MakeArea(playerCommandSender.ReferenceHub.transform.position);
                     break;
                 case "connector":
-                    formArea = NavigationMeshEditor.Instance.MakeArea(playerCommandSender.ReferenceHub.transform.position, connector: true);
+                    formArea = NavigationMeshEditor.Instance.MakeArea(playerCommandSender.ReferenceHub.transform.position, createConnector: true);
                     break;
                 default:
                     response = "Unrecognized form type argument!";
