@@ -47,19 +47,27 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static Area GetAreaWithin(Vector3 position)
         {
-            var roomArea = GetRoomAreaWithin(position);
+            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
+            if (!room)
+            {
+                return null;
+            }
+
+            var roomArea = GetRoomAreaWithin(position, room);
             if (roomArea != null)
             {
                 return roomArea;
             }
 
-            return null;    // TODO: GetConnectorAreaWithin
+            var connectors = ConnectorsByRoom[room.gameObject];
+            var connectorAreas = connectors.SelectMany(c => AreasByRoomOrConnector[c.gameObject]);
+
+            return connectorAreas.First(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
         }
 
-        public static Area GetRoomAreaWithin(Vector3 position)
+        public static Area GetRoomAreaWithin(Vector3 position, RoomIdentifier room = null)
         {
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-
+            room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
             if (!room || !AreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
             {
                 return null;
