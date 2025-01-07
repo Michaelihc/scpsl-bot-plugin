@@ -530,6 +530,11 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void UpdateEditing()
         {
+            if (PlayerEditing != null && !PlayerEditing.ReferenceHub)
+            {
+                PlayerEditing = null;
+            }
+
             if (PlayerEditing != LastPlayerEditing)
             {
                 LastPlayerEditing = PlayerEditing;

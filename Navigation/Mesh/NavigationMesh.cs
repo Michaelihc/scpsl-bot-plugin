@@ -384,7 +384,7 @@ namespace SCPSLBot.Navigation.Mesh
             var version = binaryReader.ReadByte();
             if (version < 3)
             {
-                Log.Error($"Version in navmesh file is newer or older than supported.");
+                Log.Error($"Version in navmesh file is older than supported.");
                 return;
             }
 
@@ -405,6 +405,28 @@ namespace SCPSLBot.Navigation.Mesh
                 }
 
                 formMesh.ReadMesh(binaryReader, roomForm);
+            }
+
+            if (version == 4)
+            {
+                ///
+                /// Connectors reading
+                ///
+
+                var connectorFormCount = binaryReader.ReadInt32();
+
+                for (var i = 0; i < connectorFormCount; i++)
+                {
+                    string connectorForm = binaryReader.ReadString();
+
+                    if (!MeshesByConnectorForm.TryGetValue(connectorForm, out var formMesh))
+                    {
+                        formMesh = new NavigationMesh();
+                        MeshesByConnectorForm.Add(connectorForm, formMesh);
+                    }
+
+                    formMesh.ReadMesh(binaryReader, connectorForm);
+                }
             }
         }
 
@@ -492,12 +514,23 @@ namespace SCPSLBot.Navigation.Mesh
 
                 mesh.WriteMesh(binaryWriter);
             }
+
+            ///
+            /// Connectors writing
+            ///
+
+            binaryWriter.Write(MeshesByConnectorForm.Count);
+
+            foreach (var (connectorForm, mesh) in MeshesByConnectorForm)
+            {
+                binaryWriter.Write(connectorForm);
+
+                mesh.WriteMesh(binaryWriter);
+            }
         }
 
         public void WriteMesh(BinaryWriter binaryWriter)
         {
-            FormVertices.Clear();
-
             binaryWriter.Write(FormVertices.Count);
             foreach (var vertex in FormVertices)
             {
@@ -505,9 +538,6 @@ namespace SCPSLBot.Navigation.Mesh
                 binaryWriter.Write(vertex.LocalPosition.y);
                 binaryWriter.Write(vertex.LocalPosition.z);
             }
-
-
-            FormAreas.Clear();
 
             binaryWriter.Write(FormAreas.Count);
             foreach (var area in FormAreas)
@@ -544,6 +574,10 @@ namespace SCPSLBot.Navigation.Mesh
         public static void ResetVertices()
         {
             VerticesByRoomOrConnector.Clear();
+            foreach (var (_, mesh) in MeshesByRoomForm)
+            {
+                mesh.FormVertices.Clear();
+            }
         }
 
         public static void InitAreas()
@@ -558,6 +592,10 @@ namespace SCPSLBot.Navigation.Mesh
         public static void ResetAreas()
         {
             AreasByRoomOrConnector.Clear();
+            foreach (var (_, mesh) in MeshesByRoomForm)
+            {
+                mesh.FormAreas.Clear();
+            }
         }
 
         #endregion
