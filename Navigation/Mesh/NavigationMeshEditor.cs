@@ -22,14 +22,13 @@ namespace SCPSLBot.Navigation.Mesh
         private Player LastPlayerEditing { get; set; }
 
         private Area CachedArea { get; set; }
-        private Area TracingEndingArea { get; set; }
 
         private List<FormVertex> SelectedFormVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
 
         public void Init()
         {
-            Visuals.SelectedRoomVertices = SelectedFormVertices;
+            Visuals.SelectedFormVertices = SelectedFormVertices;
             Visuals.Init();
 
             Timing.RunCoroutine(RunEachFrame(UpdateEditing));
@@ -344,7 +343,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool DissolveArea(Vector3 position)
         {
-            var formArea = Visuals.NearestRoomArea;
+            var formArea = Visuals.NearestFormArea;
             if (formArea == null)
             {
                 Log.Warning($"No area found within to remove.");
@@ -643,7 +642,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                Visuals.NearestRoomVertex = NavigationMesh.GetVertexNearby(PlayerEditing.Position, .125f)?.FormVertex;
+                Visuals.NearestFormVertex = NavigationMesh.GetVertexNearby(PlayerEditing.Position, .125f)?.FormVertex;
             }
         }
 
@@ -656,7 +655,7 @@ namespace SCPSLBot.Navigation.Mesh
                 var localPosition = room.transform.InverseTransformPoint(PlayerEditing.Camera.position);
                 var localForward = room.transform.InverseTransformDirection(PlayerEditing.Camera.forward);
 
-                Visuals.FacingRoomVertex = FindClosestVertexFacingAt(NavigationMesh.GetRoomForm(room.gameObject.name), localPosition, localForward);
+                Visuals.FacingFormVertex = FindClosestVertexFacingAt(NavigationMesh.GetRoomForm(room.gameObject.name), localPosition, localForward);
             }
         }
 
@@ -665,7 +664,7 @@ namespace SCPSLBot.Navigation.Mesh
             if (PlayerEditing != null && PlayerEditing.Camera)
             {
                 var playerPosition = PlayerEditing.Position;
-                Visuals.NearestRoomArea = NavigationMesh.GetAreaWithin(playerPosition)?.FormArea ?? FindClosestAreaByCenter(playerPosition, .25f);
+                Visuals.NearestFormArea = NavigationMesh.GetAreaWithin(playerPosition)?.FormArea ?? FindClosestAreaByCenter(playerPosition, .25f);
             }
         }
 
@@ -673,7 +672,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                Visuals.CachedRoomArea = CachedArea?.FormArea;
+                Visuals.CachedFormArea = CachedArea?.FormArea;
             }
         }
 
@@ -686,24 +685,24 @@ namespace SCPSLBot.Navigation.Mesh
                 var localPosition = room.transform.InverseTransformPoint(PlayerEditing.Camera.position);
                 var localForward = room.transform.InverseTransformDirection(PlayerEditing.Camera.forward);
 
-                Visuals.FacingRoomArea = FindClosestAreaFacingAt(NavigationMesh.GetRoomForm(room.gameObject.name), localPosition, localForward);
+                Visuals.FacingFormArea = FindClosestAreaFacingAt(NavigationMesh.GetRoomForm(room.gameObject.name), localPosition, localForward);
             }
         }
 
         private void UpdateVertexAutoSelect()
         {
-            if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestRoomVertex != null)
+            if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestFormVertex != null)
             {
-                if (SelectedFormVertices.Any() && SelectedFormVertices.First().Form != Visuals.NearestRoomVertex.Form)
+                if (SelectedFormVertices.Any() && SelectedFormVertices.First().Form != Visuals.NearestFormVertex.Form)
                 {
                     return;
                 }
 
-                if (!SelectedFormVertices.Contains(Visuals.NearestRoomVertex))
+                if (!SelectedFormVertices.Contains(Visuals.NearestFormVertex))
                 {
-                    SelectedFormVertices.Add(Visuals.NearestRoomVertex);
+                    SelectedFormVertices.Add(Visuals.NearestFormVertex);
                 }
-                else if (SelectedFormVertices.Count > 1 && SelectedFormVertices.FirstOrDefault() == Visuals.NearestRoomVertex)
+                else if (SelectedFormVertices.Count > 1 && SelectedFormVertices.FirstOrDefault() == Visuals.NearestFormVertex)
                 {
                     AutoSelectModeEnabled = false;
                     PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);
