@@ -33,7 +33,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.CreateVertexOnClosestEdge(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.CreateVertexOnClosestRoomEdge(playerCommandSender.ReferenceHub.transform.position))
             {
                 response = $"No nearby area.";
                 return false;

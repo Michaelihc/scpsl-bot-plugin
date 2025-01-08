@@ -1,4 +1,5 @@
 ﻿using Interactables.Interobjects;
+using Interactables.Interobjects.DoorUtils;
 using MapGeneration;
 using PluginAPI.Core;
 using System;
@@ -29,7 +30,7 @@ namespace SCPSLBot.Navigation.Mesh
         public static Dictionary<GameObject, List<Area>> AreasByRoomOrConnector { get; } = new();
 
 
-        public static Dictionary<GameObject, List<Transform>> ConnectorsByRoom { get; } = new();
+        public static Dictionary<GameObject, HashSet<Transform>> ConnectorsByRoom { get; } = new();
 
 
         public NavigationMesh()
@@ -62,7 +63,7 @@ namespace SCPSLBot.Navigation.Mesh
             var connectors = ConnectorsByRoom[room.gameObject];
             var connectorAreas = connectors.SelectMany(c => AreasByRoomOrConnector[c.gameObject]);
 
-            return connectorAreas.First(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
+            return connectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
         }
 
         public static Area GetRoomAreaWithin(Vector3 position, RoomIdentifier room = null)
@@ -233,7 +234,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (!MeshesByRoomForm.TryGetValue(form, out var mesh))
             {
-                mesh = MeshesByConnectorForm[form];
+                MeshesByConnectorForm.TryGetValue(form, out mesh);
             }
             return mesh;
         }
@@ -594,9 +595,20 @@ namespace SCPSLBot.Navigation.Mesh
             foreach (var connector in RoomConnector.AllConnectors)
             {
                 VerticesByRoomOrConnector.Add(connector.gameObject, new());
+                AreasByRoomOrConnector.Add(connector.gameObject, new());
                 foreach (var connectedRoom in connector.Rooms)
                 {
                     ConnectorsByRoom[connectedRoom.gameObject].Add(connector.transform);
+                }
+            }
+
+            foreach (var door in DoorVariant.AllDoors)
+            {
+                VerticesByRoomOrConnector.Add(door.gameObject, new());
+                AreasByRoomOrConnector.Add(door.gameObject, new());
+                foreach (var connectedRoom in door.Rooms)
+                {
+                    ConnectorsByRoom[connectedRoom.gameObject].Add(door.transform);
                 }
             }
         }

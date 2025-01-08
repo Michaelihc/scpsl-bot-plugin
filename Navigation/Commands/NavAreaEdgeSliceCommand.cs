@@ -34,7 +34,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.SliceClosestAreaEdge(playerCommandSender.ReferenceHub.transform.position, playerCommandSender.ReferenceHub.transform.forward))
+            if (!NavigationMeshEditor.Instance.SliceClosestRoomAreaEdge(playerCommandSender.ReferenceHub.transform.position, playerCommandSender.ReferenceHub.transform.forward))
             {
                 response = $"No nearby area edge.";
                 return false;
