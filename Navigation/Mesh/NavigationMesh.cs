@@ -203,14 +203,13 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             var radiusSqr = Mathf.Pow(radius, 2);
-            var localPosition = room.transform.InverseTransformPoint(position);
 
             var connectors = ConnectorsByRoom[room.gameObject];
             var connectorVertices = connectors.SelectMany(c => VerticesByRoomOrConnector[c.gameObject].Values);
 
             var verticesWithinRadius = roomVertexs.Values
                 .Concat(connectorVertices)
-                .Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.FormVertex.LocalPosition - localPosition)))
+                .Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.Position - position)))
                 .Where(t => t.distSqr < radiusSqr);
 
             if (!verticesWithinRadius.Any())
