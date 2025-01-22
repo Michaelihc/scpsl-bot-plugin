@@ -130,7 +130,7 @@ namespace SCPSLBot.Navigation.Mesh
             Transform transform;
             if (createConnector)
             {
-                var connector = GetClosestConnector(position, out _, room);
+                var connector = GetClosestConnector(position, out _, out _, room);
                 if (!connector)
                 {
                     return null;
@@ -301,7 +301,7 @@ namespace SCPSLBot.Navigation.Mesh
             string form;
             if (createConnector)
             {
-                var connector = GetClosestConnector(position, out _, room);
+                var connector = GetClosestConnector(position, out _, out _, room);
                 if (!connector)
                 {
                     return null;
@@ -327,28 +327,25 @@ namespace SCPSLBot.Navigation.Mesh
             return newArea;
         }
 
-        public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, out RoomIdentifier outRoom)
+        public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, out Vector3Int orientation, out RoomIdentifier outRoom)
         {
             outRoom = RoomIdUtils.RoomAtPositionRaycasts(position);
 
-            return GetClosestConnector(position, out direction, outRoom);
+            return GetClosestConnector(position, out direction, out orientation, outRoom);
         }
 
-        public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, RoomIdentifier room = null)
+        public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, out Vector3Int orientation, RoomIdentifier room = null)
         {
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
 
             var nearestRoom = room.ConnectedRooms.OrderBy(connectedRoom => Vector3.SqrMagnitude(connectedRoom.transform.position - position)).First();
             direction = Vector3Int.RoundToInt(room.transform.InverseTransformDirection(nearestRoom.OccupiedCoords[0] - room.OccupiedCoords[0]));
 
-            var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
-            if (closestConnector != null)
-            {
-                return closestConnector.gameObject;
-            }
+            var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room))?.gameObject
+                ?? DoorVariant.AllDoors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room))?.gameObject;
 
-            var closestDoorConnector = DoorVariant.AllDoors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
-            return closestDoorConnector?.gameObject;
+            orientation = Vector3Int.RoundToInt(closestConnector?.transform.forward ?? default);
+            return closestConnector;
         }
 
         public bool DissolveArea(Vector3 position)
