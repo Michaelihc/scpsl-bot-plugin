@@ -247,6 +247,7 @@ namespace SCPSLBot.Navigation.Mesh
             if (SelectedFormVertices.Any() && SelectedFormVertices.First().Form != vertex.FormVertex.Form)
             {
                 Log.Warning($"Form of the vertex for selection is different than of first selected vertex.");
+                return false;
             }
 
             SelectedFormVertices.Add(vertex.FormVertex);
