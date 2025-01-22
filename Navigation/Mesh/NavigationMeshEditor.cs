@@ -326,12 +326,19 @@ namespace SCPSLBot.Navigation.Mesh
             return newArea;
         }
 
+        public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, out RoomIdentifier outRoom)
+        {
+            outRoom = RoomIdUtils.RoomAtPositionRaycasts(position);
+
+            return GetClosestConnector(position, out direction, outRoom);
+        }
+
         public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, RoomIdentifier room = null)
         {
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
 
             var nearestRoom = room.ConnectedRooms.OrderBy(connectedRoom => Vector3.SqrMagnitude(connectedRoom.transform.position - position)).First();
-            direction = nearestRoom.OccupiedCoords[0] - room.OccupiedCoords[0];
+            direction = Vector3Int.RoundToInt(room.transform.InverseTransformDirection(nearestRoom.OccupiedCoords[0] - room.OccupiedCoords[0]));
 
             var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room));
             if (closestConnector != null)

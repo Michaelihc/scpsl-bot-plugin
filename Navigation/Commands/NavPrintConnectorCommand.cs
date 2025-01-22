@@ -23,9 +23,11 @@ namespace SCPSLBot.Navigation.Commands
             }
 
             var playerPosition = playerCommandSender.ReferenceHub.transform.position;
-            var connectorForm = NavigationMeshEditor.GetClosestConnector(playerPosition, out var direction);
+            var connector = NavigationMeshEditor.GetClosestConnector(playerPosition, out var direction, out var room);
+            var connectorForm = NavigationMesh.GetForm(connector);
+            var roomForm = NavigationMesh.GetForm(room.gameObject);
 
-            response = $"Closest room connector {connectorForm} at direction {direction}";
+            response = $"Closest connector {connectorForm} at local direction {direction} from room {roomForm}";
             return true;
         }
     }
