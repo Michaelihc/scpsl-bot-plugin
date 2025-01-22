@@ -98,11 +98,11 @@ namespace SCPSLBot.Navigation
             var fileName = "navmesh.slnmf";
             var path = Path.Combine(BaseDir, fileName);
 
-            using var fileStream = File.OpenWrite(path);
+            using var fileStream = File.Open(path, FileMode.Create, FileAccess.Write);
             using var binaryWriter = new BinaryWriter(fileStream);
 
             NavigationMesh.WriteMeshes(binaryWriter);
-        }        
+        }
 
         #region Private constructor
         private NavigationSystem()
