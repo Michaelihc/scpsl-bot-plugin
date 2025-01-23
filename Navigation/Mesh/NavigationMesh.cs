@@ -77,19 +77,19 @@ namespace SCPSLBot.Navigation.Mesh
 
             var connectorsAtDirections = ConnectorsAtDirectionsByRoom[room.gameObject];
 
-            var roomConnectorAreas = connectorsAtDirections
-                .Select(c => (
-                    room.gameObject, 
-                    c.Direction, 
-                    c.Connector.gameObject, 
-                    GetConnectorOrientation(c.Connector)))
-                .SelectMany(t => AreasByRoomDirectionConnectorOrientation[t]);
+            //var roomConnectorAreas = connectorsAtDirections
+            //    .Select(c => (
+            //        room.gameObject, 
+            //        c.Direction, 
+            //        c.Connector.gameObject, 
+            //        GetConnectorOrientation(c.Connector)))
+            //    .SelectMany(t => AreasByRoomDirectionConnectorOrientation[t]);
 
-            var roomConnectorArea = roomConnectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
-            if (roomConnectorArea != null)
-            {
-                return roomConnectorArea;
-            }
+            //var roomConnectorArea = roomConnectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
+            //if (roomConnectorArea != null)
+            //{
+            //    return roomConnectorArea;
+            //}
 
             var connectorAreas = connectorsAtDirections.SelectMany(c => AreasByRoomOrConnector[c.Connector.gameObject]);
             return connectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));

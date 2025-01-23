@@ -27,7 +27,7 @@ namespace SCPSLBot.Navigation.Commands
             var connectorForm = NavigationMesh.GetForm(connector);
             var roomForm = NavigationMesh.GetForm(room.gameObject);
 
-            response = $"Closest connector {connectorForm} with orientation {orientation} at local direction {direction} from room {roomForm}";
+            response = $"Closest connector {connectorForm} with orientation {orientation} at direction {direction} from room {roomForm}";
             return true;
         }
     }

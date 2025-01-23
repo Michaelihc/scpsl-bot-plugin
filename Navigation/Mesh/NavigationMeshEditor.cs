@@ -344,7 +344,7 @@ namespace SCPSLBot.Navigation.Mesh
             var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room))?.gameObject
                 ?? DoorVariant.AllDoors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room))?.gameObject;
 
-            orientation = Vector3Int.RoundToInt(closestConnector?.transform.forward ?? default);
+            orientation = Vector3Int.RoundToInt(room.transform.InverseTransformDirection(closestConnector?.transform.forward ?? default));
             return closestConnector;
         }
 
