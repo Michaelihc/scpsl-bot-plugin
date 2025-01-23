@@ -661,7 +661,7 @@ namespace SCPSLBot.Navigation.Mesh
                 var cameraPosition = PlayerEditing.Camera.position;
                 var cameraForward = PlayerEditing.Camera.forward;
 
-                Visuals.FacingFormVertex = NavigationMesh.ConnectorsAtDirectionsByRoom[room.gameObject]
+                Visuals.FacingFormVertex = NavigationMesh.VerticesByRoomDirectionConnectorOrientation[room.gameObject].Keys
                     .Select(t => t.Connector.transform).Prepend(room.transform)
                     .Select(transform => (
                         form: NavigationMesh.GetForm(transform.gameObject),
@@ -697,7 +697,7 @@ namespace SCPSLBot.Navigation.Mesh
                 var cameraPosition = PlayerEditing.Camera.position;
                 var cameraForward = PlayerEditing.Camera.forward;
 
-                Visuals.FacingFormArea = NavigationMesh.ConnectorsAtDirectionsByRoom[room.gameObject]
+                Visuals.FacingFormArea = NavigationMesh.AreasByRoomDirectionConnectorOrientation[room.gameObject].Keys
                     .Select(t => t.Connector.transform).Prepend(room.transform)
                     .Select(transform => (
                         form: NavigationMesh.GetForm(transform.gameObject),

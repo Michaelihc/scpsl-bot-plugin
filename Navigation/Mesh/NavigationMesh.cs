@@ -26,11 +26,11 @@ namespace SCPSLBot.Navigation.Mesh
         public event Action<FormVertex> FormVertexDeleted;
 
         public static Dictionary<GameObject, Dictionary<FormVertex, Vertex>> VerticesByRoomOrConnector { get; } = new();
-        public static Dictionary<(
-            GameObject Room,
+        public static Dictionary<
+            GameObject, Dictionary<(
                 Vector3Int Direction,
-                    GameObject Connector,
-                        Vector3Int Orientation), Dictionary<FormVertex, Vertex>> VerticesByRoomDirectionConnectorOrientation { get; } = new();
+                    Transform Connector,
+                        Vector3Int Orientation), Dictionary<FormVertex, Vertex>>> VerticesByRoomDirectionConnectorOrientation { get; } = new();
 
 
         public List<FormArea> FormAreas { get; } = new();
@@ -38,14 +38,11 @@ namespace SCPSLBot.Navigation.Mesh
         public event Action<FormArea> FormAreaDeleted;
 
         public static Dictionary<GameObject, List<Area>> AreasByRoomOrConnector { get; } = new();
-        public static Dictionary<(
-            GameObject Room,
+        public static Dictionary<
+            GameObject, Dictionary<(
                 Vector3Int Direction,
-                    GameObject Connector,
-                        Vector3Int Orientation), List<Area>> AreasByRoomDirectionConnectorOrientation { get; } = new();
-
-
-        public static Dictionary<GameObject, HashSet<(Vector3Int Direction, Transform Connector, Vector3Int Orientation)>> ConnectorsAtDirectionsByRoom { get; } = new();
+                    Transform Connector,
+                        Vector3Int Orientation), List<Area>>> AreasByRoomDirectionConnectorOrientation { get; } = new();
 
 
         public NavigationMesh()
@@ -75,23 +72,16 @@ namespace SCPSLBot.Navigation.Mesh
                 return roomArea;
             }
 
-            var connectorsAtDirections = ConnectorsAtDirectionsByRoom[room.gameObject];
+            var areasByDirectionConnectorOrientation = AreasByRoomDirectionConnectorOrientation[room.gameObject];
 
-            var roomConnectorAreas = connectorsAtDirections
-                .Select(c => (
-                    room.gameObject,
-                    c.Direction,
-                    c.Connector.gameObject,
-                    c.Orientation))
-                .SelectMany(t => AreasByRoomDirectionConnectorOrientation[t]);
-
+            var roomConnectorAreas = areasByDirectionConnectorOrientation.Values.SelectMany(l => l);
             var roomConnectorArea = roomConnectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
             if (roomConnectorArea != null)
             {
                 return roomConnectorArea;
             }
 
-            var connectorAreas = connectorsAtDirections.SelectMany(c => AreasByRoomOrConnector[c.Connector.gameObject]);
+            var connectorAreas = areasByDirectionConnectorOrientation.Keys.SelectMany(c => AreasByRoomOrConnector[c.Connector.gameObject]);
             return connectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
         }
 
@@ -233,15 +223,9 @@ namespace SCPSLBot.Navigation.Mesh
 
             var radiusSqr = Mathf.Pow(radius, 2);
 
-            var connectorsAtDirections = ConnectorsAtDirectionsByRoom[room.gameObject];
-            var connectorVertices = connectorsAtDirections.SelectMany(c => VerticesByRoomOrConnector[c.Connector.gameObject].Values);
-            var roomConnectorVertices = connectorsAtDirections
-                .Select(c => (
-                    room.gameObject,
-                    c.Direction,
-                    c.Connector.gameObject,
-                    c.Orientation))
-                .SelectMany(t => VerticesByRoomDirectionConnectorOrientation[t].Values);
+            var verticesAtDirectionConnectorOrientation = VerticesByRoomDirectionConnectorOrientation[room.gameObject];
+            var connectorVertices = verticesAtDirectionConnectorOrientation.Keys.SelectMany(c => VerticesByRoomOrConnector[c.Connector.gameObject].Values);
+            var roomConnectorVertices = verticesAtDirectionConnectorOrientation.Values.SelectMany(l => l.Values);
 
             var verticesWithinRadius = roomVertexs.Values
                 .Concat(roomConnectorVertices)
@@ -635,7 +619,8 @@ namespace SCPSLBot.Navigation.Mesh
                 VerticesByRoomOrConnector.Add(room.gameObject, new());
                 AreasByRoomOrConnector.Add(room.gameObject, new());
 
-                ConnectorsAtDirectionsByRoom.Add(room.gameObject, new());
+                VerticesByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
+                AreasByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
             }
 
             foreach (var connector in RoomConnector.AllConnectors)
@@ -653,7 +638,8 @@ namespace SCPSLBot.Navigation.Mesh
                     var direction = GetDirectionToRoom(connectedRoom, otherRoom);
                     var orientation = GetConnectorOrientation(connectedRoom, connector.transform.forward);
 
-                    ConnectorsAtDirectionsByRoom[connectedRoom.gameObject].Add((direction, connector.transform, orientation));
+                    VerticesByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, connector.transform, orientation), new());
+                    AreasByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, connector.transform, orientation), new());
                 }
             }
 
@@ -672,7 +658,8 @@ namespace SCPSLBot.Navigation.Mesh
                     var direction = GetDirectionToRoom(connectedRoom, otherRoom);
                     var orientation = GetConnectorOrientation(connectedRoom, door.transform.forward);
 
-                    ConnectorsAtDirectionsByRoom[connectedRoom.gameObject].Add((direction, door.transform, orientation));
+                    VerticesByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, door.transform, orientation), new());
+                    AreasByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, door.transform, orientation), new());
                 }
             }
         }
@@ -682,13 +669,17 @@ namespace SCPSLBot.Navigation.Mesh
             VerticesByRoomOrConnector.Clear();
             AreasByRoomOrConnector.Clear();
 
-            foreach (var mesh in MeshesByRoomForm.Values.Concat(MeshesByConnectorForm.Values))
+            var meshes = MeshesByRoomForm.Values
+                .Concat(MeshesByConnectorForm.Values)
+                .Concat(MeshesByRoomConnectorForm.Values);
+            foreach (var mesh in meshes)
             {
                 mesh.FormVertices.Clear();
                 mesh.FormAreas.Clear();
             }
 
-            ConnectorsAtDirectionsByRoom.Clear();
+            VerticesByRoomDirectionConnectorOrientation.Clear();
+            AreasByRoomDirectionConnectorOrientation.Clear();
         }
 
         #endregion
