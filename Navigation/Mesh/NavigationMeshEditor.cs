@@ -339,12 +339,12 @@ namespace SCPSLBot.Navigation.Mesh
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
 
             var nearestRoom = room.ConnectedRooms.OrderBy(connectedRoom => Vector3.SqrMagnitude(connectedRoom.transform.position - position)).First();
-            direction = Vector3Int.RoundToInt(room.transform.InverseTransformDirection(nearestRoom.OccupiedCoords[0] - room.OccupiedCoords[0]));
+            direction = NavigationMesh.GetDirectionToRoom(room, nearestRoom);
 
             var closestConnector = RoomConnector.AllConnectors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room))?.gameObject
                 ?? DoorVariant.AllDoors.FirstOrDefault(c => c.Rooms.Contains(nearestRoom) && c.Rooms.Contains(room))?.gameObject;
 
-            orientation = Vector3Int.RoundToInt(room.transform.InverseTransformDirection(closestConnector?.transform.forward ?? default));
+            orientation = NavigationMesh.GetConnectorOrientation(room, closestConnector?.transform.forward ?? default);
             return closestConnector;
         }
 
