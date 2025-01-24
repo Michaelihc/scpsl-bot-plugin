@@ -35,7 +35,7 @@ namespace SCPSLBot.Navigation.Commands
                 formType = arguments[0];
             }
 
-            FormArea formArea;
+            LocalArea formArea;
             switch (formType)
             {
                 case "room": 

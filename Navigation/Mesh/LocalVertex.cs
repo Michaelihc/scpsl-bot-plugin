@@ -2,12 +2,12 @@
 
 namespace SCPSLBot.Navigation.Mesh
 {
-    internal class FormVertex
+    internal class LocalVertex
     {
         public string Form { get; }
         public Vector3 LocalPosition { get; set; }
 
-        public FormVertex(Vector3 position, string form)
+        public LocalVertex(Vector3 position, string form)
         {
             LocalPosition = position;
             Form = form;
