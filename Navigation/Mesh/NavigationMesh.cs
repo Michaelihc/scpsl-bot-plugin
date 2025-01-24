@@ -662,6 +662,11 @@ namespace SCPSLBot.Navigation.Mesh
                     AreasByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, door.transform, orientation), new());
                 }
             }
+
+            //foreach (var (room, (dir, connectorTransform, orientation)) in VerticesByRoomDirectionConnectorOrientation.SelectMany(p => p.Value.Keys.Select(k => (p.Key, k))))
+            //{
+            //    Debug.Log($"{GetForm(room),-25}{dir,-12}{GetForm(connectorTransform.gameObject),-40}{orientation,-12}");
+            //}
         }
 
         public static void ResetMeshes()
