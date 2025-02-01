@@ -87,7 +87,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 var nearestEdge = NavigationMesh.GetNearestEdge(goalPosition, out var closestPoint, goalRoom);
                 if (nearestEdge.HasValue)
                 {
-                    var nearestFormEdge = new LocalEdge(nearestEdge.Value.From.FormVertex, nearestEdge.Value.To.FormVertex);
+                    var nearestFormEdge = new LocalEdge(nearestEdge.Value.From.LocalVertex, nearestEdge.Value.To.LocalVertex);
                     targetArea = NavigationMesh.AreasByRoomOrConnector[goalRoom.gameObject].Find(a => a.FormArea.Edges.Any(e => e == nearestFormEdge));
                     targetAreaClosestPositionToGoal = closestPoint;
                 }

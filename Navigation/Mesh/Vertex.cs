@@ -4,22 +4,17 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class Vertex
     {
-        public LocalVertex FormVertex { get; }
+        public LocalVertex LocalVertex { get; }
         public Transform Transform { get; }
 
-        public Vector3 Position => Transform.TransformPoint(FormVertex.LocalPosition);
+        public Vector3 Position => Transform.TransformPoint(LocalVertex.LocalPosition);
 
-        public Vector3 LocalPosition => FormVertex.LocalPosition;
+        public Vector3 LocalPosition => LocalVertex.LocalPosition;
 
         public Vertex(LocalVertex formVertex, Transform transform)
         {
-            FormVertex = formVertex;
+            LocalVertex = formVertex;
             Transform = transform;
-        }
-
-        public override string ToString()
-        {
-            return FormVertex.Form;
         }
     }
 }

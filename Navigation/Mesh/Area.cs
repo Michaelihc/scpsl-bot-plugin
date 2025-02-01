@@ -56,7 +56,7 @@ namespace SCPSLBot.Navigation.Mesh
         public bool ContainsEdge(Edge edge)
         {
             var (from, to) = (edge.From, edge.To);
-            return FormArea.Edges.Contains(new LocalEdge(from.FormVertex, to.FormVertex));
+            return FormArea.Edges.Contains(new LocalEdge(from.LocalVertex, to.LocalVertex));
         }
 
         public void AddConnection(Area otherArea)

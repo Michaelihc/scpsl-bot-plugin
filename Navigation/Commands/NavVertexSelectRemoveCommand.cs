@@ -33,7 +33,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.RemoveVertexFromSelection(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.RemoveNearestVertexFromSelection())
             {
                 response = $"No vertex nearby to perform this command.";
                 return false;

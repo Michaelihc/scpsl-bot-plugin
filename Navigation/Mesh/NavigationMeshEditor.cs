@@ -23,12 +23,12 @@ namespace SCPSLBot.Navigation.Mesh
 
         private Area CachedArea { get; set; }
 
-        private List<LocalVertex> SelectedFormVertices { get; } = new();
+        private List<Vertex> SelectedVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
 
         public void Init()
         {
-            Visuals.SelectedFormVertices = SelectedFormVertices;
+            Visuals.SelectedVertices = SelectedVertices;
             Visuals.Init();
 
             Timing.RunCoroutine(RunEachFrame(UpdateEditing));
@@ -126,7 +126,6 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             NavigationMesh mesh;
-            string form;
             Transform transform;
             if (createConnector)
             {
@@ -140,13 +139,12 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (!NavigationMesh.MeshesByConnectorForm.TryGetValue(connectorForm, out mesh))
                 {
-                    mesh = new NavigationMesh();
+                    mesh = NavigationMesh.Create(connectorForm);
                     NavigationMesh.MeshesByConnectorForm.Add(connectorForm, mesh);
 
-                    AddLoggingHandlers(mesh);
+                    AddLoggingHandlers(mesh, connectorForm);
                 }
 
-                form = connectorForm;
                 transform = connector.transform;
             }
             else
@@ -155,41 +153,43 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (!NavigationMesh.MeshesByRoomForm.TryGetValue(roomForm, out mesh))
                 {
-                    mesh = new NavigationMesh();
+                    mesh = NavigationMesh.Create(roomForm);
                     NavigationMesh.MeshesByRoomForm.Add(roomForm, mesh);
 
-                    AddLoggingHandlers(mesh);
+                    AddLoggingHandlers(mesh, roomForm);
                 }
 
-                form = roomForm;
                 transform = room.transform;
             }
 
             var localPosition = transform.InverseTransformPoint(position);
-            if (SelectedFormVertices.Count == 2)
+            if (SelectedVertices.Count == 2)
             {
                 localPosition = GetProjectedPosition(localPosition);
             }
 
-            var newFormVertex = mesh.AddVertex(localPosition, form);
+            var newFormVertex = mesh.AddVertex(localPosition);
             return newFormVertex;
         }
 
-        public bool DeleteVertex(Vector3 position)
+        public bool DeleteNearestVertex()
         {
-            var formVertex = NavigationMesh.GetVertexNearby(position)?.FormVertex;
-            if (formVertex == null)
+            var vertex = Visuals.NearestVertex;
+            if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby to remove.");
 
                 return false;
             }
 
-            SelectedFormVertices.Remove(formVertex);
+            SelectedVertices.Remove(vertex);
 
-            var mesh = NavigationMesh.GetMesh(formVertex.Form);
+            var formVertex = vertex.LocalVertex;
+            var form = NavigationMesh.GetForm(formVertex);
+            var mesh = NavigationMesh.GetMesh(form);
             if (!mesh.DeleteVertex(formVertex))
             {
+                Log.Warning($"No vertices at {form} to remove vertex from.");
                 return false;
             }
 
@@ -199,83 +199,89 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     mesh.RemoveArea(area);
 
-                    Log.Warning($"Area at local center position {area.LocalCenterPosition} dissolved under {formVertex.Form}.");
+                    Log.Warning($"Area at local center position {area.LocalCenterPosition} dissolved under {form}.");
                 }
             }
 
             return true;
         }
 
-        public bool MoveVertex(Vector3 position)
+        public bool MoveNearestVertex(Vector3 newPosition)
         {
-            var vertex = NavigationMesh.GetVertexNearby(position);
+            var vertex = Visuals.NearestVertex;
             if (vertex == null)
             {
                 Log.Info($"No vertex found nearby to move.");
                 return false;
             }
 
-            var newLocalPosition = vertex.Transform.InverseTransformPoint(position);
+            var newLocalPosition = vertex.Transform.InverseTransformPoint(newPosition);
 
-            if (SelectedFormVertices.Count == 2)
+            if (SelectedVertices.Count == 2)
             {
                 newLocalPosition = GetProjectedPosition(newLocalPosition);
             }
 
-            var formVertex = vertex.FormVertex;
-
-            var mesh = NavigationMesh.GetMesh(formVertex.Form);
+            var formVertex = vertex.LocalVertex;
+            var form = NavigationMesh.GetForm(formVertex);
+            var mesh = NavigationMesh.GetMesh(form);
             if (!mesh.MoveVertex(formVertex, newLocalPosition))
             {
                 return false;
             }
 
-            Log.Info($"Vertex #{mesh.FormVertices.IndexOf(formVertex)} of {formVertex.Form} moved to new local position {formVertex.LocalPosition}.");
+            Log.Info($"Vertex #{mesh.FormVertices.IndexOf(formVertex)} of {form} moved to new local position {formVertex.LocalPosition}.");
 
             return true;
         }
 
-        public bool AddVertexToSelection(Vector3 position)
+        public bool AddNearestVertexToSelection()
         {
-            var vertex = NavigationMesh.GetVertexNearby(position);
+            var vertex = Visuals.NearestVertex;
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby for selection.");
                 return false;
             }
 
-            if (SelectedFormVertices.Any() && SelectedFormVertices.First().Form != vertex.FormVertex.Form)
+            if (SelectedVertices.Any() && SelectedVertices.First().Transform != vertex.Transform)
             {
                 Log.Warning($"Form of the vertex for selection is different than of first selected vertex.");
                 return false;
             }
 
-            SelectedFormVertices.Add(vertex.FormVertex);
+            SelectedVertices.Add(vertex);
 
-            Log.Info($"Vertex at local position {vertex.FormVertex.LocalPosition} added to selection under {vertex.FormVertex.Form}.");
+            var formVertex = vertex.LocalVertex;
+            var form = NavigationMesh.GetForm(formVertex);
+
+            Log.Info($"Vertex at local position {formVertex.LocalPosition} added to selection under {form}.");
 
             return true;
         }
 
-        public bool RemoveVertexFromSelection(Vector3 position)
+        public bool RemoveNearestVertexFromSelection()
         {
-            var vertex = NavigationMesh.GetVertexNearby(position);
+            var vertex = Visuals.NearestVertex;
             if (vertex == null)
             {
                 Log.Warning($"No vertex found nearby to remove from selection.");
                 return false;
             }
 
-            SelectedFormVertices.Remove(vertex.FormVertex);
+            SelectedVertices.Remove(vertex);
 
-            Log.Info($"Vertex at local position {vertex.FormVertex.LocalPosition} removed from selection under {vertex.FormVertex.Form}.");
+            var formVertex = vertex.LocalVertex;
+            var form = NavigationMesh.GetForm(formVertex);
+
+            Log.Info($"Vertex at local position {formVertex.LocalPosition} removed from selection under {form}.");
 
             return true;
         }
 
         public void ClearVertexSelection()
         {
-            SelectedFormVertices.Clear();
+            SelectedVertices.Clear();
         }
 
         public void ToggleAutoSelectingVertices(bool isEnabled)
@@ -285,7 +291,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public LocalArea MakeArea(Vector3 position, bool createConnector = false)
         {
-            if (SelectedFormVertices.Count < 3)
+            if (SelectedVertices.Count < 3)
             {
                 Log.Warning($"Not enough vertices (min 3) selected.");
                 return null;
@@ -315,12 +321,12 @@ namespace SCPSLBot.Navigation.Mesh
                 form = NavigationMesh.GetForm(room.gameObject);
                 mesh = NavigationMesh.MeshesByRoomForm[form];
             }
-            var newArea = mesh.MakeArea(SelectedFormVertices, form);
+            var newArea = mesh.MakeArea(SelectedVertices.Select(v => v.LocalVertex), form);
             ConnectAdjacentAreas(newArea, form);
 
             Log.Info($"Area #{mesh.FormAreas.IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under {newArea.Form}.");
 
-            SelectedFormVertices.Clear();
+            SelectedVertices.Clear();
             AutoSelectModeEnabled = false;
             PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on area creation.", 3f);
 
@@ -409,7 +415,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var vertex = mesh.AddVertex(newVertexPos, roomForm);
+            var vertex = mesh.AddVertex(newVertexPos);
 
             mesh.AddVertexToArea(area, vertex, edge.to);
 
@@ -474,7 +480,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var vertex = mesh.AddVertex(newVertexPos, roomForm);
+            var vertex = mesh.AddVertex(newVertexPos);
 
             mesh.AddVertexToArea(area, vertex, edge.to);
 
@@ -556,7 +562,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         private Vector3 GetProjectedPosition(Vector3 position)
         {
-            var lineSegment = (from: SelectedFormVertices.First(), to: SelectedFormVertices.Last());
+            var lineSegment = (from: SelectedVertices.First(), to: SelectedVertices.Last());
 
             var dirTo2 = (lineSegment.to.LocalPosition - lineSegment.from.LocalPosition);
             var dirToPoint = (position - lineSegment.from.LocalPosition);
@@ -607,49 +613,60 @@ namespace SCPSLBot.Navigation.Mesh
                 return;
             }
 
+            var meshesByForm = NavigationMesh.MeshesByRoomForm.Concat(NavigationMesh.MeshesByConnectorForm);
+
             if (PlayerEditing != null)
             {
-                foreach (var mesh in NavigationMesh.MeshesByRoomForm.Values.Concat(NavigationMesh.MeshesByConnectorForm.Values))
+                foreach (var (form, mesh) in meshesByForm)
                 {
-                    AddLoggingHandlers(mesh);
+                    AddLoggingHandlers(mesh, form);
                 }
             }
             else
             {
-                foreach (var mesh in NavigationMesh.MeshesByRoomForm.Values.Concat(NavigationMesh.MeshesByConnectorForm.Values))
+                foreach (var (_, mesh) in meshesByForm)
                 {
                     RemoveLoggingHandlers(mesh);
                 }
             }
         }
 
-        private void AddLoggingHandlers(NavigationMesh mesh)
+        private readonly Dictionary<NavigationMesh, Action<LocalVertex>> vertexCreatedDelegatesByMesh = new();
+        private readonly Dictionary<NavigationMesh, Action<LocalVertex>> vertexDeletedDelegatesByMesh = new();
+
+        private void AddLoggingHandlers(NavigationMesh mesh, string form)
         {
-            mesh.FormVertexCreated += LogVertexCreated;
-            mesh.FormVertexDeleted += LogVertexDeleted;
+            vertexCreatedDelegatesByMesh.Add(mesh, vertex => LogVertexCreated(vertex, form));
+            mesh.FormVertexCreated += vertexCreatedDelegatesByMesh[mesh];
+
+            vertexDeletedDelegatesByMesh.Add(mesh, vertex => LogVertexDeleted(vertex, form));
+            mesh.FormVertexDeleted += vertexDeletedDelegatesByMesh[mesh];
         }
 
         private void RemoveLoggingHandlers(NavigationMesh mesh)
         {
-            mesh.FormVertexCreated -= LogVertexCreated;
-            mesh.FormVertexDeleted -= LogVertexDeleted;
+            vertexCreatedDelegatesByMesh.Remove(mesh, out var vertexCreatedDelagate);
+            mesh.FormVertexCreated -= vertexCreatedDelagate;
+
+            vertexDeletedDelegatesByMesh.Remove(mesh, out var vertexDeletedDelagate);
+            mesh.FormVertexDeleted -= vertexDeletedDelagate;
         }
 
-        private void LogVertexCreated(LocalVertex formVertex)
+        private void LogVertexCreated(LocalVertex formVertex, string form)
         {
-            Log.Info($"Vertex #{NavigationMesh.GetMesh(formVertex.Form).FormVertices.IndexOf(formVertex)} at local position {formVertex.LocalPosition} added under room {formVertex.Form}.");
+            Log.Info($"Vertex #{NavigationMesh.GetMesh(form).FormVertices.IndexOf(formVertex)} at local position {formVertex.LocalPosition} added under {form}.");
         }
 
-        private void LogVertexDeleted(LocalVertex formVertex)
+        private void LogVertexDeleted(LocalVertex formVertex, string form)
         {
-            Log.Info($"Vertex at local position {formVertex.LocalPosition} deleted under room {formVertex.Form}.");
+            Log.Info($"Vertex at local position {formVertex.LocalPosition} deleted under {form}.");
         }
 
         private void UpdateNearestVertex()
         {
             if (PlayerEditing != null)
             {
-                Visuals.NearestFormVertex = NavigationMesh.GetVertexNearby(PlayerEditing.Position, .125f)?.FormVertex;
+                Visuals.NearestVertex = NavigationMesh.GetVertexNearby(PlayerEditing.Position, .125f);
             }
         }
 
@@ -661,13 +678,18 @@ namespace SCPSLBot.Navigation.Mesh
                 var cameraPosition = PlayerEditing.Camera.position;
                 var cameraForward = PlayerEditing.Camera.forward;
 
-                Visuals.FacingFormVertex = NavigationMesh.VerticesByRoomDirectionConnectorOrientation[room.gameObject].Keys
-                    .Select(t => t.Connector.transform).Prepend(room.transform)
-                    .Select(transform => (
-                        form: NavigationMesh.GetForm(transform.gameObject),
-                        localPosition: transform.InverseTransformPoint(cameraPosition),
-                        localForward: transform.InverseTransformDirection(cameraForward)))
-                    .Select(t => FindClosestVertexFacingAt(t.form, t.localPosition, t.localForward))
+                Visuals.FacingVertex = NavigationMesh.VerticesByRoomDirectionConnectorOrientation[room.gameObject].Keys
+                    .Select(t => t.Connector.gameObject).Prepend(room.gameObject)
+                    .Select(roomOrConnector => (
+                        form: NavigationMesh.GetForm(roomOrConnector),
+                        roomOrConnector,
+                        localPosition: roomOrConnector.transform.InverseTransformPoint(cameraPosition),
+                        localForward: roomOrConnector.transform.InverseTransformDirection(cameraForward)))
+                    .Select(t => (
+                        localVertex: FindClosestVertexFacingAt(t.form, t.localPosition, t.localForward),
+                        t.roomOrConnector
+                    ))
+                    .Select(t => NavigationMesh.VerticesByRoomOrConnector[t.roomOrConnector][t.localVertex])
                     .FirstOrDefault();
             }
         }
@@ -710,18 +732,18 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void UpdateVertexAutoSelect()
         {
-            if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestFormVertex != null)
+            if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestVertex != null)
             {
-                if (SelectedFormVertices.Any() && SelectedFormVertices.First().Form != Visuals.NearestFormVertex.Form)
+                if (SelectedVertices.Any() && SelectedVertices.First().Transform != Visuals.NearestVertex.Transform)
                 {
                     return;
                 }
 
-                if (!SelectedFormVertices.Contains(Visuals.NearestFormVertex))
+                if (!SelectedVertices.Contains(Visuals.NearestVertex))
                 {
-                    SelectedFormVertices.Add(Visuals.NearestFormVertex);
+                    SelectedVertices.Add(Visuals.NearestVertex);
                 }
-                else if (SelectedFormVertices.Count > 1 && SelectedFormVertices.FirstOrDefault() == Visuals.NearestFormVertex)
+                else if (SelectedVertices.Count > 1 && SelectedVertices.FirstOrDefault() == Visuals.NearestVertex)
                 {
                     AutoSelectModeEnabled = false;
                     PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);

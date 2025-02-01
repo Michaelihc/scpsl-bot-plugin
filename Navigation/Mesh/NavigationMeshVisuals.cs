@@ -17,10 +17,10 @@ namespace SCPSLBot.Navigation.Mesh
     {
         public Player PlayerEnabledVisualsFor { get; set; }
 
-        public LocalVertex NearestFormVertex { get; set; }
-        public LocalVertex FacingFormVertex { get; set; }
+        public Vertex NearestVertex { get; set; }
+        public Vertex FacingVertex { get; set; }
 
-        public List<LocalVertex> SelectedFormVertices { get; set; }
+        public List<Vertex> SelectedVertices { get; set; }
 
         public LocalArea NearestFormArea { get; set; }
         public LocalArea FacingFormArea { get; set; }
@@ -83,26 +83,28 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEnabledVisualsFor != null)
             {
-                if (NearestFormVertex != null)
+                if (NearestVertex != null)
                 {
-                    var mesh = NavigationMesh.GetMesh(NearestFormVertex.Form);
-                    var nearestVertexId = mesh.FormVertices.IndexOf(NearestFormVertex);
-                    VisualsMessages[0] = $"Vertex #{nearestVertexId} in {NearestFormVertex.Form}";
+                    var form = NavigationMesh.GetForm(NearestVertex.LocalVertex);
+                    var mesh = NavigationMesh.GetMesh(form);
+                    var nearestVertexId = mesh.FormVertices.IndexOf(NearestVertex.LocalVertex);
+                    VisualsMessages[0] = $"Vertex #{nearestVertexId} in {form}";
 
-                    var selectedIdx = SelectedFormVertices.IndexOf(NearestFormVertex);
+                    var selectedIdx = SelectedVertices.IndexOf(NearestVertex);
                     if (selectedIdx >= 0)
                     {
                         VisualsMessages[0] += $" <color=green>(selected #{selectedIdx})</color>";
                     }
                 }
 
-                if (FacingFormVertex != null)
+                if (FacingVertex != null)
                 {
-                    var mesh = NavigationMesh.GetMesh(FacingFormVertex.Form);
-                    var facingVertexId = mesh.FormVertices.IndexOf(FacingFormVertex);
-                    VisualsMessages[1] = $"Facing vertex #{facingVertexId} in {FacingFormVertex.Form}";
+                    var form = NavigationMesh.GetForm(FacingVertex.LocalVertex);
+                    var mesh = NavigationMesh.GetMesh(form);
+                    var facingVertexId = mesh.FormVertices.IndexOf(FacingVertex.LocalVertex);
+                    VisualsMessages[1] = $"Facing vertex #{facingVertexId} in {form}";
 
-                    var selectedIdx = SelectedFormVertices.IndexOf(FacingFormVertex);
+                    var selectedIdx = SelectedVertices.IndexOf(FacingVertex);
                     if (selectedIdx >= 0)
                     {
                         VisualsMessages[1] += $" <color=green>(selected #{selectedIdx})</color>";
@@ -217,11 +219,11 @@ namespace SCPSLBot.Navigation.Mesh
 
                     if (visual.gameObject.activeSelf)
                     {
-                        if (NearestFormArea?.Vertices.Contains(vertex.FormVertex) ?? false)
+                        if (NearestFormArea?.Vertices.Contains(vertex.LocalVertex) ?? false)
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
-                        else if (SelectedFormVertices.Contains(vertex.FormVertex))
+                        else if (SelectedVertices.Contains(vertex))
                         {
                             visual.NetworkMaterialColor = Color.green;
                         }
