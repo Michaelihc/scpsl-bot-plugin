@@ -29,7 +29,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.CreateConnection(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.CreateConnection())
             {
                 response = "Failed to create connection!";
                 return false;

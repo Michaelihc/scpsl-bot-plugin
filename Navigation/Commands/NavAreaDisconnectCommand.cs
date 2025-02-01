@@ -29,7 +29,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.DeleteConnection(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.DeleteConnection())
             {
                 response = "Failed to delete connection!";
                 return false;

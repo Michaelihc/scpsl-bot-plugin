@@ -16,7 +16,7 @@ namespace SCPSLBot.Navigation.Mesh
         public IEnumerable<LocalEdge> Edges => Vertices.Zip(Vertices.Skip(1), (v1, v2) => new LocalEdge(v1, v2))
             .Append(new LocalEdge(Vertices.Last(), Vertices.First()));
 
-        public List<LocalArea> ConnectedFormAreas { get; } = new();
+        public List<LocalArea> ConnectedLocalAreas { get; } = new();
 
         public event Action<LocalVertex> VertexAdded;
         public event Action<LocalVertex> VertexRemoved;
@@ -59,13 +59,13 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void AddConnection(LocalArea connectingArea)
         {
-            ConnectedFormAreas.Add(connectingArea);
+            ConnectedLocalAreas.Add(connectingArea);
             ConnectionAdded?.Invoke(connectingArea);
         }
 
         public void RemoveConnection(LocalArea connectedArea)
         {
-            if (ConnectedFormAreas.Remove(connectedArea))
+            if (ConnectedLocalAreas.Remove(connectedArea))
             {
                 ConnectionRemoved?.Invoke(connectedArea);
             }

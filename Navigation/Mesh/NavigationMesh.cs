@@ -128,7 +128,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var hit = roomAreas.SelectMany(a => a.FormArea.Edges)
+            var hit = roomAreas.SelectMany(a => a.LocalArea.Edges)
                 .Select(edge => (edge, planeDist: GetPointDistToEdgePlane(edge, localPosition, out var planeClosest), planeClosest))
                 .Where(t => t.planeDist <= 0f)
 
@@ -393,7 +393,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             foreach (var (roomOrConnector, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, formArea.Form)))
             {
-                var newArea = new Area(formArea, roomOrConnector.transform, formArea => areas.Find(a => a.FormArea == formArea));
+                var newArea = new Area(formArea, roomOrConnector.transform, formArea => areas.Find(a => a.LocalArea == formArea));
                 areas.Add(newArea);
             }
         }
@@ -426,7 +426,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             foreach (var (_, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, formArea.Form)))
             {
-                var areaToRemove = areas.Find(n => n.FormArea == formArea);
+                var areaToRemove = areas.Find(n => n.LocalArea == formArea);
                 areas.Remove(areaToRemove);
             }
         }
@@ -618,8 +618,8 @@ namespace SCPSLBot.Navigation.Mesh
                     binaryWriter.Write(vertexIdx);
                 }
 
-                binaryWriter.Write(area.ConnectedFormAreas.Count);
-                foreach (var connIdx in area.ConnectedFormAreas.Select(connArea => FormAreas.IndexOf(connArea)))
+                binaryWriter.Write(area.ConnectedLocalAreas.Count);
+                foreach (var connIdx in area.ConnectedLocalAreas.Select(connArea => FormAreas.IndexOf(connArea)))
                 {
                     binaryWriter.Write(connIdx);
                 }
@@ -708,10 +708,10 @@ namespace SCPSLBot.Navigation.Mesh
 
         private static bool IsLocalPointWithinArea(Area area, Vector3 pointLocalPosition)
         {
-            var areaRoomFormEdges = area.FormArea.Edges;
+            var areaLocalEdges = area.LocalArea.Edges;
 
             var isAnyVertexWithinVerticalRange = false;
-            foreach (var e in areaRoomFormEdges)
+            foreach (var e in areaLocalEdges)
             {
                 if (GetPointDistToEdgePlane(e, pointLocalPosition) <= 0f)
                 {

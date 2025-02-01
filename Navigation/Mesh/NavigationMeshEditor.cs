@@ -51,20 +51,16 @@ namespace SCPSLBot.Navigation.Mesh
 
         }
 
-        public LocalVertex FindClosestVertexFacingAt(string form, Vector3 localPosition, Vector3 localDirection)
+        public Vertex FindClosestVertexFacingAt(GameObject roomOrConnector, Vector3 localPosition, Vector3 localDirection)
         {
-            var mesh = NavigationMesh.GetMesh(form);
-            if (mesh == null)
-            {
-                return null;
-            }
+            var vertices = NavigationMesh.VerticesByRoomOrConnector[roomOrConnector].Values;
 
-            var targetVertex = mesh.FormVertices
-                .Select(a => (n: a, d: Vector3.SqrMagnitude(a.LocalPosition - localPosition)))
+            var targetVertex = vertices
+                .Select(v => (n: v, d: Vector3.SqrMagnitude(v.LocalVertex.LocalPosition - localPosition)))
                 .Where(t => t.d < 50f && t.d > 1f)
                 .OrderBy(t => t.d)
                 .Select(t => t.n)
-                .FirstOrDefault(a => Vector3.Dot(Vector3.Normalize(a.LocalPosition - localPosition), localDirection) > 0.999848f);
+                .FirstOrDefault(a => Vector3.Dot(Vector3.Normalize(a.LocalVertex.LocalPosition - localPosition), localDirection) > 0.999848f);
 
             return targetVertex;
         }
@@ -99,20 +95,16 @@ namespace SCPSLBot.Navigation.Mesh
                 .area;
         }
 
-        public LocalArea FindClosestAreaFacingAt(string form, Vector3 localPosition, Vector3 localDirection)
+        public Area FindClosestAreaFacingAt(GameObject roomOrConnector, Vector3 localPosition, Vector3 localDirection)
         {
-            var mesh = NavigationMesh.GetMesh(form);
-            if (mesh == null)
-            {
-                return null;
-            }
+            var areas = NavigationMesh.AreasByRoomOrConnector[roomOrConnector];
 
-            var targetArea = mesh.FormAreas
-                .Select(a => (n: a, d: Vector3.SqrMagnitude(a.LocalCenterPosition - localPosition)))
+            var targetArea = areas
+                .Select(a => (n: a, d: Vector3.SqrMagnitude(a.LocalArea.LocalCenterPosition - localPosition)))
                 .Where(t => t.d < 50f && t.d > 1f)
                 .OrderBy(t => t.d)
                 .Select(t => t.n)
-                .FirstOrDefault(a => Vector3.Dot(Vector3.Normalize(a.LocalCenterPosition - localPosition), localDirection) > 0.999848f);
+                .FirstOrDefault(a => Vector3.Dot(Vector3.Normalize(a.LocalArea.LocalCenterPosition - localPosition), localDirection) > 0.999848f);
 
             return targetArea;
         }
@@ -356,7 +348,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool DissolveArea(Vector3 position)
         {
-            var formArea = Visuals.NearestFormArea;
+            var formArea = Visuals.NearestArea?.LocalArea;
             if (formArea == null)
             {
                 Log.Warning($"No area found within to remove.");
@@ -489,9 +481,9 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        public bool CacheArea(Vector3 position)
+        public bool CacheNearestArea()
         {
-            CachedArea = NavigationMesh.GetAreaWithin(position);
+            CachedArea = Visuals.NearestArea;
 
             return CachedArea != null;
         }
@@ -503,7 +495,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var targetArea = NavigationMesh.GetAreaWithin(position);
+            var targetArea = Visuals.NearestArea;
             if (targetArea == null)
             {
                 return false;
@@ -520,42 +512,42 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        public bool CreateConnection(Vector3 position)
+        public bool CreateConnection()
         {
             if (CachedArea == null)
             {
                 return false;
             }
 
-            var targetArea = NavigationMesh.GetAreaWithin(position);
+            var targetArea = Visuals.NearestArea;
             if (targetArea == null)
             {
                 return false;
             }
 
-            var mesh = NavigationMesh.GetMesh(CachedArea.FormArea.Form);
+            var mesh = NavigationMesh.GetMesh(CachedArea.LocalArea.Form);
 
-            mesh.CreateAreaConnection(CachedArea.FormArea, targetArea.FormArea);
+            mesh.CreateAreaConnection(CachedArea.LocalArea, targetArea.LocalArea);
 
             return true;
         }
 
-        public bool DeleteConnection(Vector3 position)
+        public bool DeleteConnection()
         {
             if (CachedArea == null)
             {
                 return false;
             }
 
-            var targetArea = NavigationMesh.GetAreaWithin(position);
+            var targetArea = Visuals.NearestArea;
             if (targetArea == null)
             {
                 return false;
             }
 
-            var mesh = NavigationMesh.GetMesh(CachedArea.FormArea.Form);
+            var mesh = NavigationMesh.GetMesh(CachedArea.LocalArea.Form);
 
-            mesh.DeleteAreaConnection(CachedArea.FormArea, targetArea.FormArea);
+            mesh.DeleteAreaConnection(CachedArea.LocalArea, targetArea.LocalArea);
 
             return true;
         }
@@ -679,17 +671,12 @@ namespace SCPSLBot.Navigation.Mesh
                 var cameraForward = PlayerEditing.Camera.forward;
 
                 Visuals.FacingVertex = NavigationMesh.VerticesByRoomDirectionConnectorOrientation[room.gameObject].Keys
-                    .Select(t => t.Connector.gameObject).Prepend(room.gameObject)
-                    .Select(roomOrConnector => (
-                        form: NavigationMesh.GetForm(roomOrConnector),
-                        roomOrConnector,
-                        localPosition: roomOrConnector.transform.InverseTransformPoint(cameraPosition),
-                        localForward: roomOrConnector.transform.InverseTransformDirection(cameraForward)))
-                    .Select(t => (
-                        localVertex: FindClosestVertexFacingAt(t.form, t.localPosition, t.localForward),
-                        t.roomOrConnector
-                    ))
-                    .Select(t => NavigationMesh.VerticesByRoomOrConnector[t.roomOrConnector][t.localVertex])
+                    .Select(t => t.Connector.transform).Prepend(room.transform)
+                    .Select(transform => (
+                        roomOrConnector: transform.gameObject,
+                        localPosition: transform.InverseTransformPoint(cameraPosition),
+                        localForward: transform.InverseTransformDirection(cameraForward)))
+                    .Select(t => FindClosestVertexFacingAt(t.roomOrConnector, t.localPosition, t.localForward))
                     .FirstOrDefault();
             }
         }
@@ -699,7 +686,7 @@ namespace SCPSLBot.Navigation.Mesh
             if (PlayerEditing != null && PlayerEditing.Camera)
             {
                 var playerPosition = PlayerEditing.Position;
-                Visuals.NearestFormArea = NavigationMesh.GetAreaWithin(playerPosition)?.FormArea ?? FindClosestRoomAreaByCenter(playerPosition, .25f);
+                Visuals.NearestArea = NavigationMesh.GetAreaWithin(playerPosition);
             }
         }
 
@@ -707,7 +694,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                Visuals.CachedFormArea = CachedArea?.FormArea;
+                Visuals.CachedArea = CachedArea;
             }
         }
 
@@ -719,13 +706,13 @@ namespace SCPSLBot.Navigation.Mesh
                 var cameraPosition = PlayerEditing.Camera.position;
                 var cameraForward = PlayerEditing.Camera.forward;
 
-                Visuals.FacingFormArea = NavigationMesh.AreasByRoomDirectionConnectorOrientation[room.gameObject].Keys
+                Visuals.FacingArea = NavigationMesh.AreasByRoomDirectionConnectorOrientation[room.gameObject].Keys
                     .Select(t => t.Connector.transform).Prepend(room.transform)
                     .Select(transform => (
-                        form: NavigationMesh.GetForm(transform.gameObject),
+                        roomOrConnector: transform.gameObject,
                         localPosition: transform.InverseTransformPoint(cameraPosition),
                         localForward: transform.InverseTransformDirection(cameraForward)))
-                    .Select(t => FindClosestAreaFacingAt(t.form, t.localPosition, t.localForward))
+                    .Select(t => FindClosestAreaFacingAt(t.roomOrConnector, t.localPosition, t.localForward))
                     .FirstOrDefault();
             }
         }

@@ -33,7 +33,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.CacheArea(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.CacheNearestArea())
             {
                 response = $"Failed to cache area.";
                 return false;

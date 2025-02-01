@@ -7,56 +7,56 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class Area
     {
-        public LocalArea FormArea { get; }
+        public LocalArea LocalArea { get; }
         public Transform Transform { get; }
 
-        public Vector3 CenterPosition => Transform.transform.TransformPoint(FormArea.LocalCenterPosition);
-        public Vector3 LocalCenterPosition => FormArea.LocalCenterPosition;
+        public Vector3 CenterPosition => Transform.TransformPoint(LocalArea.LocalCenterPosition);
+        public Vector3 LocalCenterPosition => LocalArea.LocalCenterPosition;
 
-        public Dictionary<LocalArea, Area> ConnectedAreasOfForm { get; } = new();
+        public Dictionary<LocalArea, Area> ConnectedAreasOfLocal { get; } = new();
         public List<Area> ForeignConnectedAreas { get; } = new();
 
         public IEnumerable<Area> ConnectedAreas { get; }
         public Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
 
         public Area(
-            LocalArea formArea, Transform transform, Func<LocalArea, Area> areaGetter)
-            : this(formArea, areaGetter)
+            LocalArea localArea, Transform transform, Func<LocalArea, Area> areaGetter)
+            : this(localArea, areaGetter)
         {
             Transform = transform;
 
-            ConnectedAreas = FormArea.ConnectedFormAreas
-                .Select(f => ConnectedAreasOfForm[f])
+            ConnectedAreas = LocalArea.ConnectedLocalAreas
+                .Select(f => ConnectedAreasOfLocal[f])
                 .Concat(ForeignConnectedAreas);
         }
 
-        private Area(LocalArea formArea, Func<LocalArea, Area> areaGetter)
+        private Area(LocalArea localArea, Func<LocalArea, Area> areaGetter)
         {
-            FormArea = formArea;
+            LocalArea = localArea;
 
-            FormArea.ConnectionAdded += (LocalArea otherFormArea) => AddConnectionOfForm(otherFormArea, areaGetter.Invoke(otherFormArea));
-            FormArea.ConnectionRemoved += RemoveConnectionOfForm;
+            LocalArea.ConnectionAdded += (otherLocalArea) => AddConnectionOfLocal(otherLocalArea, areaGetter.Invoke(otherLocalArea));
+            LocalArea.ConnectionRemoved += RemoveConnectionOfLocal;
 
-            foreach (var connectedFormArea in FormArea.ConnectedFormAreas)
+            foreach (var connectedLocalArea in LocalArea.ConnectedLocalAreas)
             {
-                AddConnectionOfForm(connectedFormArea, areaGetter.Invoke(connectedFormArea));
+                AddConnectionOfLocal(connectedLocalArea, areaGetter.Invoke(connectedLocalArea));
             }
         }
 
-        private void AddConnectionOfForm(LocalArea otherFormArea, Area otherArea)
+        private void AddConnectionOfLocal(LocalArea otherLocalArea, Area otherArea)
         {
-            ConnectedAreasOfForm.Add(otherFormArea, otherArea);
+            ConnectedAreasOfLocal.Add(otherLocalArea, otherArea);
         }
 
-        private void RemoveConnectionOfForm(LocalArea otherFormArea)
+        private void RemoveConnectionOfLocal(LocalArea otherLocalArea)
         {
-            ConnectedAreasOfForm.Remove(otherFormArea);
+            ConnectedAreasOfLocal.Remove(otherLocalArea);
         }
 
         public bool ContainsEdge(Edge edge)
         {
             var (from, to) = (edge.From, edge.To);
-            return FormArea.Edges.Contains(new LocalEdge(from.LocalVertex, to.LocalVertex));
+            return LocalArea.Edges.Contains(new LocalEdge(from.LocalVertex, to.LocalVertex));
         }
 
         public void AddConnection(Area otherArea)
@@ -71,7 +71,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public override string ToString()
         {
-            return FormArea.Form;
+            return LocalArea.Form;
         }
     }
 }
