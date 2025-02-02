@@ -310,136 +310,130 @@ namespace SCPSLBot.Navigation.Mesh
 
         public LocalVertex AddVertex(Vector3 localPosition)
         {
-            var newFormVertex = CreateFormVertex(localPosition);
-            LocalVertexCreated?.Invoke(newFormVertex);
+            var newVertex = new LocalVertex(localPosition);
+            LocalVertices.Add(newVertex);
 
-            return newFormVertex;
+            LocalVertexCreated?.Invoke(newVertex);
+
+            return newVertex;
         }
 
-        private LocalVertex CreateFormVertex(Vector3 localPosition)
-        {
-            var newFormVertex = new LocalVertex(localPosition);
-            LocalVertices.Add(newFormVertex);
-
-            return newFormVertex;
-        }
-
-        private static void AddVerticesToRoomsOrConnectors(LocalVertex formVertex, string form)
+        private static void AddVerticesToRoomsOrConnectors(LocalVertex localVertex, string form)
         {
             foreach (var verticesPair in VerticesByRoomOrConnector.Where(p => StartsWithForm(p.Key, form)))
             {
-                verticesPair.Value.Add(formVertex, new Vertex(formVertex, verticesPair.Key.transform));
+                verticesPair.Value.Add(localVertex, new Vertex(localVertex, verticesPair.Key.transform));
             }
 
-            FormsByVertices.Add(formVertex, form);
+            FormsByVertices.Add(localVertex, form);
         }
 
-        public bool DeleteVertex(LocalVertex formVertex)
+
+        public bool DeleteVertex(LocalVertex vertex)
         {
-            if (!DeleteFormVertex(formVertex))
+            if (!LocalVertices.Remove(vertex))
             {
                 return false;
             }
 
-            LocalVertexDeleted?.Invoke(formVertex);
+            LocalVertexDeleted?.Invoke(vertex);
 
             return true;
         }
 
-        private bool DeleteFormVertex(LocalVertex formVertex)
-        {
-            LocalVertices.Remove(formVertex);
-
-            return true;
-        }
-
-        private void RemoveVertexFromAreas(LocalVertex formVertex)
+        private void RemoveVertexFromAreas(LocalVertex vertex)
         {
             foreach (var area in LocalAreas)
             {
-                area.RemoveVertex(formVertex);
+                area.RemoveVertex(vertex);
             }
         }
 
-        private static void RemoveVerticesFromRoomsOrConnectors(LocalVertex formVertex, string form)
+
+        private static void RemoveVerticesFromRoomsOrConnectors(LocalVertex localVertex, string form)
         {
             foreach (var (_, vertices) in VerticesByRoomOrConnector.Where(p => StartsWithForm(p.Key, form)))
             {
-                vertices.Remove(formVertex);
+                vertices.Remove(localVertex);
             }
 
-            FormsByVertices.Remove(formVertex);
+            FormsByVertices.Remove(localVertex);
         }
 
-        public bool MoveVertex(LocalVertex formVertex, Vector3 newLocalPosition)
+
+        public bool MoveVertex(LocalVertex vertex, Vector3 newLocalPosition)
         {
-            formVertex.LocalPosition = newLocalPosition;
+            vertex.LocalPosition = newLocalPosition;
 
             return true;
         }
 
-        public LocalArea MakeArea(IEnumerable<LocalVertex> formVertices, string form)
+
+        public LocalArea MakeArea(IEnumerable<LocalVertex> vertices, string form)
         {
-            var newFormArea = new LocalArea(formVertices, form);
-            LocalAreas.Add(newFormArea);
+            var newArea = new LocalArea(vertices, form);
+            LocalAreas.Add(newArea);
 
-            LocalAreaCreated?.Invoke(newFormArea);
+            LocalAreaCreated?.Invoke(newArea);
 
-            return newFormArea;
+            return newArea;
         }
 
-
-        private static void AddAreas(LocalArea formArea)
+        private static void AddAreas(LocalArea localArea)
         {
-            foreach (var (roomOrConnector, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            foreach (var (roomOrConnector, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, localArea.Form)))
             {
-                var newArea = new Area(formArea, roomOrConnector.transform, formArea => areas.Find(a => a.LocalArea == formArea));
+                var newArea = new Area(localArea, roomOrConnector.transform, localArea => areas.Find(a => a.LocalArea == localArea));
                 areas.Add(newArea);
             }
         }
 
-        public bool RemoveArea(LocalArea formArea)
+
+        public bool RemoveArea(LocalArea area)
         {
-            var formAreas = LocalAreas;
-            if (!formAreas.Remove(formArea))
+            var areas = LocalAreas;
+            if (!areas.Remove(area))
             {
-                Log.Warning($"No areas at {formArea.Form} to remove area from.");
+                Log.Warning($"No areas at {area.Form} to remove area from.");
                 return false;
             }
 
-            RemoveConnectionsToArea(formArea);
+            RemoveConnectionsToArea(area);
 
-            LocalAreaDeleted?.Invoke(formArea);
+            LocalAreaDeleted?.Invoke(area);
 
             return true;
         }
 
-        private void RemoveConnectionsToArea(LocalArea formArea)
+        private void RemoveConnectionsToArea(LocalArea area)
         {
-            foreach (var otherFormArea in LocalAreas)
+            foreach (var otherArea in LocalAreas)
             {
-                otherFormArea.RemoveConnection(formArea);
+                otherArea.RemoveConnection(area);
             }
         }
 
-        private static void RemoveAreas(LocalArea formArea)
+
+        private static void RemoveAreas(LocalArea localArea)
         {
-            foreach (var (_, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, formArea.Form)))
+            foreach (var (_, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, localArea.Form)))
             {
-                var areaToRemove = areas.Find(n => n.LocalArea == formArea);
+                var areaToRemove = areas.Find(n => n.LocalArea == localArea);
                 areas.Remove(areaToRemove);
             }
         }
 
-        public void CreateAreaConnection(LocalArea fromFormArea, LocalArea toFormArea)
+
+        public void CreateAreaConnection(LocalArea fromArea, LocalArea toArea)
         {
-            fromFormArea.AddConnection(toFormArea);
+            fromArea.AddConnection(toArea);
         }
 
-        public void DeleteAreaConnection(LocalArea fromFormArea, LocalArea toFormArea)
+        public void DeleteAreaConnection(LocalArea fromArea, LocalArea toArea)
         {
-            fromFormArea.RemoveConnection(toFormArea);;
+            fromArea.RemoveConnection(toArea);
         }
+
 
         public void AddVertexToArea(LocalArea area, LocalVertex vertex, LocalVertex beforeVertex)
         {
