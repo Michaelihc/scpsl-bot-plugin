@@ -120,28 +120,32 @@ namespace SCPSLBot.Navigation.Mesh
                 if (NearestArea != null)
                 {
                     //var connectedIdsStr = string.Join(", ", NearestArea.ConnectedAreas.Select(c => $"#{c.Id}"));
-                    var mesh = NavigationMesh.GetMesh(NearestArea.LocalArea.Form);
+                    var form = NavigationMesh.GetForm(NearestArea.LocalArea);
+                    var mesh = NavigationMesh.GetMesh(form);
                     var NearestAreaId = mesh.LocalAreas.IndexOf(NearestArea.LocalArea);
-                    VisualsMessages[0] = $"Area #{NearestAreaId} in {NearestArea.LocalArea.Form}";
+                    VisualsMessages[0] = $"Area #{NearestAreaId} in {form}";
                 }
 
                 if (CachedArea != null)
                 {
-                    var mesh = NavigationMesh.GetMesh(CachedArea.LocalArea.Form);
-                    var cachedAreaId = mesh.LocalAreas.IndexOf(CachedArea.LocalArea);
-                    VisualsMessages[1] = $"Cached area #{cachedAreaId} in {CachedArea.LocalArea.Form}";
+                    var cachedLocalArea = CachedArea.LocalArea;
+                    var form = NavigationMesh.GetForm(cachedLocalArea);
+                    var mesh = NavigationMesh.GetMesh(form);
+                    var cachedAreaId = mesh.LocalAreas.IndexOf(cachedLocalArea);
+                    VisualsMessages[1] = $"Cached area #{cachedAreaId} in {form}";
 
                     if (NearestArea != null)
                     {
-                        if (NearestArea.LocalArea.ConnectedLocalAreas.Contains(CachedArea.LocalArea) && CachedArea.LocalArea.ConnectedLocalAreas.Contains(NearestArea.LocalArea))
+                        var nearestLocalArea = NearestArea.LocalArea;
+                        if (nearestLocalArea.ConnectedLocalAreas.Contains(cachedLocalArea) && cachedLocalArea.ConnectedLocalAreas.Contains(nearestLocalArea))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (NearestArea.LocalArea.ConnectedLocalAreas.Contains(CachedArea.LocalArea))
+                        else if (nearestLocalArea.ConnectedLocalAreas.Contains(cachedLocalArea))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (CachedArea.LocalArea.ConnectedLocalAreas.Contains(NearestArea.LocalArea))
+                        else if (cachedLocalArea.ConnectedLocalAreas.Contains(nearestLocalArea))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
@@ -150,21 +154,24 @@ namespace SCPSLBot.Navigation.Mesh
 
                 if (FacingArea != null)
                 {
-                    var mesh = NavigationMesh.GetMesh(FacingArea.LocalArea.Form);
-                    var facingAreaId = mesh.LocalAreas.IndexOf(FacingArea.LocalArea);
-                    VisualsMessages[1] = $"Facing area #{facingAreaId} in {FacingArea.LocalArea.Form}";
+                    var facingLocalArea = FacingArea.LocalArea;
+                    var form = NavigationMesh.GetForm(facingLocalArea);
+                    var mesh = NavigationMesh.GetMesh(form);
+                    var facingAreaId = mesh.LocalAreas.IndexOf(facingLocalArea);
+                    VisualsMessages[1] = $"Facing area #{facingAreaId} in {form}";
 
                     if (NearestArea != null)
                     {
-                        if (NearestArea.LocalArea.ConnectedLocalAreas.Contains(FacingArea.LocalArea) && FacingArea.LocalArea.ConnectedLocalAreas.Contains(NearestArea.LocalArea))
+                        var nearestLocalArea = NearestArea.LocalArea;
+                        if (nearestLocalArea.ConnectedLocalAreas.Contains(facingLocalArea) && facingLocalArea.ConnectedLocalAreas.Contains(nearestLocalArea))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (NearestArea.LocalArea.ConnectedLocalAreas.Contains(FacingArea.LocalArea))
+                        else if (nearestLocalArea.ConnectedLocalAreas.Contains(facingLocalArea))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (FacingArea.LocalArea.ConnectedLocalAreas.Contains(NearestArea.LocalArea))
+                        else if (facingLocalArea.ConnectedLocalAreas.Contains(nearestLocalArea))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }

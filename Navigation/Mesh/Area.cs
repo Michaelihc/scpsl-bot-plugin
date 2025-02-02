@@ -68,10 +68,5 @@ namespace SCPSLBot.Navigation.Mesh
         {
             ForeignConnectedAreas.Remove(otherArea);
         }
-
-        public override string ToString()
-        {
-            return LocalArea.Form;
-        }
     }
 }

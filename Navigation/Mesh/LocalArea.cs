@@ -7,7 +7,6 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class LocalArea
     {
-        public string Form { get; private set; }
         public List<LocalVertex> Vertices { get; } = new();
 
         public Vector3 LocalCenterPosition => Vertices.Select(v => v.LocalPosition)
@@ -24,14 +23,8 @@ namespace SCPSLBot.Navigation.Mesh
         public event Action<LocalArea> ConnectionAdded;
         public event Action<LocalArea> ConnectionRemoved;
 
-        public LocalArea(string form)
+        public LocalArea(IEnumerable<LocalVertex> vertices)
         {
-            Form = form;
-        }
-
-        public LocalArea(IEnumerable<LocalVertex> vertices, string form)
-        {
-            Form = form;
             Vertices.AddRange(vertices);
         }
 
@@ -69,11 +62,6 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 ConnectionRemoved?.Invoke(connectedArea);
             }
-        }
-
-        public override string ToString()
-        {
-            return Form;
         }
     }
 }

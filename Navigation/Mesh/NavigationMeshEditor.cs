@@ -313,10 +313,10 @@ namespace SCPSLBot.Navigation.Mesh
                 form = NavigationMesh.GetForm(room.gameObject);
                 mesh = NavigationMesh.MeshesByRoomForm[form];
             }
-            var newArea = mesh.MakeArea(SelectedVertices.Select(v => v.LocalVertex), form);
+            var newArea = mesh.MakeArea(SelectedVertices.Select(v => v.LocalVertex));
             ConnectAdjacentAreas(newArea, form);
 
-            Log.Info($"Area #{mesh.LocalAreas.IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under {newArea.Form}.");
+            Log.Info($"Area #{mesh.LocalAreas.IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under {form}.");
 
             SelectedVertices.Clear();
             AutoSelectModeEnabled = false;
@@ -348,8 +348,8 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool DissolveArea(Vector3 position)
         {
-            var formArea = Visuals.NearestArea?.LocalArea;
-            if (formArea == null)
+            var localArea = Visuals.NearestArea?.LocalArea;
+            if (localArea == null)
             {
                 Log.Warning($"No area found within to remove.");
                 return false;
@@ -362,15 +362,16 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var mesh = NavigationMesh.GetMesh(formArea.Form);
+            var form = NavigationMesh.GetForm(localArea);
+            var mesh = NavigationMesh.GetMesh(form);
 
-            if (!mesh.RemoveArea(formArea))
+            if (!mesh.RemoveArea(localArea))
             {
-                Log.Warning($"Area already does not exist in collection by {formArea.Form}.");
+                Log.Warning($"Area already does not exist in collection by {form}.");
             }
             else
             {
-                Log.Info($"Area at local center position {formArea.LocalCenterPosition} removed under {formArea.Form}.");
+                Log.Info($"Area at local center position {localArea.LocalCenterPosition} removed under {form}.");
             }
 
             return true;
@@ -525,7 +526,8 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var mesh = NavigationMesh.GetMesh(CachedArea.LocalArea.Form);
+            var form = NavigationMesh.GetForm(CachedArea.LocalArea);
+            var mesh = NavigationMesh.GetMesh(form);
 
             mesh.CreateAreaConnection(CachedArea.LocalArea, targetArea.LocalArea);
 
@@ -545,7 +547,8 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var mesh = NavigationMesh.GetMesh(CachedArea.LocalArea.Form);
+            var form = NavigationMesh.GetForm(CachedArea.LocalArea);
+            var mesh = NavigationMesh.GetMesh(form);
 
             mesh.DeleteAreaConnection(CachedArea.LocalArea, targetArea.LocalArea);
 
@@ -564,19 +567,19 @@ namespace SCPSLBot.Navigation.Mesh
             return projected;
         }
 
-        private void ConnectAdjacentAreas(LocalArea formArea, string form)
+        private void ConnectAdjacentAreas(LocalArea localArea, string form)
         {
             var mesh = NavigationMesh.GetMesh(form);
 
-            foreach (var edge in formArea.Edges)
+            foreach (var edge in localArea.Edges)
             {
                 var inversedEdge = new LocalEdge(edge.To, edge.From);
 
-                var connectedArea = mesh.LocalAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
+                var connectedArea = mesh.LocalAreas.Find(a => a != localArea && a.Edges.Contains(inversedEdge));
                 if (connectedArea != null)
                 {
-                    formArea.AddConnection(connectedArea);
-                    connectedArea.AddConnection(formArea);
+                    localArea.AddConnection(connectedArea);
+                    connectedArea.AddConnection(localArea);
                 }
             }
         }

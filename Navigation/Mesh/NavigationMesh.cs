@@ -61,9 +61,9 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        public LocalArea MakeArea(IEnumerable<LocalVertex> vertices, string form)
+        public LocalArea MakeArea(IEnumerable<LocalVertex> vertices)
         {
-            var newArea = new LocalArea(vertices, form);
+            var newArea = new LocalArea(vertices);
             LocalAreas.Add(newArea);
 
             LocalAreaCreated?.Invoke(newArea);
@@ -76,7 +76,6 @@ namespace SCPSLBot.Navigation.Mesh
             var areas = LocalAreas;
             if (!areas.Remove(area))
             {
-                Log.Warning($"No areas at {area.Form} to remove area from.");
                 return false;
             }
 
@@ -113,7 +112,7 @@ namespace SCPSLBot.Navigation.Mesh
         #endregion
         #region Mesh reading/writing
 
-        public void ReadMesh(BinaryReader binaryReader, string form)
+        public void ReadMesh(BinaryReader binaryReader)
         {
             ///
             /// Vertices reading
@@ -130,7 +129,7 @@ namespace SCPSLBot.Navigation.Mesh
                     z = binaryReader.ReadSingle()
                 };
 
-                var newRoomFormVertex = AddVertex(vertexLocalPosition);
+                var newVertex = AddVertex(vertexLocalPosition);
             }
 
             ///
@@ -144,7 +143,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             for (var j = 0; j < areasCount; j++)
             {
-                var newRoomFormArea = MakeArea(Enumerable.Empty<LocalVertex>(), form);
+                var newArea = MakeArea(Enumerable.Empty<LocalVertex>());
 
                 var areaVerticesCount = binaryReader.ReadInt32();
                 var areaVertices = new int[areaVerticesCount];
