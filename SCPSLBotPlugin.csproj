@@ -75,9 +75,4 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Navigation\Mesh\Connector\" />
-    <Folder Include="Navigation\Mesh\Room\" />
-  </ItemGroup>
 </Project>

@@ -82,7 +82,7 @@ namespace SCPSLBot.Navigation.Mesh
             var radiusSqr = Mathf.Pow(radius, 2);
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var areasWithinRadius = mesh.FormAreas.Select(area => (area, distSqr: Vector3.SqrMagnitude(area.LocalCenterPosition - localPosition)))
+            var areasWithinRadius = mesh.LocalAreas.Select(area => (area, distSqr: Vector3.SqrMagnitude(area.LocalCenterPosition - localPosition)))
                 .Where(t => t.distSqr < radiusSqr);
 
             if (!areasWithinRadius.Any())
@@ -185,7 +185,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            foreach (var area in mesh.FormAreas.ToArray())
+            foreach (var area in mesh.LocalAreas.ToArray())
             {
                 if (area.Vertices.Count < 3)
                 {
@@ -222,7 +222,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            Log.Info($"Vertex #{mesh.FormVertices.IndexOf(formVertex)} of {form} moved to new local position {formVertex.LocalPosition}.");
+            Log.Info($"Vertex #{mesh.LocalVertices.IndexOf(formVertex)} of {form} moved to new local position {formVertex.LocalPosition}.");
 
             return true;
         }
@@ -316,7 +316,7 @@ namespace SCPSLBot.Navigation.Mesh
             var newArea = mesh.MakeArea(SelectedVertices.Select(v => v.LocalVertex), form);
             ConnectAdjacentAreas(newArea, form);
 
-            Log.Info($"Area #{mesh.FormAreas.IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under {newArea.Form}.");
+            Log.Info($"Area #{mesh.LocalAreas.IndexOf(newArea)} at local center position {newArea.LocalCenterPosition} added under {newArea.Form}.");
 
             SelectedVertices.Clear();
             AutoSelectModeEnabled = false;
@@ -388,7 +388,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var (newVertexPos, area, edge) = mesh.FormAreas
+            var (newVertexPos, area, edge) = mesh.LocalAreas
                 .SelectMany(a => a.Edges.Select(e => (edge: (from: e.From, to: e.To), area: a)))
                 .Select(t => (
                     t.edge,
@@ -411,7 +411,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             mesh.AddVertexToArea(area, vertex, edge.to);
 
-            Log.Info($"Vertex #{mesh.FormVertices.IndexOf(vertex)} created on edge of area #{mesh.FormAreas.IndexOf(area)}");
+            Log.Info($"Vertex #{mesh.LocalVertices.IndexOf(vertex)} created on edge of area #{mesh.LocalAreas.IndexOf(area)}");
 
             return true;
         }
@@ -431,7 +431,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var lookPlane = new Plane(Vector3.Cross(localDirection, Vector3.up), localPosition);
 
-            var (newVertexPos, area, edge) = mesh.FormAreas
+            var (newVertexPos, area, edge) = mesh.LocalAreas
                 .SelectMany(a => a.Edges.Select(e => (edge: (from: e.From, to: e.To), area: a)))
                 .Select(t => (
                     t.edge,
@@ -476,7 +476,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             mesh.AddVertexToArea(area, vertex, edge.to);
 
-            Log.Info($"Vertex #{mesh.FormVertices.IndexOf(vertex)} created on edge of area #{mesh.FormAreas.IndexOf(area)}");
+            Log.Info($"Vertex #{mesh.LocalVertices.IndexOf(vertex)} created on edge of area #{mesh.LocalAreas.IndexOf(area)}");
 
             return true;
         }
@@ -572,7 +572,7 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var inversedEdge = new LocalEdge(edge.To, edge.From);
 
-                var connectedArea = mesh.FormAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
+                var connectedArea = mesh.LocalAreas.Find(a => a != formArea && a.Edges.Contains(inversedEdge));
                 if (connectedArea != null)
                 {
                     formArea.AddConnection(connectedArea);
@@ -629,24 +629,24 @@ namespace SCPSLBot.Navigation.Mesh
         private void AddLoggingHandlers(NavigationMesh mesh, string form)
         {
             vertexCreatedDelegatesByMesh.Add(mesh, vertex => LogVertexCreated(vertex, form));
-            mesh.FormVertexCreated += vertexCreatedDelegatesByMesh[mesh];
+            mesh.LocalVertexCreated += vertexCreatedDelegatesByMesh[mesh];
 
             vertexDeletedDelegatesByMesh.Add(mesh, vertex => LogVertexDeleted(vertex, form));
-            mesh.FormVertexDeleted += vertexDeletedDelegatesByMesh[mesh];
+            mesh.LocalVertexDeleted += vertexDeletedDelegatesByMesh[mesh];
         }
 
         private void RemoveLoggingHandlers(NavigationMesh mesh)
         {
             vertexCreatedDelegatesByMesh.Remove(mesh, out var vertexCreatedDelagate);
-            mesh.FormVertexCreated -= vertexCreatedDelagate;
+            mesh.LocalVertexCreated -= vertexCreatedDelagate;
 
             vertexDeletedDelegatesByMesh.Remove(mesh, out var vertexDeletedDelagate);
-            mesh.FormVertexDeleted -= vertexDeletedDelagate;
+            mesh.LocalVertexDeleted -= vertexDeletedDelagate;
         }
 
         private void LogVertexCreated(LocalVertex formVertex, string form)
         {
-            Log.Info($"Vertex #{NavigationMesh.GetMesh(form).FormVertices.IndexOf(formVertex)} at local position {formVertex.LocalPosition} added under {form}.");
+            Log.Info($"Vertex #{NavigationMesh.GetMesh(form).LocalVertices.IndexOf(formVertex)} at local position {formVertex.LocalPosition} added under {form}.");
         }
 
         private void LogVertexDeleted(LocalVertex formVertex, string form)

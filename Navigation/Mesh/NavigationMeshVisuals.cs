@@ -87,7 +87,7 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var form = NavigationMesh.GetForm(NearestVertex.LocalVertex);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var nearestVertexId = mesh.FormVertices.IndexOf(NearestVertex.LocalVertex);
+                    var nearestVertexId = mesh.LocalVertices.IndexOf(NearestVertex.LocalVertex);
                     VisualsMessages[0] = $"Vertex #{nearestVertexId} in {form}";
 
                     var selectedIdx = SelectedVertices.IndexOf(NearestVertex);
@@ -101,7 +101,7 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var form = NavigationMesh.GetForm(FacingVertex.LocalVertex);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var facingVertexId = mesh.FormVertices.IndexOf(FacingVertex.LocalVertex);
+                    var facingVertexId = mesh.LocalVertices.IndexOf(FacingVertex.LocalVertex);
                     VisualsMessages[1] = $"Facing vertex #{facingVertexId} in {form}";
 
                     var selectedIdx = SelectedVertices.IndexOf(FacingVertex);
@@ -121,14 +121,14 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     //var connectedIdsStr = string.Join(", ", NearestArea.ConnectedAreas.Select(c => $"#{c.Id}"));
                     var mesh = NavigationMesh.GetMesh(NearestArea.LocalArea.Form);
-                    var NearestAreaId = mesh.FormAreas.IndexOf(NearestArea.LocalArea);
+                    var NearestAreaId = mesh.LocalAreas.IndexOf(NearestArea.LocalArea);
                     VisualsMessages[0] = $"Area #{NearestAreaId} in {NearestArea.LocalArea.Form}";
                 }
 
                 if (CachedArea != null)
                 {
                     var mesh = NavigationMesh.GetMesh(CachedArea.LocalArea.Form);
-                    var cachedAreaId = mesh.FormAreas.IndexOf(CachedArea.LocalArea);
+                    var cachedAreaId = mesh.LocalAreas.IndexOf(CachedArea.LocalArea);
                     VisualsMessages[1] = $"Cached area #{cachedAreaId} in {CachedArea.LocalArea.Form}";
 
                     if (NearestArea != null)
@@ -151,7 +151,7 @@ namespace SCPSLBot.Navigation.Mesh
                 if (FacingArea != null)
                 {
                     var mesh = NavigationMesh.GetMesh(FacingArea.LocalArea.Form);
-                    var facingAreaId = mesh.FormAreas.IndexOf(FacingArea.LocalArea);
+                    var facingAreaId = mesh.LocalAreas.IndexOf(FacingArea.LocalArea);
                     VisualsMessages[1] = $"Facing area #{facingAreaId} in {FacingArea.LocalArea.Form}";
 
                     if (NearestArea != null)

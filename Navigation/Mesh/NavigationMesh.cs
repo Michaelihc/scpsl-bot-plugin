@@ -23,9 +23,9 @@ namespace SCPSLBot.Navigation.Mesh
         public static Dictionary<LocalVertex, string> FormsByVertices { get; } = new();
 
         #region Instance vertices
-        public List<LocalVertex> FormVertices { get; } = new();
-        public event Action<LocalVertex> FormVertexCreated;
-        public event Action<LocalVertex> FormVertexDeleted;
+        public List<LocalVertex> LocalVertices { get; } = new();
+        public event Action<LocalVertex> LocalVertexCreated;
+        public event Action<LocalVertex> LocalVertexDeleted;
         #endregion
 
         public static Dictionary<GameObject, Dictionary<LocalVertex, Vertex>> VerticesByRoomOrConnector { get; } = new();
@@ -36,9 +36,9 @@ namespace SCPSLBot.Navigation.Mesh
                         Vector3Int Orientation), Dictionary<LocalVertex, Vertex>>> VerticesByRoomDirectionConnectorOrientation { get; } = new();
 
         #region Instance areas
-        public List<LocalArea> FormAreas { get; } = new();
-        public event Action<LocalArea> FormAreaCreated;
-        public event Action<LocalArea> FormAreaDeleted;
+        public List<LocalArea> LocalAreas { get; } = new();
+        public event Action<LocalArea> LocalAreaCreated;
+        public event Action<LocalArea> LocalAreaDeleted;
         #endregion
 
         public static Dictionary<GameObject, List<Area>> AreasByRoomOrConnector { get; } = new();
@@ -51,18 +51,18 @@ namespace SCPSLBot.Navigation.Mesh
 
         private NavigationMesh()
         {
-            FormVertexDeleted += RemoveVertexFromAreas;
+            LocalVertexDeleted += RemoveVertexFromAreas;
         }
 
         public static NavigationMesh Create(string form)
         {
             var mesh = new NavigationMesh();
 
-            mesh.FormVertexCreated += vertex => AddVerticesToRoomsOrConnectors(vertex, form);
-            mesh.FormVertexDeleted += vertex => RemoveVerticesFromRoomsOrConnectors(vertex, form);
+            mesh.LocalVertexCreated += vertex => AddVerticesToRoomsOrConnectors(vertex, form);
+            mesh.LocalVertexDeleted += vertex => RemoveVerticesFromRoomsOrConnectors(vertex, form);
 
-            mesh.FormAreaCreated += AddAreas;
-            mesh.FormAreaDeleted += RemoveAreas;
+            mesh.LocalAreaCreated += AddAreas;
+            mesh.LocalAreaDeleted += RemoveAreas;
 
             return mesh;
         }
@@ -311,7 +311,7 @@ namespace SCPSLBot.Navigation.Mesh
         public LocalVertex AddVertex(Vector3 localPosition)
         {
             var newFormVertex = CreateFormVertex(localPosition);
-            FormVertexCreated?.Invoke(newFormVertex);
+            LocalVertexCreated?.Invoke(newFormVertex);
 
             return newFormVertex;
         }
@@ -319,7 +319,7 @@ namespace SCPSLBot.Navigation.Mesh
         private LocalVertex CreateFormVertex(Vector3 localPosition)
         {
             var newFormVertex = new LocalVertex(localPosition);
-            FormVertices.Add(newFormVertex);
+            LocalVertices.Add(newFormVertex);
 
             return newFormVertex;
         }
@@ -341,21 +341,21 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            FormVertexDeleted?.Invoke(formVertex);
+            LocalVertexDeleted?.Invoke(formVertex);
 
             return true;
         }
 
         private bool DeleteFormVertex(LocalVertex formVertex)
         {
-            FormVertices.Remove(formVertex);
+            LocalVertices.Remove(formVertex);
 
             return true;
         }
 
         private void RemoveVertexFromAreas(LocalVertex formVertex)
         {
-            foreach (var area in FormAreas)
+            foreach (var area in LocalAreas)
             {
                 area.RemoveVertex(formVertex);
             }
@@ -381,9 +381,9 @@ namespace SCPSLBot.Navigation.Mesh
         public LocalArea MakeArea(IEnumerable<LocalVertex> formVertices, string form)
         {
             var newFormArea = new LocalArea(formVertices, form);
-            FormAreas.Add(newFormArea);
+            LocalAreas.Add(newFormArea);
 
-            FormAreaCreated?.Invoke(newFormArea);
+            LocalAreaCreated?.Invoke(newFormArea);
 
             return newFormArea;
         }
@@ -400,7 +400,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool RemoveArea(LocalArea formArea)
         {
-            var formAreas = FormAreas;
+            var formAreas = LocalAreas;
             if (!formAreas.Remove(formArea))
             {
                 Log.Warning($"No areas at {formArea.Form} to remove area from.");
@@ -409,14 +409,14 @@ namespace SCPSLBot.Navigation.Mesh
 
             RemoveConnectionsToArea(formArea);
 
-            FormAreaDeleted?.Invoke(formArea);
+            LocalAreaDeleted?.Invoke(formArea);
 
             return true;
         }
 
         private void RemoveConnectionsToArea(LocalArea formArea)
         {
-            foreach (var otherFormArea in FormAreas)
+            foreach (var otherFormArea in LocalAreas)
             {
                 otherFormArea.RemoveConnection(formArea);
             }
@@ -550,17 +550,17 @@ namespace SCPSLBot.Navigation.Mesh
                 areasConnections[j] = connectedAreas;
             }
 
-            foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (FormAreas[areaIndex], vertices)))
+            foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (LocalAreas[areaIndex], vertices)))
             {
-                foreach (var areaVertex in vertices.Select(vertexIdx => FormVertices[vertexIdx]))
+                foreach (var areaVertex in vertices.Select(vertexIdx => LocalVertices[vertexIdx]))
                 {
                     area.AddVertex(areaVertex);
                 }
             }
 
-            foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (FormAreas[areaIndex], conns)))
+            foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (LocalAreas[areaIndex], conns)))
             {
-                foreach (var connectingArea in conns.Select(connectedIndex => FormAreas[connectedIndex]))
+                foreach (var connectingArea in conns.Select(connectedIndex => LocalAreas[connectedIndex]))
                 {
                     area.AddConnection(connectingArea);
                 }
@@ -601,25 +601,25 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void WriteMesh(BinaryWriter binaryWriter)
         {
-            binaryWriter.Write(FormVertices.Count);
-            foreach (var vertex in FormVertices)
+            binaryWriter.Write(LocalVertices.Count);
+            foreach (var vertex in LocalVertices)
             {
                 binaryWriter.Write(vertex.LocalPosition.x);
                 binaryWriter.Write(vertex.LocalPosition.y);
                 binaryWriter.Write(vertex.LocalPosition.z);
             }
 
-            binaryWriter.Write(FormAreas.Count);
-            foreach (var area in FormAreas)
+            binaryWriter.Write(LocalAreas.Count);
+            foreach (var area in LocalAreas)
             {
                 binaryWriter.Write(area.Vertices.Count);
-                foreach (var vertexIdx in area.Vertices.Select(areaVertex => FormVertices.IndexOf(areaVertex)))
+                foreach (var vertexIdx in area.Vertices.Select(areaVertex => LocalVertices.IndexOf(areaVertex)))
                 {
                     binaryWriter.Write(vertexIdx);
                 }
 
                 binaryWriter.Write(area.ConnectedLocalAreas.Count);
-                foreach (var connIdx in area.ConnectedLocalAreas.Select(connArea => FormAreas.IndexOf(connArea)))
+                foreach (var connIdx in area.ConnectedLocalAreas.Select(connArea => LocalAreas.IndexOf(connArea)))
                 {
                     binaryWriter.Write(connIdx);
                 }
@@ -696,8 +696,8 @@ namespace SCPSLBot.Navigation.Mesh
                 .Concat(MeshesByRoomConnectorForm.Values);
             foreach (var mesh in meshes)
             {
-                mesh.FormVertices.Clear();
-                mesh.FormAreas.Clear();
+                mesh.LocalVertices.Clear();
+                mesh.LocalAreas.Clear();
             }
 
             VerticesByRoomDirectionConnectorOrientation.Clear();
