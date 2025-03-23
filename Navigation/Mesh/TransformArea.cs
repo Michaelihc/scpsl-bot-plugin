@@ -1,4 +1,5 @@
 ﻿using SCPSLBot.Collections.Generic;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,21 +7,21 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal partial record struct TransformArea(Area Local, Transform Transform)
     {
-        public SelectingEnumerable<IEnumerable<Area>, TransformArea, Area> ConnectedAreas { get; } 
-            = new(Local.ConnectedAreas, ca => new TransformArea(ca, Transform));
+        public readonly SelectingEnumerable<IEnumerable<Area>, TransformArea, Area> ConnectedAreas
+            => new(Local.ConnectedAreas, ToTransformArea);
 
-        public SelectingDictionary<TransformArea, TransformEdge, Area, Edge> ConnectedAreaEdges { get; }
-            = new(Local.ConnectedAreaEdges, 
-                ta => ta.Local, 
-                a => new (a, Transform), 
-                e => new (e, Transform)
-            );
+        public readonly SelectingDictionary<TransformArea, TransformEdge, Area, Edge> ConnectedAreaEdges
+            => new(Local.ConnectedAreaEdges, ToLocalArea, ToTransformArea, ToTransformEdge);
+
+        public readonly Vector3 CenterPosition => Transform.TransformPoint(Local.CenterPosition);
 
         public TransformArea((Area Area, Transform Tranform) tuple)
             : this(tuple.Area, tuple.Tranform)
         {
         }
 
-        public readonly Vector3 CenterPosition => Transform.TransformPoint(Local.CenterPosition);
+        private readonly TransformArea ToTransformArea(Area localArea) => new(localArea, Transform);
+        private readonly TransformEdge ToTransformEdge(Edge localEdge) => new(localEdge, Transform);
+        private readonly Area ToLocalArea(TransformArea transformArea) => transformArea.Local;
     }
 }

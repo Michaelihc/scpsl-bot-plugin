@@ -45,8 +45,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             var mesh = new NavigationMesh();
 
-            BindVertices(mesh, form);
-            BindAreas(mesh, form);
+            BindMesh(mesh, form);
 
             mesh.VertexCreated += vertex => FormsByVertices.Add(vertex, form);
             mesh.VertexDeleted += vertex => FormsByVertices.Remove(vertex);
@@ -60,18 +59,17 @@ namespace SCPSLBot.Navigation.Mesh
             return mesh;
         }
 
-        private static void BindVertices(NavigationMesh mesh, string form)
+        private static void BindMesh(NavigationMesh mesh, string form)
         {
-            foreach (var roomOrConnector in RoomsOrConnectorsByForm[form])
+            if (!RoomsOrConnectorsByForm.TryGetValue(form, out var roomsOrConnectors))
+            {
+                roomsOrConnectors = new();
+                RoomsOrConnectorsByForm.Add(form, roomsOrConnectors);
+            }
+
+            foreach (var roomOrConnector in roomsOrConnectors)
             {
                 LocalVerticesByRoomOrConnector[roomOrConnector] = mesh.Vertices;
-            }
-        }
-
-        private static void BindAreas(NavigationMesh mesh, string form)
-        {
-            foreach (var roomOrConnector in RoomsOrConnectorsByForm[form])
-            {
                 LocalAreasByRoomOrConnector[roomOrConnector] = mesh.Areas;
             }
         }
@@ -121,7 +119,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var connectorAreas = areasByDirectionConnectorOrientation.Keys
                 .SelectMany(c => LocalAreasByRoomOrConnector[c.Connector.gameObject]
-                    .Select(a => new TransformArea(Local: a, Transform: c.Connector)
+                    .Select(a => new TransformArea(a, c.Connector)
                 ));
             return connectorAreas
                 .Where(t => IsLocalPointWithinArea(t.Local, t.Transform.InverseTransformPoint(position)))
@@ -139,7 +137,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            return roomAreas.First(a => IsLocalPointWithinArea(a, localPosition));
+            return roomAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, localPosition));
         }
 
         public static bool IsAtPositiveEdgeSide(Vector3 position, TransformEdge transformEdge)
@@ -428,12 +426,15 @@ namespace SCPSLBot.Navigation.Mesh
             foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier.gameObject))
             {
                 var roomForm = GetForm(room);
-                if (RoomsOrConnectorsByForm.TryGetValue(roomForm, out var rooms))
+                if (!RoomsOrConnectorsByForm.TryGetValue(roomForm, out var rooms))
                 {
                     rooms = new();
                     RoomsOrConnectorsByForm.Add(roomForm, rooms);
                 }
                 rooms.Add(room);
+
+                LocalVerticesByRoomOrConnector.Add(room.gameObject, new List<Vertex>());
+                LocalAreasByRoomOrConnector.Add(room.gameObject, new List<Area>());
 
                 LocalVerticesByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
                 LocalAreasByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
@@ -450,12 +451,15 @@ namespace SCPSLBot.Navigation.Mesh
                 }
 
                 var connectorForm = GetForm(connectorOrDoor);
-                if (RoomsOrConnectorsByForm.TryGetValue(connectorForm, out var connectors))
+                if (!RoomsOrConnectorsByForm.TryGetValue(connectorForm, out var connectors))
                 {
                     connectors = new();
                     RoomsOrConnectorsByForm.Add(connectorForm, connectors);
                 }
                 connectors.Add(connectorOrDoor);
+
+                LocalVerticesByRoomOrConnector.Add(connectorOrDoor.gameObject, new List<Vertex>());
+                LocalAreasByRoomOrConnector.Add(connectorOrDoor.gameObject, new List<Area>());
 
                 foreach (var connectedRoom in rooms)
                 {
