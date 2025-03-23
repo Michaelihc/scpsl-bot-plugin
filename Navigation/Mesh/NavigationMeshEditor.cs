@@ -51,7 +51,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public Vertex FindClosestVertexFacingAt(GameObject roomOrConnector, Vector3 localPosition, Vector3 localDirection)
         {
-            var vertices = NavigationMesh.VerticesByRoomOrConnector[roomOrConnector];
+            var vertices = NavigationMesh.LocalVerticesByRoomOrConnector[roomOrConnector];
 
             var targetVertex = vertices
                 .Select(v => (n: v, d: Vector3.SqrMagnitude(v.Position - localPosition)))
@@ -669,7 +669,7 @@ namespace SCPSLBot.Navigation.Mesh
                 var cameraPosition = PlayerEditing.Camera.position;
                 var cameraForward = PlayerEditing.Camera.forward;
 
-                Visuals.FacingLocalVertex = NavigationMesh.VerticesByRoomDirectionConnectorOrientation[room.gameObject].Keys
+                Visuals.FacingLocalVertex = NavigationMesh.LocalVerticesByRoomDirectionConnectorOrientation[room.gameObject].Keys
                     .Select(t => t.Connector.transform).Prepend(room.transform)
                     .Select(transform => (
                         roomOrConnector: transform.gameObject,

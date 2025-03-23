@@ -186,14 +186,14 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var vertexPosChanged = vertexVisual.Value.transform.position != vertexVisual.Key.Position;
 
-                    if (!NavigationMesh.VerticesByRoomOrConnector.Values.Any(l => l.Contains(vertexVisual.Key)) || vertexPosChanged)
+                    if (!NavigationMesh.LocalVerticesByRoomOrConnector.Values.Any(l => l.Contains(vertexVisual.Key)) || vertexPosChanged)
                     {
                         NetworkServer.Destroy(vertexVisual.Value.gameObject);
                         VertexVisuals.Remove(vertexVisual.Key);
                     }
                 }
 
-                foreach (var (roomOrConnector, localVertex) in NavigationMesh.VerticesByRoomOrConnector.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
+                foreach (var (roomOrConnector, localVertex) in NavigationMesh.LocalVerticesByRoomOrConnector.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
                 {
                     if (!VertexVisuals.TryGetValue(localVertex, out var visual))
                     {
