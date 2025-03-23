@@ -1,5 +1,4 @@
-﻿using PluginAPI.Core;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,71 +8,71 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal partial class NavigationMesh
     {
-        public List<LocalVertex> LocalVertices { get; } = new();
-        public event Action<LocalVertex> LocalVertexCreated;
-        public event Action<LocalVertex> LocalVertexDeleted;
+        public List<Vertex> Vertices { get; } = new();
+        public event Action<Vertex> VertexCreated;
+        public event Action<Vertex> VertexDeleted;
 
-        public List<LocalArea> LocalAreas { get; } = new();
-        public event Action<LocalArea> LocalAreaCreated;
-        public event Action<LocalArea> LocalAreaDeleted;
+        public List<Area> Areas { get; } = new();
+        public event Action<Area> AreaCreated;
+        public event Action<Area> AreaDeleted;
 
         private NavigationMesh()
         {
-            LocalVertexDeleted += RemoveVertexFromAreas;
+            VertexDeleted += RemoveVertexFromAreas;
         }
 
         #region Mesh manipulation
 
-        public LocalVertex AddVertex(Vector3 localPosition)
+        public Vertex AddVertex(Vector3 position)
         {
-            var newVertex = new LocalVertex(localPosition);
-            LocalVertices.Add(newVertex);
+            var newVertex = new Vertex(position);
+            Vertices.Add(newVertex);
 
-            LocalVertexCreated?.Invoke(newVertex);
+            VertexCreated?.Invoke(newVertex);
 
             return newVertex;
         }
 
-        public bool DeleteVertex(LocalVertex vertex)
+        public bool DeleteVertex(Vertex vertex)
         {
-            if (!LocalVertices.Remove(vertex))
+            if (!Vertices.Remove(vertex))
             {
                 return false;
             }
 
-            LocalVertexDeleted?.Invoke(vertex);
+            VertexDeleted?.Invoke(vertex);
 
             return true;
         }
 
-        private void RemoveVertexFromAreas(LocalVertex vertex)
+        private void RemoveVertexFromAreas(Vertex vertex)
         {
-            foreach (var area in LocalAreas)
+            foreach (var area in Areas)
             {
                 area.RemoveVertex(vertex);
             }
         }
 
-        public bool MoveVertex(LocalVertex vertex, Vector3 newLocalPosition)
+        public bool MoveVertex(Vertex vertex, Vector3 newPosition)
         {
-            vertex.LocalPosition = newLocalPosition;
+            vertex.Position = newPosition;
 
             return true;
         }
 
-        public LocalArea MakeArea(IEnumerable<LocalVertex> vertices)
+        public Area MakeArea(IEnumerable<Vertex> vertices)
         {
-            var newArea = new LocalArea(vertices);
-            LocalAreas.Add(newArea);
+            var newArea = new Area(vertices);
+            Areas.Add(newArea);
 
-            LocalAreaCreated?.Invoke(newArea);
+            AreaCreated?.Invoke(newArea);
 
             return newArea;
         }
 
-        public bool RemoveArea(LocalArea area)
+        public bool RemoveArea(Area area)
         {
-            var areas = LocalAreas;
+            var areas = Areas;
             if (!areas.Remove(area))
             {
                 return false;
@@ -81,30 +80,30 @@ namespace SCPSLBot.Navigation.Mesh
 
             RemoveConnectionsToArea(area);
 
-            LocalAreaDeleted?.Invoke(area);
+            AreaDeleted?.Invoke(area);
 
             return true;
         }
 
-        private void RemoveConnectionsToArea(LocalArea area)
+        private void RemoveConnectionsToArea(Area area)
         {
-            foreach (var otherArea in LocalAreas)
+            foreach (var otherArea in Areas)
             {
                 otherArea.RemoveConnection(area);
             }
         }
 
-        public void CreateAreaConnection(LocalArea fromArea, LocalArea toArea)
+        public void CreateAreaConnection(Area fromArea, Area toArea)
         {
             fromArea.AddConnection(toArea);
         }
 
-        public void DeleteAreaConnection(LocalArea fromArea, LocalArea toArea)
+        public void DeleteAreaConnection(Area fromArea, Area toArea)
         {
             fromArea.RemoveConnection(toArea);
         }
 
-        public void AddVertexToArea(LocalArea area, LocalVertex vertex, LocalVertex beforeVertex)
+        public void AddVertexToArea(Area area, Vertex vertex, Vertex beforeVertex)
         {
             area.AddVertex(vertex, beforeVertex);
         }
@@ -122,14 +121,14 @@ namespace SCPSLBot.Navigation.Mesh
 
             for (var j = 0; j < vertexCount; j++)
             {
-                var vertexLocalPosition = new Vector3()
+                var vertexPosition = new Vector3()
                 {
                     x = binaryReader.ReadSingle(),
                     y = binaryReader.ReadSingle(),
                     z = binaryReader.ReadSingle()
                 };
 
-                var newVertex = AddVertex(vertexLocalPosition);
+                var newVertex = AddVertex(vertexPosition);
             }
 
             ///
@@ -143,7 +142,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             for (var j = 0; j < areasCount; j++)
             {
-                var newArea = MakeArea(Enumerable.Empty<LocalVertex>());
+                var newArea = MakeArea(Enumerable.Empty<Vertex>());
 
                 var areaVerticesCount = binaryReader.ReadInt32();
                 var areaVertices = new int[areaVerticesCount];
@@ -162,17 +161,17 @@ namespace SCPSLBot.Navigation.Mesh
                 areasConnections[j] = connectedAreas;
             }
 
-            foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (LocalAreas[areaIndex], vertices)))
+            foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (Areas[areaIndex], vertices)))
             {
-                foreach (var areaVertex in vertices.Select(vertexIdx => LocalVertices[vertexIdx]))
+                foreach (var areaVertex in vertices.Select(vertexIdx => Vertices[vertexIdx]))
                 {
                     area.AddVertex(areaVertex);
                 }
             }
 
-            foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (LocalAreas[areaIndex], conns)))
+            foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (Areas[areaIndex], conns)))
             {
-                foreach (var connectingArea in conns.Select(connectedIndex => LocalAreas[connectedIndex]))
+                foreach (var connectingArea in conns.Select(connectedIndex => Areas[connectedIndex]))
                 {
                     area.AddConnection(connectingArea);
                 }
@@ -181,25 +180,25 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void WriteMesh(BinaryWriter binaryWriter)
         {
-            binaryWriter.Write(LocalVertices.Count);
-            foreach (var vertex in LocalVertices)
+            binaryWriter.Write(Vertices.Count);
+            foreach (var vertex in Vertices)
             {
-                binaryWriter.Write(vertex.LocalPosition.x);
-                binaryWriter.Write(vertex.LocalPosition.y);
-                binaryWriter.Write(vertex.LocalPosition.z);
+                binaryWriter.Write(vertex.Position.x);
+                binaryWriter.Write(vertex.Position.y);
+                binaryWriter.Write(vertex.Position.z);
             }
 
-            binaryWriter.Write(LocalAreas.Count);
-            foreach (var area in LocalAreas)
+            binaryWriter.Write(Areas.Count);
+            foreach (var area in Areas)
             {
                 binaryWriter.Write(area.Vertices.Count);
-                foreach (var vertexIdx in area.Vertices.Select(areaVertex => LocalVertices.IndexOf(areaVertex)))
+                foreach (var vertexIdx in area.Vertices.Select(areaVertex => Vertices.IndexOf(areaVertex)))
                 {
                     binaryWriter.Write(vertexIdx);
                 }
 
-                binaryWriter.Write(area.ConnectedLocalAreas.Count);
-                foreach (var connIdx in area.ConnectedLocalAreas.Select(connArea => LocalAreas.IndexOf(connArea)))
+                binaryWriter.Write(area.ConnectedAreas.Count);
+                foreach (var connIdx in area.ConnectedAreas.Select(connArea => Areas.IndexOf(connArea)))
                 {
                     binaryWriter.Write(connIdx);
                 }

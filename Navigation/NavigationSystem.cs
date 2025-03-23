@@ -70,8 +70,8 @@ namespace SCPSLBot.Navigation
                 if (areaAt0InShaft != null && areaAt1InShaft != null)
                 {
                     // Connect
-                    areaAt0InShaft.AddConnection(areaAt1InShaft);
-                    areaAt1InShaft.AddConnection(areaAt0InShaft);
+                    NavigationMesh.ForeignConnectedAreas[areaAt0InShaft.Value].Add(areaAt1InShaft.Value);
+                    NavigationMesh.ForeignConnectedAreas[areaAt1InShaft.Value].Add(areaAt0InShaft.Value);
                 }
             }
             Log.Info($"Connecting areas finished.");

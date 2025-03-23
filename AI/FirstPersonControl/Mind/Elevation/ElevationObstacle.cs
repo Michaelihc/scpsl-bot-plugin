@@ -61,9 +61,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         public bool Has(Vector3 goalPos) => GoalPosition == goalPos;
         public ElevatorChamber Elevator { get; private set; }
         public Vector3? GoalPosition { get; private set; }
-        public Area DestinationArea { get; private set; }
+        public TransformArea? DestinationArea { get; private set; }
 
-        private void Update(ElevatorChamber newChamberValue, Vector3? goalPos, Area destinationArea)
+        private void Update(ElevatorChamber newChamberValue, Vector3? goalPos, TransformArea? destinationArea)
         {
             if (newChamberValue != Elevator) 
             { 

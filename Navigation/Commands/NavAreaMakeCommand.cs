@@ -35,7 +35,7 @@ namespace SCPSLBot.Navigation.Commands
                 formType = arguments[0];
             }
 
-            LocalArea formArea;
+            Area formArea;
             switch (formType)
             {
                 case "room": 
@@ -55,7 +55,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            response = $"Area at local center position {formArea.LocalCenterPosition} created.";
+            response = $"Area at local center position {formArea.CenterPosition} created.";
             return true;
         }
     }

@@ -37,7 +37,7 @@ namespace SCPSLBot.Navigation.Commands
 
             var playerPosition = playerCommandSender.ReferenceHub.transform.position;
 
-            LocalVertex formVertex;
+            Vertex formVertex;
             switch (formType)
             {
                 case "room":
@@ -57,7 +57,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            response = $"Vertex at local position {formVertex.LocalPosition} created.";
+            response = $"Vertex at local position {formVertex.Position} created.";
             return true;
         }
     }

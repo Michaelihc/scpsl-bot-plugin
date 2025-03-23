@@ -19,41 +19,82 @@ namespace SCPSLBot.Navigation.Mesh
                     string ConnectorForm,
                         Vector3Int Orientation), NavigationMesh> MeshesByRoomConnectorForm { get; } = new();
 
-        public static Dictionary<LocalVertex, string> FormsByVertices { get; } = new();
-        public static Dictionary<LocalArea, string> FormsByAreas { get; } = new();
+        public static Dictionary<Vertex, string> FormsByVertices { get; } = new();
+        public static Dictionary<Area, string> FormsByAreas { get; } = new();
 
 
-        public static Dictionary<GameObject, Dictionary<LocalVertex, Vertex>> VerticesByRoomOrConnector { get; } = new();
+        public static Dictionary<string, List<GameObject>> RoomsOrConnectorsByForm { get; } = new();
+
+        public static Dictionary<GameObject, IReadOnlyList<Vertex>> VerticesByRoomOrConnector { get; } = new();
         public static Dictionary<
             GameObject, Dictionary<(
                 Vector3Int Direction,
                     Transform Connector,
-                        Vector3Int Orientation), Dictionary<LocalVertex, Vertex>>> VerticesByRoomDirectionConnectorOrientation { get; } = new();
+                        Vector3Int Orientation), IReadOnlyList<Vertex>>> VerticesByRoomDirectionConnectorOrientation { get; } = new();
 
-        public static Dictionary<GameObject, List<Area>> AreasByRoomOrConnector { get; } = new();
+        public static Dictionary<GameObject, IReadOnlyList<Area>> LocalAreasByRoomOrConnector { get; } = new();
         public static Dictionary<
             GameObject, Dictionary<(
                 Vector3Int Direction,
                     Transform Connector,
-                        Vector3Int Orientation), List<Area>>> AreasByRoomDirectionConnectorOrientation { get; } = new();
+                        Vector3Int Orientation), IReadOnlyList<Area>>> LocalAreasByRoomDirectionConnectorOrientation { get; } = new();
 
+        public static Dictionary<TransformArea, List<TransformArea>> ForeignConnectedAreas = new();
 
         public static NavigationMesh Create(string form)
         {
             var mesh = new NavigationMesh();
 
-            mesh.LocalVertexCreated += vertex => AddVerticesToRoomsOrConnectors(vertex, form);
-            mesh.LocalVertexDeleted += vertex => RemoveVerticesFromRoomsOrConnectors(vertex, form);
+            BindVertices(mesh, form);
+            BindAreas(mesh, form);
 
-            mesh.LocalAreaCreated += area => AddAreas(area, form);
-            mesh.LocalAreaDeleted += area => RemoveAreas(area, form);
+            mesh.VertexCreated += vertex => FormsByVertices.Add(vertex, form);
+            mesh.VertexDeleted += vertex => FormsByVertices.Remove(vertex);
+
+            mesh.AreaCreated += area => FormsByAreas.Add(area, form);
+            mesh.AreaDeleted += area => FormsByAreas.Remove(area);
+
+            mesh.AreaCreated += area => AddForeignConnectedAreasList(area, form);
+            mesh.AreaDeleted += area => RemoveForeignConnectedAreasList(area, form);
 
             return mesh;
         }
 
+        private static void BindVertices(NavigationMesh mesh, string form)
+        {
+            foreach (var roomOrConnector in RoomsOrConnectorsByForm[form])
+            {
+                VerticesByRoomOrConnector[roomOrConnector] = mesh.Vertices;
+            }
+        }
+
+        private static void BindAreas(NavigationMesh mesh, string form)
+        {
+            foreach (var roomOrConnector in RoomsOrConnectorsByForm[form])
+            {
+                LocalAreasByRoomOrConnector[roomOrConnector] = mesh.Areas;
+            }
+        }
+
+        private static void AddForeignConnectedAreasList(Area area, string form)
+        {
+            foreach (var roomOrConnector in RoomsOrConnectorsByForm[form])
+            {
+                ForeignConnectedAreas.Add(new(area, roomOrConnector.transform), new());
+            }
+        }
+
+        private static void RemoveForeignConnectedAreasList(Area area, string form)
+        {
+            foreach (var roomOrConnector in RoomsOrConnectorsByForm[form])
+            {
+                ForeignConnectedAreas.Remove(new(area, roomOrConnector.transform));
+            }
+        }
+
         #region Mesh querying
 
-        public static Area GetAreaWithin(Vector3 position)
+        public static TransformArea? GetAreaWithin(Vector3 position)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             if (!room)
@@ -64,33 +105,48 @@ namespace SCPSLBot.Navigation.Mesh
             var roomArea = GetRoomAreaWithin(position, room);
             if (roomArea != null)
             {
-                return roomArea;
+                return new (roomArea, room.transform);
             }
 
-            var areasByDirectionConnectorOrientation = AreasByRoomDirectionConnectorOrientation[room.gameObject];
+            var areasByDirectionConnectorOrientation = LocalAreasByRoomDirectionConnectorOrientation[room.gameObject];
+
+            var roomTransform = room.transform;
 
             var roomConnectorAreas = areasByDirectionConnectorOrientation.Values.SelectMany(l => l);
-            var roomConnectorArea = roomConnectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
+            var roomConnectorArea = roomConnectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, roomTransform.InverseTransformPoint(position)));
             if (roomConnectorArea != null)
             {
-                return roomConnectorArea;
+                return new (roomConnectorArea, room.transform);
             }
 
-            var connectorAreas = areasByDirectionConnectorOrientation.Keys.SelectMany(c => AreasByRoomOrConnector[c.Connector.gameObject]);
-            return connectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, a.Transform.InverseTransformPoint(position)));
+            var connectorAreas = areasByDirectionConnectorOrientation.Keys
+                .SelectMany(c => LocalAreasByRoomOrConnector[c.Connector.gameObject]
+                    .Select(a => new TransformArea(Local: a, Transform: c.Connector)
+                ));
+            return connectorAreas
+                .Where(t => IsLocalPointWithinArea(t.Local, t.Transform.InverseTransformPoint(position)))
+                .Select(t => new TransformArea?(t))
+                .FirstOrDefault();
         }
 
         public static Area GetRoomAreaWithin(Vector3 position, RoomIdentifier room = null)
         {
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room || !AreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
+            if (!room || !LocalAreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
             {
                 return null;
             }
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            return roomAreas.Find(a => IsLocalPointWithinArea(a, localPosition));
+            return roomAreas.First(a => IsLocalPointWithinArea(a, localPosition));
+        }
+
+        public static bool IsAtPositiveEdgeSide(Vector3 position, TransformEdge transformEdge)
+        {
+            var localPosition = transformEdge.Transform.InverseTransformPoint(position);
+
+            return IsAtPositiveEdgeSide(localPosition, new Edge(transformEdge.From.Local, transformEdge.To.Local));
         }
 
         public static bool IsAtPositiveEdgeSide(Vector3 position, Edge edge)
@@ -105,23 +161,23 @@ namespace SCPSLBot.Navigation.Mesh
 
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
 
-            if (!room || !AreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
+            if (!room || !LocalAreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
             {
                 return null;
             }
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var hit = roomAreas.SelectMany(a => a.LocalArea.Edges)
-                .Select(edge => (edge, planeDist: GetPointDistToEdgePlane(edge, localPosition, out var planeClosest), planeClosest))
+            var hit = roomAreas.SelectMany(a => a.Edges)
+                .Select(roomEdge => (roomEdge, planeDist: GetPointDistToEdgePlane(roomEdge, localPosition, out var planeClosest), planeClosest))
                 .Where(t => t.planeDist <= 0f)
 
-                .Select(t => (t.edge, closest: ClampWithinEdgePoints(t.edge, t.planeClosest)))
-                .Select(t => (t.edge, dist: -Vector3.SqrMagnitude(localPosition - t.closest), t.closest))
+                .Select(t => (t.roomEdge, closest: ClampWithinEdgePoints(t.roomEdge, t.planeClosest)))
+                .Select(t => (t.roomEdge, dist: -Vector3.SqrMagnitude(localPosition - t.closest), t.closest))
 
-                .Where(t => IsEdgeCenterWithinVertically(t.edge, localPosition))
+                .Where(t => IsEdgeCenterWithinVertically(t.roomEdge, localPosition))
                 .OrderByDescending(t => t.dist)
-                .Select(t => new (LocalEdge, float, Vector3)?(t))
+                .Select(t => new (Edge, float, Vector3)?(t))
                 .DefaultIfEmpty(null)
                 .First();
 
@@ -132,25 +188,21 @@ namespace SCPSLBot.Navigation.Mesh
 
             var (roomFormEdge, dist, closestLocalPoint) = hit.Value;
 
-            Vertex roomEdgeFrom = VerticesByRoomOrConnector[room.gameObject][roomFormEdge.From],
-                   roomEdgeTo = VerticesByRoomOrConnector[room.gameObject][roomFormEdge.To];
-
             closestPoint = room.transform.TransformPoint(closestLocalPoint);
 
-            return (roomEdgeFrom, roomEdgeTo);
+            return (roomFormEdge.From, roomFormEdge.To);
         }
 
-        public static void FindShortestPath(Area startingArea, Area endArea, List<Area> results)
+        public static void FindShortestPath(TransformArea startingArea, TransformArea endArea, List<TransformArea> results)
         {
-            var areasWithPriorityToEvaluate = new Dictionary<Area, float>();
-            var cameFromAreas = new Dictionary<Area, Area>();
-            var costsTill = new Dictionary<Area, float>();
+            var areasWithPriorityToEvaluate = new Dictionary<TransformArea, float>();
+            var cameFromAreas = new Dictionary<TransformArea, TransformArea>();
+            var costsTill = new Dictionary<TransformArea, float>();
 
             var cost = 0f;
             var heuristic = Vector3.Magnitude(endArea.CenterPosition - startingArea.CenterPosition);
 
             areasWithPriorityToEvaluate.Add(startingArea, cost + heuristic);
-            cameFromAreas.Add(startingArea, null);
             costsTill.Add(startingArea, cost);
 
             var area = startingArea;
@@ -173,7 +225,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 //Log.Debug($"Area evaluating connections #{areaIdx} cost so far {cost}");
 
-                foreach (var connectedArea in area.ConnectedAreas)
+                foreach (var connectedArea in area.ConnectedAreas.Concat(ForeignConnectedAreas[area]))
                 {
                     var connectedCost = cost + Vector3.Magnitude(connectedArea.CenterPosition - area.CenterPosition);
 
@@ -199,11 +251,12 @@ namespace SCPSLBot.Navigation.Mesh
             if (cameFromAreas.ContainsKey(endArea))
             {
                 area = endArea;
-                while (area != null)
+                do
                 {
                     shortestPath.Add(area);
-                    cameFromAreas.TryGetValue(area, out area);
                 }
+                while (cameFromAreas.TryGetValue(area, out area));
+
                 shortestPath.Reverse();
             }
         }
@@ -219,10 +272,10 @@ namespace SCPSLBot.Navigation.Mesh
             var radiusSqr = Mathf.Pow(radius, 2);
 
             var verticesAtDirectionConnectorOrientation = VerticesByRoomDirectionConnectorOrientation[room.gameObject];
-            var connectorVertices = verticesAtDirectionConnectorOrientation.Keys.SelectMany(c => VerticesByRoomOrConnector[c.Connector.gameObject].Values);
-            var roomConnectorVertices = verticesAtDirectionConnectorOrientation.Values.SelectMany(l => l.Values);
+            var connectorVertices = verticesAtDirectionConnectorOrientation.Keys.SelectMany(c => VerticesByRoomOrConnector[c.Connector.gameObject]);
+            var roomConnectorVertices = verticesAtDirectionConnectorOrientation.Values.SelectMany(l => l);
 
-            var verticesWithinRadius = roomVertexs.Values
+            var verticesWithinRadius = roomVertexs
                 .Concat(roomConnectorVertices)
                 .Concat(connectorVertices)
                 .Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.Position - position)))
@@ -238,19 +291,12 @@ namespace SCPSLBot.Navigation.Mesh
                 .vertex;
         }
 
-        public static bool IsPointWithinArea(Area area, Vector3 pointPosition)
-        {
-            var pointLocalPosition = area.Transform.InverseTransformPoint(pointPosition);
-
-            return IsLocalPointWithinArea(area, pointLocalPosition);
-        }
-
-        public static string GetForm(LocalVertex vertex)
+        public static string GetForm(Vertex vertex)
         {
             return FormsByVertices[vertex];
         }
 
-        public static string GetForm(LocalArea area)
+        public static string GetForm(Area area)
         {
             return FormsByAreas[area];
         }
@@ -274,69 +320,24 @@ namespace SCPSLBot.Navigation.Mesh
             return Vector3Int.RoundToInt(room.transform.InverseTransformDirection(connectorTransformForward));
         }
 
-        private static Vector3 ClampWithinEdgePoints(LocalEdge edge, Vector3 planeClosestPoint)
+        private static Vector3 ClampWithinEdgePoints(Edge edge, Vector3 planeClosestPoint)
         {
-            var dir1To2 = edge.To.LocalPosition - edge.From.LocalPosition;
-            var dir1ToPoint = planeClosestPoint - edge.From.LocalPosition;
+            var dir1To2 = edge.To.Position - edge.From.Position;
+            var dir1ToPoint = planeClosestPoint - edge.From.Position;
 
-            var dir2To1 = edge.From.LocalPosition - edge.To.LocalPosition;
-            var dir2ToPoint = planeClosestPoint - edge.To.LocalPosition;
+            var dir2To1 = edge.From.Position - edge.To.Position;
+            var dir2ToPoint = planeClosestPoint - edge.To.Position;
 
             if (Vector3.Dot(dir1ToPoint, dir1To2) < 0f)
             {
-                return edge.From.LocalPosition;
+                return edge.From.Position;
             }
             if (Vector3.Dot(dir2ToPoint, dir2To1) < 0f)
             {
-                return edge.To.LocalPosition;
+                return edge.To.Position;
             }
 
             return planeClosestPoint;
-        }
-
-        #endregion
-        #region Mesh manipulation handlers
-
-        private static void AddVerticesToRoomsOrConnectors(LocalVertex localVertex, string form)
-        {
-            foreach (var verticesPair in VerticesByRoomOrConnector.Where(p => StartsWithForm(p.Key, form)))
-            {
-                verticesPair.Value.Add(localVertex, new Vertex(localVertex, verticesPair.Key.transform));
-            }
-
-            FormsByVertices.Add(localVertex, form);
-        }
-
-        private static void RemoveVerticesFromRoomsOrConnectors(LocalVertex localVertex, string form)
-        {
-            foreach (var (_, vertices) in VerticesByRoomOrConnector.Where(p => StartsWithForm(p.Key, form)))
-            {
-                vertices.Remove(localVertex);
-            }
-
-            FormsByVertices.Remove(localVertex);
-        }
-
-        private static void AddAreas(LocalArea localArea, string form)
-        {
-            foreach (var (roomOrConnector, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, form)))
-            {
-                var newArea = new Area(localArea, roomOrConnector.transform, localArea => areas.Find(a => a.LocalArea == localArea));
-                areas.Add(newArea);
-            }
-
-            FormsByAreas.Add(localArea, form);
-        }
-
-        private static void RemoveAreas(LocalArea localArea, string form)
-        {
-            foreach (var (_, areas) in AreasByRoomOrConnector.Where(p => StartsWithForm(p.Key, form)))
-            {
-                var areaToRemove = areas.Find(n => n.LocalArea == localArea);
-                areas.Remove(areaToRemove);
-            }
-
-            FormsByAreas.Remove(localArea);
         }
 
         #endregion
@@ -430,52 +431,46 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static void InitMeshes()
         {
-            foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier))
+            foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier.gameObject))
             {
-                VerticesByRoomOrConnector.Add(room.gameObject, new());
-                AreasByRoomOrConnector.Add(room.gameObject, new());
+                var roomForm = GetForm(room);
+                if (RoomsOrConnectorsByForm.TryGetValue(roomForm, out var rooms))
+                {
+                    rooms = new();
+                    RoomsOrConnectorsByForm.Add(roomForm, rooms);
+                }
+                rooms.Add(room);
 
                 VerticesByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
-                AreasByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
+                LocalAreasByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
             }
 
-            foreach (var connector in RoomConnector.AllConnectors)
+            var allConnectors = RoomConnector.AllConnectors.Select(c => (c.gameObject, c.Rooms));
+            var allDoors = DoorVariant.AllDoors.Where(d => d.Rooms.Length >= 2).Select(c => (c.gameObject, c.Rooms));
+
+            foreach (var (connectorOrDoor, rooms) in allConnectors.Concat(allDoors))
             {
-                if (connector.Rooms.Length != 2)
+                if (rooms.Length != 2)
                 {
-                    Log.Warning($"Abnormal number {connector.Rooms.Length} of connected rooms for connector {connector}");
+                    Log.Warning($"Abnormal number {rooms.Length} of connected rooms at {connectorOrDoor}");
                 }
 
-                VerticesByRoomOrConnector.Add(connector.gameObject, new());
-                AreasByRoomOrConnector.Add(connector.gameObject, new());
-                foreach (var connectedRoom in connector.Rooms)
+                var connectorForm = GetForm(connectorOrDoor);
+                if (RoomsOrConnectorsByForm.TryGetValue(connectorForm, out var connectors))
                 {
-                    var otherRoom = connector.Rooms.First(r => r != connectedRoom);
+                    connectors = new();
+                    RoomsOrConnectorsByForm.Add(connectorForm, connectors);
+                }
+                connectors.Add(connectorOrDoor);
+
+                foreach (var connectedRoom in rooms)
+                {
+                    var otherRoom = rooms.First(r => r != connectedRoom);
                     var direction = GetDirectionToRoom(connectedRoom, otherRoom);
-                    var orientation = GetConnectorOrientation(connectedRoom, connector.transform.forward);
+                    var orientation = GetConnectorOrientation(connectedRoom, connectorOrDoor.transform.forward);
 
-                    VerticesByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, connector.transform, orientation), new());
-                    AreasByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, connector.transform, orientation), new());
-                }
-            }
-
-            foreach (var door in DoorVariant.AllDoors.Where(d => d.Rooms.Length >= 2))
-            {
-                if (door.Rooms.Length != 2)
-                {
-                    Log.Warning($"Abnormal number {door.Rooms.Length} of connected rooms for door {door}");
-                }
-
-                VerticesByRoomOrConnector.Add(door.gameObject, new());
-                AreasByRoomOrConnector.Add(door.gameObject, new());
-                foreach (var connectedRoom in door.Rooms)
-                {
-                    var otherRoom = door.Rooms.First(r => r != connectedRoom);
-                    var direction = GetDirectionToRoom(connectedRoom, otherRoom);
-                    var orientation = GetConnectorOrientation(connectedRoom, door.transform.forward);
-
-                    VerticesByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, door.transform, orientation), new());
-                    AreasByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, door.transform, orientation), new());
+                    VerticesByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, connectorOrDoor.transform, orientation), new List<Vertex>());
+                    LocalAreasByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, connectorOrDoor.transform, orientation), new List<Area>());
                 }
             }
 
@@ -487,27 +482,26 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static void ResetMeshes()
         {
-            VerticesByRoomOrConnector.Clear();
-            AreasByRoomOrConnector.Clear();
+            RoomsOrConnectorsByForm.Clear();
 
             var meshes = MeshesByRoomForm.Values
                 .Concat(MeshesByConnectorForm.Values)
                 .Concat(MeshesByRoomConnectorForm.Values);
             foreach (var mesh in meshes)
             {
-                mesh.LocalVertices.Clear();
-                mesh.LocalAreas.Clear();
+                mesh.Vertices.Clear();
+                mesh.Areas.Clear();
             }
 
             VerticesByRoomDirectionConnectorOrientation.Clear();
-            AreasByRoomDirectionConnectorOrientation.Clear();
+            LocalAreasByRoomDirectionConnectorOrientation.Clear();
         }
 
         #endregion
 
         private static bool IsLocalPointWithinArea(Area area, Vector3 pointLocalPosition)
         {
-            var areaLocalEdges = area.LocalArea.Edges;
+            var areaLocalEdges = area.Edges;
 
             var isAnyVertexWithinVerticalRange = false;
             foreach (var e in areaLocalEdges)
@@ -520,8 +514,8 @@ namespace SCPSLBot.Navigation.Mesh
                 if (!isAnyVertexWithinVerticalRange)
                 {
                     isAnyVertexWithinVerticalRange =
-                        e.From.LocalPosition.y > pointLocalPosition.y - 1f
-                        && e.From.LocalPosition.y < pointLocalPosition.y + 1f;
+                        e.From.Position.y > pointLocalPosition.y - 1f
+                        && e.From.Position.y < pointLocalPosition.y + 1f;
                 }
             }
 
@@ -543,26 +537,11 @@ namespace SCPSLBot.Navigation.Mesh
             return dist;
         }
 
-        private static float GetPointDistToEdgePlane(LocalEdge roomEdge, Vector3 localPoint) => GetPointDistToEdgePlane(roomEdge, localPoint, out _);
-        private static float GetPointDistToEdgePlane(LocalEdge roomEdge, Vector3 localPoint, out Vector3 closestLocalPoint)
-        {
-            var dirTo2 = roomEdge.To.LocalPosition - roomEdge.From.LocalPosition;
-            var dirToPoint = localPoint - roomEdge.From.LocalPosition;
-
-            var edgeNormal = Vector3.Cross(dirTo2.normalized, Vector3.down);
-
-            var dist = Vector3.Dot(edgeNormal, dirToPoint);
-
-            closestLocalPoint = localPoint - edgeNormal * dist;
-
-            return dist;
-        }
-
-        private static bool IsEdgeCenterWithinVertically(LocalEdge edge, Vector3 localPoint)
+        private static bool IsEdgeCenterWithinVertically(Edge edge, Vector3 localPoint)
         {
             var localPointYLowest = localPoint.y - 1f;
             var localPointYHighest = localPoint.y + 1f;
-            var edgeCenter = Vector3.Lerp(edge.From.LocalPosition, edge.To.LocalPosition, 0.5f);
+            var edgeCenter = Vector3.Lerp(edge.From.Position, edge.To.Position, 0.5f);
 
             return edgeCenter.y > localPointYLowest
                 && edgeCenter.y < localPointYHighest;

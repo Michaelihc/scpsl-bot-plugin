@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -7,66 +6,51 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class Area
     {
-        public LocalArea LocalArea { get; }
-        public Transform Transform { get; }
+        public List<Vertex> Vertices { get; } = new();
+        public List<Area> ConnectedAreas { get; } = new();
 
-        public Vector3 CenterPosition => Transform.TransformPoint(LocalArea.LocalCenterPosition);
-        public Vector3 LocalCenterPosition => LocalArea.LocalCenterPosition;
+        public IEnumerable<Edge> Edges => Vertices.Zip(Vertices.Skip(1), (v1, v2) => new Edge(v1, v2))
+            .Append(new Edge(Vertices.Last(), Vertices.First()));
 
-        public Dictionary<LocalArea, Area> ConnectedAreasOfLocal { get; } = new();
-        public List<Area> ForeignConnectedAreas { get; } = new();
+        public Vector3 CenterPosition => Vertices.Select(v => v.Position)
+            .Aggregate(Vector3.zero, (a, u) => a + u) / Vertices.Count;
 
-        public IEnumerable<Area> ConnectedAreas { get; }
         public Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
 
-        public Area(
-            LocalArea localArea, Transform transform, Func<LocalArea, Area> areaGetter)
-            : this(localArea, areaGetter)
+        public Area(IEnumerable<Vertex> vertices)
         {
-            Transform = transform;
-
-            ConnectedAreas = LocalArea.ConnectedLocalAreas
-                .Select(f => ConnectedAreasOfLocal[f])
-                .Concat(ForeignConnectedAreas);
-        }
-
-        private Area(LocalArea localArea, Func<LocalArea, Area> areaGetter)
-        {
-            LocalArea = localArea;
-
-            LocalArea.ConnectionAdded += (otherLocalArea) => AddConnectionOfLocal(otherLocalArea, areaGetter.Invoke(otherLocalArea));
-            LocalArea.ConnectionRemoved += RemoveConnectionOfLocal;
-
-            foreach (var connectedLocalArea in LocalArea.ConnectedLocalAreas)
-            {
-                AddConnectionOfLocal(connectedLocalArea, areaGetter.Invoke(connectedLocalArea));
-            }
-        }
-
-        private void AddConnectionOfLocal(LocalArea otherLocalArea, Area otherArea)
-        {
-            ConnectedAreasOfLocal.Add(otherLocalArea, otherArea);
-        }
-
-        private void RemoveConnectionOfLocal(LocalArea otherLocalArea)
-        {
-            ConnectedAreasOfLocal.Remove(otherLocalArea);
+            Vertices.AddRange(vertices);
         }
 
         public bool ContainsEdge(Edge edge)
         {
-            var (from, to) = (edge.From, edge.To);
-            return LocalArea.Edges.Contains(new LocalEdge(from.LocalVertex, to.LocalVertex));
+            return Edges.Contains(edge);
         }
 
-        public void AddConnection(Area otherArea)
+        public void AddVertex(Vertex vertex)
         {
-            ForeignConnectedAreas.Add(otherArea);
+            Vertices.Add(vertex);
         }
 
-        public void RemoveConnection(Area otherArea)
+        public void AddVertex(Vertex vertex, Vertex beforeVertex)
         {
-            ForeignConnectedAreas.Remove(otherArea);
+            var atIdx = Vertices.IndexOf(beforeVertex);
+            Vertices.Insert(atIdx, vertex);
+        }
+
+        public void RemoveVertex(Vertex vertex)
+        {
+            Vertices.Remove(vertex);
+        }
+
+        public void AddConnection(Area connectingArea)
+        {
+            ConnectedAreas.Add(connectingArea);
+        }
+
+        public void RemoveConnection(Area connectedArea)
+        {
+            ConnectedAreas.Remove(connectedArea);
         }
     }
 }

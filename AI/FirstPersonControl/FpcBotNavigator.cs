@@ -10,12 +10,12 @@ namespace SCPSLBot.AI.FirstPersonControl
     internal class FpcBotNavigator
     {
         private Vector3 lastPlayerPosition;
-        private Area areaWithin;
+        private TransformArea? areaWithin;
 
-        private Area currentArea;
-        private Area goalArea;
-        public List<Area> AreasPath { get; } = new();
-        public IEnumerable<(Area Area, Area NextArea)> AreaPathSegments { get; }
+        private TransformArea currentArea;
+        private TransformArea goalArea;
+        public List<TransformArea> AreasPath { get; } = new();
+        public IEnumerable<(TransformArea Area, TransformArea NextArea)> AreaPathSegments { get; }
         private int currentPathIdx = -1;
 
         public Vector3 GoalPosition { get; private set; }
@@ -65,7 +65,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 do
                 {
                     var nextTargetArea = this.AreasPath[this.currentPathIdx + 1];
-                    var nextTargetAreaEdge = currentArea.ConnectedAreaEdges[nextTargetArea];
+                    var nextTargetAreaEdge = this.currentArea.ConnectedAreaEdges[nextTargetArea];
 
                     isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetAreaEdge);
                     if (isEdgeReached)
@@ -87,8 +87,11 @@ namespace SCPSLBot.AI.FirstPersonControl
                 var nearestEdge = NavigationMesh.GetNearestEdge(goalPosition, out var closestPoint, goalRoom);
                 if (nearestEdge.HasValue)
                 {
-                    var nearestFormEdge = new LocalEdge(nearestEdge.Value.From.LocalVertex, nearestEdge.Value.To.LocalVertex);
-                    targetArea = NavigationMesh.AreasByRoomOrConnector[goalRoom.gameObject].Find(a => a.LocalArea.Edges.Any(e => e == nearestFormEdge));
+                    var nearestLocalEdge = new Edge(nearestEdge.Value.From, nearestEdge.Value.To);
+                    targetArea = NavigationMesh.LocalAreasByRoomOrConnector[goalRoom.gameObject]
+                        .Where(a => a.Edges.Any(e => e == nearestLocalEdge))
+                        .Select(a => new TransformArea?(new (a, goalRoom.transform)))
+                        .FirstOrDefault();
                     targetAreaClosestPositionToGoal = closestPoint;
                 }
                 else
@@ -103,14 +106,14 @@ namespace SCPSLBot.AI.FirstPersonControl
                 isGoalOutside = false;
             }
 
-            if (withinArea != null && (targetArea != this.goalArea || withinArea != this.currentArea))
+            if (withinArea != null && targetArea != null && (targetArea.Value != this.goalArea || withinArea.Value != this.currentArea))
             {
-                this.currentArea = withinArea;
-                this.goalArea = targetArea;
+                this.currentArea = withinArea.Value;
+                this.goalArea = targetArea.Value;
                 //Log.Debug($"New start area {withinArea}.");
                 //Log.Debug($"New goal area {targetArea}.");
 
-                NavigationMesh.FindShortestPath(this.currentArea, this.goalArea, this.AreasPath);
+                NavigationMesh.FindShortestPath(withinArea.Value, targetArea.Value, this.AreasPath);
                 this.currentPathIdx = 0;
 
                 //Log.Debug($"New path of {this.AreasPath.Count} areas:");
@@ -142,14 +145,11 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
         }
 
-        public Area GetAreaWithin()
+        public TransformArea? GetAreaWithin()
         {
             var playerPosition = botPlayer.PlayerPosition;
-            if (playerPosition != lastPlayerPosition)
-            {
-                areaWithin = NavigationMesh.GetAreaWithin(playerPosition);
-                lastPlayerPosition = playerPosition;
-            }
+            areaWithin = NavigationMesh.GetAreaWithin(playerPosition);
+            lastPlayerPosition = playerPosition;
 
             return areaWithin;
         }

@@ -12,11 +12,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 {
     internal class RoomSightSense : SightSense, ISense
     {
-        public List<Area> ForeignRoomsAreas { get; } = new();
+        public List<TransformArea> ForeignRoomsAreas { get; } = new();
         public IEnumerable<RoomIdentifier> ForeignRooms { get; }
         public RoomIdentifier RoomWithin { get; private set; }
 
-        public event Action<Area> OnSensedForeignRoomArea;
+        public event Action<TransformArea> OnSensedForeignRoomArea;
         public event Action OnAfterSensedForeignRooms;
 
         public event Action<RoomIdentifier> OnSensedRoomWithin;
@@ -62,9 +62,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
             if (RoomWithin)
             {
                 ForeignRoomsAreas.Clear();
-                foreach (var a in NavigationMesh.AreasByRoomOrConnector[RoomWithin.gameObject])
+
+                foreach (var localArea in NavigationMesh.LocalAreasByRoomOrConnector[RoomWithin.gameObject])
                 {
-                    foreach (var fa in a.ForeignConnectedAreas.Where(fa => fa.Transform.GetComponent<RoomIdentifier>()))
+                    var transformArea = new TransformArea(localArea, RoomWithin.transform);
+                    foreach (var fa in NavigationMesh.ForeignConnectedAreas[transformArea].Where(fa => fa.Transform.GetComponent<RoomIdentifier>()))
                     {
                         var faa = fa.ConnectedAreas.First();
                         ForeignRoomsAreas.Add(faa);
