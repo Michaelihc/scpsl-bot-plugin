@@ -1,23 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  
+
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <Platforms>x64</Platforms>
-    <AssemblyName>SCPSLBot</AssemblyName>
-    <RootNamespace>SCPSLBot</RootNamespace>
-
-    <LangVersion>11.0</LangVersion>
-    <Nullable>warnings</Nullable>
+    <AssemblyName>SCPSLBot.Tests</AssemblyName>
+    <RootNamespace>SCPSLBot.Tests</RootNamespace>
+    
+    <LangVersion>12.0</LangVersion>
 
     <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
 
     <AssemblySearchPaths>$(SL_REFERENCES);$(AssemblySearchPaths)</AssemblySearchPaths>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DebugType>embedded</DebugType>
-    <DefineConstants>$(DefineConstants);ENABLE_PROFILER</DefineConstants>
     <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
@@ -25,13 +26,12 @@
     <DebugType>portable</DebugType>
     <IsPublishable>False</IsPublishable>
   </PropertyGroup>
-
   
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="echo Copying output file $(TargetName)&#xD;&#xA;copy $(TargetPath) &quot;$(SL_APPDATA)\PluginAPI\plugins\global\$(TargetFileName)&quot;" />
-  </Target>
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
 
-  
   <ItemGroup>
     <None Remove=".editorconfig" />
     <None Remove=".gitattributes" />
@@ -39,12 +39,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="IsExternalInit" Version="1.0.3" />
-    <PackageReference Include="Lib.Harmony" Version="2.2.2" />
-    <PackageReference Include="Northwood.PluginAPI" Version="13.1.1" />
+    <PackageReference Include="xunit.v3.extensibility.core" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="mscorlib" />
+    <Reference Include="netstandard" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
     <Reference Include="Assembly-CSharp">
       <Private>false</Private>
     </Reference>
@@ -66,14 +68,9 @@
     <Reference Include="UnityEngine.PhysicsModule">
       <Private>false</Private>
     </Reference>
-    <Reference Include="mscorlib" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Assets\navmesh.slnmf">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
+    <Using Include="Xunit" />
   </ItemGroup>
 </Project>
