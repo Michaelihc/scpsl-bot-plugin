@@ -1,5 +1,5 @@
 ﻿using CommandSystem;
-using Mirror;
+using NUnit;
 using NUnit.Engine;
 using NUnit.Engine.Internal;
 using PluginAPI.Core;
@@ -28,8 +28,12 @@ namespace SCPSLTests.Runner.Commands
             var assemblyFileName = arguments[0];
 
             ITestEngine engine = TestEngineActivator.CreateInstance();
-            TestPackage package = new TestPackage(assemblyFileName);
+            TestPackage package = new (assemblyFileName);
+            package.AddSetting("ProcessModel", "Single");
+            package.AddSetting("DomainUsage", "None");
+
             ITestRunner runner = engine.GetRunner(package);
+
             XmlNode testResult = runner.Run(listener: null, TestFilter.Empty);
 
             Console.WriteLine(testResult.OuterXml);

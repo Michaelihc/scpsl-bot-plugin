@@ -19,8 +19,7 @@ namespace SCPSLTests.Runner.Patches
         [HarmonyPrefix()]
         public static bool Prefix(ref string __result)
         {
-            var consoleRunnerPath = @"C:\Users\repkins\.nuget\packages\nunit.consolerunner\3.19.2\tools";
-            __result = $"{consoleRunnerPath};{Path.Combine(Paths.GlobalPlugins.Dependencies, "private")}";
+            __result = Path.Combine(Paths.GlobalPlugins.Dependencies, "private");
             return false;
         }
     }
