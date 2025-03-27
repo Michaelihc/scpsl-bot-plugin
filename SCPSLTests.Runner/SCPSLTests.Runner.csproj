@@ -3,18 +3,17 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <Platforms>x64</Platforms>
-    <AssemblyName>SCPSLBot.Tests</AssemblyName>
-    <RootNamespace>SCPSLBot.Tests</RootNamespace>
-    
-    <LangVersion>12.0</LangVersion>
+    <AssemblyName>SCPSLTests.Runner</AssemblyName>
+    <RootNamespace>SCPSLTests.Runner</RootNamespace>
 
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
     <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
 
     <AssemblySearchPaths>$(SL_REFERENCES);$(AssemblySearchPaths)</AssemblySearchPaths>
-
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -26,27 +25,24 @@
     <DebugType>portable</DebugType>
     <IsPublishable>False</IsPublishable>
   </PropertyGroup>
+
   
-  <PropertyGroup>
-    <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
-  </PropertyGroup>
-
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="echo Copying output file $(TargetName)&#xD;&#xA;copy $(TargetPath) &quot;$(SL_APPDATA)\PluginAPI\plugins\global\$(TargetFileName)&quot;" />
+  </Target>
+  
+  
   <ItemGroup>
-    <None Remove=".editorconfig" />
-    <None Remove=".gitattributes" />
-    <None Remove=".gitignore" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="NUnit" Version="4.3.2" />
-    <PackageReference Include="NUnit.ConsoleRunner" Version="3.19.2" />
+    <PackageReference Include="Lib.Harmony" Version="2.2.2" />
+    <PackageReference Include="Northwood.PluginAPI" Version="13.1.1" />
+    <PackageReference Include="NUnit.Engine" Version="3.19.2" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
     <Reference Include="Assembly-CSharp">
       <Private>false</Private>
     </Reference>
@@ -54,18 +50,6 @@
       <Private>false</Private>
     </Reference>
     <Reference Include="CommandSystem.Core">
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Mirror">
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Pooling">
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule">
       <Private>false</Private>
     </Reference>
   </ItemGroup>
