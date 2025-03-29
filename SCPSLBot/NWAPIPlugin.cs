@@ -42,6 +42,8 @@ namespace SCPSLBot
             HarmonyInstance.UnpatchAll();
             HarmonyInstance = null;
             Instance = null;
+
+            Log.Info("Unloaded plugin.");
         }
     }
 }
