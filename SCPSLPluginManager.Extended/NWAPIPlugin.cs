@@ -9,6 +9,7 @@ namespace SCPSLPluginManager
     public class NWAPIPlugin
     {
         public static NWAPIPlugin? Instance;
+        public static Harmony? HarmonyInstance;
 
         [PluginConfig()]
         public Config? Config;
@@ -18,6 +19,10 @@ namespace SCPSLPluginManager
         {
             Instance = this;
 
+            HarmonyInstance = new Harmony($"SCPSLPluginManager.100.{DateTime.Now.Ticks}");
+            HarmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
+            Log.Info("Patching successful.");
+
             Log.Info("Loaded plugin.");
         }
 
@@ -25,6 +30,9 @@ namespace SCPSLPluginManager
         public void OnUnload()
         {
             Instance = null;
+
+            HarmonyInstance!.UnpatchAll();
+            HarmonyInstance = null;
 
             Log.Info("Unloaded plugin.");
         }
