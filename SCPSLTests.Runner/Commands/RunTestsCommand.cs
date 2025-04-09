@@ -1,9 +1,8 @@
 ﻿using CommandSystem;
 using NUnit;
 using NUnit.Engine;
-using NUnit.Engine.Internal;
 using PluginAPI.Core;
-using System;
+using SCPSLTests.Runner.Listeners;
 using System.Xml;
 
 namespace SCPSLTests.Runner.Commands
@@ -27,14 +26,16 @@ namespace SCPSLTests.Runner.Commands
 
             var assemblyFileName = arguments[0];
 
-            ITestEngine engine = TestEngineActivator.CreateInstance();
-            TestPackage package = new (assemblyFileName);
+            using var engine = TestEngineActivator.CreateInstance();
+            engine.Initialize();
+
+            var package = new TestPackage(assemblyFileName);
             package.AddSetting("ProcessModel", "Single");
             package.AddSetting("DomainUsage", "None");
 
-            ITestRunner runner = engine.GetRunner(package);
+            using var runner = engine.GetRunner(package);
 
-            XmlNode testResult = runner.Run(listener: null, TestFilter.Empty);
+            XmlNode testResult = runner.Run(new ConsoleEventListener(), TestFilter.Empty);
 
             Console.WriteLine(testResult.OuterXml);
 
