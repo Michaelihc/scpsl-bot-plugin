@@ -11,9 +11,7 @@ namespace SCPSLBot
 {
     public class NWAPIPlugin
     {
-        public static NWAPIPlugin Instance;
-
-        public static Harmony HarmonyInstance;
+        public Harmony HarmonyInstance;
 
         [PluginConfig()]
         public Config Config;
@@ -21,9 +19,6 @@ namespace SCPSLBot
         [PluginEntryPoint("SCPSLBot", "1.0.0", "AI players addon.", "repkins(19)")]
         public void OnLoad()
         {
-            Instance = this;
-            Log.Info("Loaded plugin.");
-
             HarmonyInstance = new Harmony($"SCPSLBot.100.{DateTime.Now.Ticks}");
             HarmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
             Log.Info("Patching successful.");
@@ -34,14 +29,19 @@ namespace SCPSLBot
             NavigationMeshEditor.Instance.Init();
 
             BotManager.Instance.Init();
+
+            Log.Info("Loaded plugin.");
         }
 
         [PluginUnload]
         public void OnUnload()
         {
+            NavigationSystem.Instance.Terminate();
+            NavigationMeshEditor.Instance.Terminate();
+
+            BotManager.Instance.Terminate();
+
             HarmonyInstance.UnpatchAll();
-            HarmonyInstance = null;
-            Instance = null;
 
             Log.Info("Unloaded plugin.");
         }

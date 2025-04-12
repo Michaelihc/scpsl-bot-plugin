@@ -43,6 +43,11 @@ namespace SCPSLBot.Navigation.Mesh
             EventManager.RegisterEvents(this);
         }
 
+        public void Terminate()
+        {
+            EventManager.UnregisterEvents(this);
+        }
+
         [PluginEvent(PluginAPI.Enums.ServerEventType.WaitingForPlayers)]
         public void AssignPrimPrefab()
         {

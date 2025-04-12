@@ -78,6 +78,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SCPSLBot.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectCapability Remove="LaunchProfiles" />
     <ProjectCapability Remove="SharedProjectReferences" />
     <ProjectCapability Remove="ReferenceManagerSharedProjects" />

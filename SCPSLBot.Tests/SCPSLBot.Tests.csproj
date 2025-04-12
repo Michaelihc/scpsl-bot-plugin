@@ -13,23 +13,21 @@
 
     <AssemblySearchPaths>$(SL_REFERENCES);$(AssemblySearchPaths)</AssemblySearchPaths>
 
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DebugType>embedded</DebugType>
-    <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebugType>portable</DebugType>
-    <IsPublishable>False</IsPublishable>
   </PropertyGroup>
   
   <PropertyGroup>
+    <IsPublishable>False</IsPublishable>
     <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
+    <DefineConstants>$(DefineConstants);UNITY_ASSERTIONS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,6 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SCPSLBot\SCPSLBot.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -55,6 +54,9 @@
     <Reference Include="CommandSystem.Core">
       <Private>false</Private>
     </Reference>
+    <Reference Include="PluginAPI">
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Mirror">
       <Private>false</Private>
     </Reference>
@@ -68,4 +70,8 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="echo Copying output file $(TargetName)&#xD;&#xA;copy $(TargetPath) &quot;$(SL_APPDATA)\PluginAPI\plugins\global\$(TargetFileName)&quot;" />
+  </Target>
 </Project>

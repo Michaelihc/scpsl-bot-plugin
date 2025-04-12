@@ -20,9 +20,18 @@ namespace SCPSLBot.Navigation
 
         public string BaseDir { get; set; }
 
+        public bool Initialized { get; private set; } = false;
+
         public void Init()
         {
             EventManager.RegisterEvents(this);
+            Initialized = true;
+        }
+
+        public void Terminate()
+        {
+            EventManager.UnregisterEvents(this);
+            Initialized = false;
         }
 
         [PluginEvent(PluginAPI.Enums.ServerEventType.MapGenerated)]

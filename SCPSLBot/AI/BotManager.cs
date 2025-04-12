@@ -21,9 +21,11 @@ namespace SCPSLBot.AI
 
         public Dictionary<ReferenceHub, BotHub> BotPlayers { get; } = new Dictionary<ReferenceHub, BotHub>();
 
+        private CoroutineHandle handle;
+
         public void Init()
         {
-            Timing.RunCoroutine(RunPlayerUpdates());
+            handle = Timing.RunCoroutine(RunPlayerUpdates());
 
             PlayerRoleManager.OnRoleChanged += OnRoleChanged;
 
@@ -36,6 +38,13 @@ namespace SCPSLBot.AI
             Physics.IgnoreLayerCollision(31, LayerMask.NameToLayer("InteractableNoPlayerCollision"), false);
             Physics.IgnoreLayerCollision(31, LayerMask.NameToLayer("Glass"), false);
             Physics.IgnoreLayerCollision(31, LayerMask.NameToLayer("Hitbox"), false);
+        }
+
+        public void Terminate()
+        {
+            Timing.KillCoroutines(handle);
+
+            PlayerRoleManager.OnRoleChanged -= OnRoleChanged;
         }
 
         public void AddBotPlayer()

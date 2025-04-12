@@ -24,29 +24,40 @@ namespace SCPSLBot.Navigation.Mesh
         private List<Vertex> SelectedVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
 
+        private CoroutineHandle[] handles;
+
         public void Init()
         {
             Visuals.SelectedLocalVertices = SelectedVertices;
             Visuals.Init();
 
-            Timing.RunCoroutine(RunEachFrame(UpdateEditing));
-            Timing.RunCoroutine(RunEachFrame(UpdateMeshEventLogging));
+            handles = new [] {
+                Timing.RunCoroutine(RunEachFrame(UpdateEditing)),
+                Timing.RunCoroutine(RunEachFrame(UpdateMeshEventLogging)),
 
-            Timing.RunCoroutine(RunEachFrame(UpdateNearestVertex));
-            Timing.RunCoroutine(RunEachFrame(UpdateFacingVertex));
-            Timing.RunCoroutine(RunEachFrame(UpdateVertexAutoSelect));
+                Timing.RunCoroutine(RunEachFrame(UpdateNearestVertex)),
+                Timing.RunCoroutine(RunEachFrame(UpdateFacingVertex)),
+                Timing.RunCoroutine(RunEachFrame(UpdateVertexAutoSelect)),
 
-            Timing.RunCoroutine(RunEachFrame(UpdateNearestArea));
-            Timing.RunCoroutine(RunEachFrame(UpdateCachedArea));
-            Timing.RunCoroutine(RunEachFrame(UpdateFacingArea));
+                Timing.RunCoroutine(RunEachFrame(UpdateNearestArea)),
+                Timing.RunCoroutine(RunEachFrame(UpdateCachedArea)),
+                Timing.RunCoroutine(RunEachFrame(UpdateFacingArea)),
 
-            Timing.RunCoroutine(RunEachFrame(Visuals.UpdateBroadcastMessage));
+                Timing.RunCoroutine(RunEachFrame(Visuals.UpdateBroadcastMessage)),
 
-            Timing.RunCoroutine(RunEachFrame(Visuals.UpdateVertexVisuals));
-            Timing.RunCoroutine(RunEachFrame(Visuals.UpdateAreaVisuals));
-            Timing.RunCoroutine(RunEachFrame(Visuals.UpdateEdgeVisuals));
-            Timing.RunCoroutine(RunEachFrame(Visuals.UpdateConnectionVisuals));
+                Timing.RunCoroutine(RunEachFrame(Visuals.UpdateVertexVisuals)),
+                Timing.RunCoroutine(RunEachFrame(Visuals.UpdateAreaVisuals)),
+                Timing.RunCoroutine(RunEachFrame(Visuals.UpdateEdgeVisuals)),
+                Timing.RunCoroutine(RunEachFrame(Visuals.UpdateConnectionVisuals)),
+            };
+        }
 
+        public void Terminate()
+        {
+            Visuals.Terminate();
+
+            Timing.KillCoroutines(handles);
+            handles = null;
         }
 
         public Vertex FindClosestVertexFacingAt(GameObject roomOrConnector, Vector3 localPosition, Vector3 localDirection)
