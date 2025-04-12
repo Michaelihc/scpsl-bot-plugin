@@ -45,6 +45,13 @@ namespace SCPSLBot.AI
             Timing.KillCoroutines(handle);
 
             PlayerRoleManager.OnRoleChanged -= OnRoleChanged;
+
+            foreach (var (referenceHub, _) in BotPlayers)
+            {
+                var player = referenceHub.gameObject;
+                ServerConsole.Disconnect(player, "BotManager terminating");
+            }
+            BotPlayers.Clear();
         }
 
         public void AddBotPlayer()

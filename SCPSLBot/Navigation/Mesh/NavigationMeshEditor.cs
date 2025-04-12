@@ -58,6 +58,9 @@ namespace SCPSLBot.Navigation.Mesh
 
             Timing.KillCoroutines(handles);
             handles = null;
+
+            Instance.IsEditing = false;
+            Instance.PlayerEditing = null;
         }
 
         public Vertex FindClosestVertexFacingAt(GameObject roomOrConnector, Vector3 localPosition, Vector3 localDirection)

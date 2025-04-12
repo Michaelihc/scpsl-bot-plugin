@@ -32,6 +32,8 @@ namespace SCPSLBot.Navigation
         {
             EventManager.UnregisterEvents(this);
             Initialized = false;
+
+            NavigationMesh.ResetMeshes();
         }
 
         [PluginEvent(PluginAPI.Enums.ServerEventType.MapGenerated)]
