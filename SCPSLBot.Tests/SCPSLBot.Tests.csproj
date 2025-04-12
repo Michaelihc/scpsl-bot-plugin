@@ -39,7 +39,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="xunit.v3.extensibility.core" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -68,9 +67,5 @@
     <Reference Include="UnityEngine.PhysicsModule">
       <Private>false</Private>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Using Include="Xunit" />
   </ItemGroup>
 </Project>
