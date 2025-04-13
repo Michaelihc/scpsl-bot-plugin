@@ -30,10 +30,10 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     LocalMeshesByRoom[room] = mesh;
                 }
-            }
 
-            mesh.AreaCreated += area => AddForeignConnectedAreasList(area, form);
-            mesh.AreaDeleted += area => RemoveForeignConnectedAreasList(area, form);
+                mesh.AreaCreated += area => AddForeignConnectedAreasList(area, form);
+                mesh.AreaDeleted += area => RemoveForeignConnectedAreasList(area, form);
+            }
 
             return mesh;
         }
@@ -336,6 +336,7 @@ namespace SCPSLBot.Navigation.Mesh
             RoomsByForm.Clear();
             MeshesByRoomForm.Clear();
             LocalMeshesByRoom.Clear();
+            ForeignConnectedAreas.Clear();
         }
 
         #endregion
