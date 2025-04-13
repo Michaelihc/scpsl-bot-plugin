@@ -33,8 +33,36 @@ namespace SCPSLBot.Tests.Navigation
             TestCreateVertex(existingForm);
             TestCreateVertex(existingForm);
             TestCreateVertex(existingForm);
+            TestCreateVertex(existingForm);
 
             TestDeleteVertex(existingForm, 2);
+            TestCreateVertex(existingForm);
+
+            TestMakeArea(existingForm, 0, 1, 2);
+
+            TestCreateVertex(existingForm);
+            TestCreateVertex(existingForm);
+            TestCreateVertex(existingForm);
+            TestCreateVertex(existingForm);
+            TestMakeArea(existingForm, 3, 4, 5, 6);
+
+            TestCreateVertex(existingForm);
+            TestCreateVertex(existingForm);
+            TestCreateVertex(existingForm);
+
+            TestMakeArea(existingForm, 2, 3, 7, 8);
+
+            TestRemoveArea(existingForm, 1);
+            TestMakeArea(existingForm, 3, 4, 5, 6);
+
+            TestAddConnection(existingForm, 0, 1);
+            TestAddConnection(existingForm, 1, 0);
+            TestAddConnection(existingForm, 0, 2);
+
+            TestRemoveConnection(existingForm, 0, 2);
+            TestAddConnection(existingForm, 0, 2);
+
+            TestRemoveArea(existingForm, 2);
 
             response = $"Passed.";
             return true;
@@ -133,14 +161,132 @@ namespace SCPSLBot.Tests.Navigation
             Log.Info($"{nameof(TestDeleteVertex)}({form}, {vertexIdx})");
         }
 
-        private void TestCreateArea()
+        private void TestMakeArea(string form, params int[] vertexIdxs)
         {
+            var mesh = NavigationMesh.MeshesByRoomForm[form];
+            var vertices = vertexIdxs.Select(idx => mesh.Vertices[idx]);
 
+            Area emittedArea = null;
+            void createdHandler(Area a)
+            {
+                emittedArea = a;
+            }
+            mesh.AreaCreated += createdHandler;
+
+            var area = mesh.MakeArea(vertices);
+
+            Assert.IsNotNull(area);
+            Assert.IsTrue(mesh.Areas.Contains(area));
+
+            if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
+            {
+                foreach (var room in rooms)
+                {
+                    var transformArea = new TransformArea(area, room.transform);
+                    Assert.IsTrue(NavigationMesh.ForeignConnectedAreas.ContainsKey(transformArea));
+                    Assert.IsNotNull(NavigationMesh.ForeignConnectedAreas[transformArea]);
+                }
+            }
+
+            Assert.AreEqual(emittedArea, area);
+
+            mesh.AreaCreated -= createdHandler;
+
+            Log.Info($"{nameof(TestMakeArea)}({form}, {string.Join(", ", vertexIdxs)})");
         }
 
-        private void TestDeleteArea()
+        private void TestRemoveArea(string form, int areaIdx)
         {
+            var mesh = NavigationMesh.MeshesByRoomForm[form];
+            var area = mesh.Areas[areaIdx];
 
+            Area emittedArea = null;
+            void deletedHandler(Area a)
+            {
+                emittedArea = a;
+            }
+            mesh.AreaDeleted += deletedHandler;
+
+            var countBefore = mesh.Areas.Count;
+
+            mesh.RemoveArea(area);
+
+            var countAfter = mesh.Areas.Count;
+
+            Assert.IsFalse(mesh.Areas.Contains(area));
+            Assert.AreEqual(1, countBefore - countAfter);
+
+            foreach (var otherArea in mesh.Areas)
+            {
+                Assert.IsFalse(otherArea.ConnectedAreas.Contains(area));
+            }
+
+            if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
+            {
+                foreach (var room in rooms)
+                {
+                    var transformArea = new TransformArea(area, room.transform);
+                    foreach (var otherArea in mesh.Areas)
+                    {
+                        var otherTransformArea = new TransformArea(otherArea, room.transform);
+                        Assert.IsFalse(otherTransformArea.ConnectedAreas.Contains(transformArea));
+                    }
+
+                    Assert.IsFalse(NavigationMesh.ForeignConnectedAreas.ContainsKey(transformArea));
+                }
+            }
+
+            Assert.AreEqual(emittedArea, area);
+
+            mesh.AreaDeleted -= deletedHandler;
+
+            Log.Info($"{nameof(TestRemoveArea)}({form}, {areaIdx})");
+        }
+
+        private void TestAddConnection(string form, int fromIdx, int toIdx)
+        {
+            var mesh = NavigationMesh.MeshesByRoomForm[form];
+            var fromArea = mesh.Areas[fromIdx];
+            var toArea = mesh.Areas[toIdx];
+
+            fromArea.AddConnection(toArea);
+
+            Assert.IsTrue(fromArea.ConnectedAreas.Contains(toArea));
+
+            if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
+            {
+                foreach (var room in rooms)
+                {
+                    var fromTransformArea = new TransformArea(fromArea, room.transform);
+                    var toTransformArea = new TransformArea(toArea, room.transform);
+                    Assert.IsTrue(fromTransformArea.ConnectedAreas.Contains(toTransformArea));
+                }
+            }
+
+            Log.Info($"{nameof(TestAddConnection)}({form}, {fromIdx}, {toIdx})");
+        }
+
+        private void TestRemoveConnection(string form, int fromIdx, int toIdx)
+        {
+            var mesh = NavigationMesh.MeshesByRoomForm[form];
+            var fromArea = mesh.Areas[fromIdx];
+            var toArea = mesh.Areas[toIdx];
+
+            fromArea.RemoveConnection(toArea);
+
+            Assert.IsFalse(fromArea.ConnectedAreas.Contains(toArea));
+
+            if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
+            {
+                foreach (var room in rooms)
+                {
+                    var fromTransformArea = new TransformArea(fromArea, room.transform);
+                    var toTransformArea = new TransformArea(toArea, room.transform);
+                    Assert.IsFalse(fromTransformArea.ConnectedAreas.Contains(toTransformArea));
+                }
+            }
+
+            Log.Info($"{nameof(TestRemoveConnection)}({form}, {fromIdx}, {toIdx})");
         }
 
         private void TestPersistance()
