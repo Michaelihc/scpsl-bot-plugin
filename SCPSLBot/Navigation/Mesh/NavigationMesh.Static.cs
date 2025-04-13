@@ -12,11 +12,6 @@ namespace SCPSLBot.Navigation.Mesh
     internal partial class NavigationMesh
     {
         public static Dictionary<string, NavigationMesh> MeshesByRoomForm { get; } = new();
-
-        public static Dictionary<Vertex, string> FormsByVertices { get; } = new();
-        public static Dictionary<Area, string> FormsByAreas { get; } = new();
-
-
         public static Dictionary<string, List<GameObject>> RoomsByForm { get; } = new();
 
         public static Dictionary<GameObject, NavigationMesh> LocalMeshesByRoom { get; } = new();
@@ -29,22 +24,13 @@ namespace SCPSLBot.Navigation.Mesh
 
             MeshesByRoomForm.Add(form, mesh);
 
-            if (!RoomsByForm.TryGetValue(form, out var rooms))
+            if (RoomsByForm.TryGetValue(form, out var rooms))
             {
-                rooms = new();
-                RoomsByForm.Add(form, rooms);
+                foreach (var room in rooms)
+                {
+                    LocalMeshesByRoom[room] = mesh;
+                }
             }
-
-            foreach (var room in rooms)
-            {
-                LocalMeshesByRoom[room] = mesh;
-            }
-
-            mesh.VertexCreated += vertex => FormsByVertices.Add(vertex, form);
-            mesh.VertexDeleted += vertex => FormsByVertices.Remove(vertex);
-
-            mesh.AreaCreated += area => FormsByAreas.Add(area, form);
-            mesh.AreaDeleted += area => FormsByAreas.Remove(area);
 
             mesh.AreaCreated += area => AddForeignConnectedAreasList(area, form);
             mesh.AreaDeleted += area => RemoveForeignConnectedAreasList(area, form);
@@ -218,7 +204,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public static Vertex GetVertexNearby(Vector3 position, float radius = 1f)
+        public static TransformVertex? GetVertexNearby(Vector3 position, float radius = 1f)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             if (!room || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
@@ -237,19 +223,9 @@ namespace SCPSLBot.Navigation.Mesh
                 return null;
             }
 
-            return verticesWithinRadius
+            return new (verticesWithinRadius
                 .Aggregate((a, c) => c.distSqr < a.distSqr ? c : a)
-                .vertex;
-        }
-
-        public static string GetForm(Vertex vertex)
-        {
-            return FormsByVertices[vertex];
-        }
-
-        public static string GetForm(Area area)
-        {
-            return FormsByAreas[area];
+                .vertex, room.transform);
         }
 
         public static NavigationMesh GetMesh(string form)
@@ -349,8 +325,6 @@ namespace SCPSLBot.Navigation.Mesh
                     RoomsByForm.Add(roomForm, rooms);
                 }
                 rooms.Add(room);
-
-                LocalMeshesByRoom.Add(room.gameObject, new());
             }
 
             var allConnectors = RoomConnector.AllConnectors.Select(c => (c.gameObject, c.Rooms));

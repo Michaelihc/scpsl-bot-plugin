@@ -15,8 +15,8 @@ namespace SCPSLBot.Navigation.Mesh
     {
         public Player PlayerEnabledVisualsFor { get; set; }
 
-        public Vertex NearestLocalVertex { get; set; }
-        public Vertex FacingLocalVertex { get; set; }
+        public TransformVertex? NearestVertex { get; set; }
+        public TransformVertex? FacingVertex { get; set; }
 
         public List<Vertex> SelectedLocalVertices { get; set; }
 
@@ -86,28 +86,28 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEnabledVisualsFor != null)
             {
-                if (NearestLocalVertex != null)
+                if (NearestVertex != null)
                 {
-                    var form = NavigationMesh.GetForm(NearestLocalVertex);
+                    var form = NavigationMesh.GetForm(NearestVertex?.Transform.gameObject);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var nearestVertexId = mesh.Vertices.IndexOf(NearestLocalVertex);
+                    var nearestVertexId = mesh.Vertices.IndexOf(NearestVertex?.Local);
                     VisualsMessages[0] = $"Vertex #{nearestVertexId} in {form}";
 
-                    var selectedIdx = SelectedLocalVertices.IndexOf(NearestLocalVertex);
+                    var selectedIdx = SelectedLocalVertices.IndexOf(NearestVertex?.Local);
                     if (selectedIdx >= 0)
                     {
                         VisualsMessages[0] += $" <color=green>(selected #{selectedIdx})</color>";
                     }
                 }
 
-                if (FacingLocalVertex != null)
+                if (FacingVertex != null)
                 {
-                    var form = NavigationMesh.GetForm(FacingLocalVertex);
+                    var form = NavigationMesh.GetForm(FacingVertex?.Transform.gameObject);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var facingVertexId = mesh.Vertices.IndexOf(FacingLocalVertex);
+                    var facingVertexId = mesh.Vertices.IndexOf(FacingVertex?.Local);
                     VisualsMessages[1] = $"Facing vertex #{facingVertexId} in {form}";
 
-                    var selectedIdx = SelectedLocalVertices.IndexOf(FacingLocalVertex);
+                    var selectedIdx = SelectedLocalVertices.IndexOf(FacingVertex?.Local);
                     if (selectedIdx >= 0)
                     {
                         VisualsMessages[1] += $" <color=green>(selected #{selectedIdx})</color>";
@@ -120,61 +120,67 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEnabledVisualsFor != null)
             {
-                var nearestLocalArea = NearestArea?.Local;
-                var cachedLocalArea = CachedArea?.Local;
-                var facingLocalArea = FacingArea?.Local;
-
-                if (nearestLocalArea != null)
+                if (NearestArea != null)
                 {
+                    var nearestArea = NearestArea.Value;
+
                     //var connectedIdsStr = string.Join(", ", NearestArea.ConnectedAreas.Select(c => $"#{c.Id}"));
-                    var form = NavigationMesh.GetForm(nearestLocalArea);
+                    var form = NavigationMesh.GetForm(nearestArea.Transform.gameObject);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var NearestAreaId = mesh.Areas.IndexOf(nearestLocalArea);
+                    var NearestAreaId = mesh.Areas.IndexOf(nearestArea.Local);
                     VisualsMessages[0] = $"Area #{NearestAreaId} in {form}";
                 }
 
-                if (cachedLocalArea != null)
+                if (CachedArea != null)
                 {
-                    var form = NavigationMesh.GetForm(cachedLocalArea);
+                    var cachedArea = CachedArea.Value;
+
+                    var form = NavigationMesh.GetForm(cachedArea.Transform.gameObject);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var cachedAreaId = mesh.Areas.IndexOf(cachedLocalArea);
+                    var cachedAreaId = mesh.Areas.IndexOf(cachedArea.Local);
                     VisualsMessages[1] = $"Cached area #{cachedAreaId} in {form}";
 
-                    if (nearestLocalArea != null)
+                    if (NearestArea != null)
                     {
-                        if (nearestLocalArea.ConnectedAreas.Contains(cachedLocalArea) && cachedLocalArea.ConnectedAreas.Contains(nearestLocalArea))
+                        var nearestArea = NearestArea.Value;
+
+                        if (nearestArea.Local.ConnectedAreas.Contains(cachedArea.Local) && cachedArea.Local.ConnectedAreas.Contains(nearestArea.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (nearestLocalArea.ConnectedAreas.Contains(cachedLocalArea))
+                        else if (nearestArea.Local.ConnectedAreas.Contains(cachedArea.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (cachedLocalArea.ConnectedAreas.Contains(nearestLocalArea))
+                        else if (cachedArea.Local.ConnectedAreas.Contains(nearestArea.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
                     }
                 }
 
-                if (facingLocalArea != null)
+                if (FacingArea != null)
                 {
-                    var form = NavigationMesh.GetForm(facingLocalArea);
+                    var facingArea = FacingArea.Value;
+
+                    var form = NavigationMesh.GetForm(facingArea.Transform.gameObject);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var facingAreaId = mesh.Areas.IndexOf(facingLocalArea);
+                    var facingAreaId = mesh.Areas.IndexOf(facingArea.Local);
                     VisualsMessages[1] = $"Facing area #{facingAreaId} in {form}";
 
-                    if (nearestLocalArea != null)
+                    if (NearestArea != null)
                     {
-                        if (nearestLocalArea.ConnectedAreas.Contains(facingLocalArea) && facingLocalArea.ConnectedAreas.Contains(nearestLocalArea))
+                        var nearestArea = NearestArea.Value;
+
+                        if (nearestArea.Local.ConnectedAreas.Contains(facingArea.Local) && facingArea.Local.ConnectedAreas.Contains(nearestArea.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (nearestLocalArea.ConnectedAreas.Contains(facingLocalArea))
+                        else if (nearestArea.Local.ConnectedAreas.Contains(facingArea.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (facingLocalArea.ConnectedAreas.Contains(nearestLocalArea))
+                        else if (facingArea.Local.ConnectedAreas.Contains(nearestArea.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
@@ -191,7 +197,7 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var vertexPosChanged = vertexVisual.Value.transform.position != vertexVisual.Key.Position;
 
-                    if (!NavigationMesh.LocalMeshesByRoom.Values.Any(m => m.Vertices.Contains(vertexVisual.Key)) || vertexPosChanged)
+                    if (!NavigationMesh.LocalMeshesByRoom.Values.Distinct().Any(m => m.Vertices.Contains(vertexVisual.Key)) || vertexPosChanged)
                     {
                         NetworkServer.Destroy(vertexVisual.Value.gameObject);
                         VertexVisuals.Remove(vertexVisual.Key);
@@ -340,11 +346,7 @@ namespace SCPSLBot.Navigation.Mesh
                 var enabledEdgeVisuals = EdgeVisuals.Where(p => p.Value.Visual.gameObject.activeInHierarchy);
                 foreach (var (edge, (visual, area)) in enabledEdgeVisuals.Select(p => (p.Key, p.Value)).ToArray())
                 {
-                    var isAreaRemoved = area switch
-                    {
-                        Area roomArea => !NavigationMesh.FormsByAreas.ContainsKey(roomArea),
-                        _ => throw new NotImplementedException()
-                    };
+                    var isAreaRemoved = !NavigationMesh.LocalMeshesByRoom.Values.Distinct().Any(m => m.Areas.Contains(area));
 
                     Vector3 currentEdgeCenter() => Vector3.Lerp(edge.From.Position, edge.To.Position, 0.5f);
                     bool isEdgeCenterChanged() => currentEdgeCenter() != visual.transform.position;
@@ -439,11 +441,7 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 foreach (var ((areaFrom, areaTo), visual) in ConnectionVisuals.Select(p => (p.Key, p.Value)).ToArray())
                 {
-                    var isAreaFromRemoved = areaFrom switch
-                    {
-                        Area roomArea => !NavigationMesh.FormsByAreas.ContainsKey(roomArea),
-                        _ => throw new NotImplementedException()
-                    };
+                    var isAreaFromRemoved = !NavigationMesh.LocalMeshesByRoom.Values.Distinct().Any(m => m.Areas.Contains(areaFrom));
 
                     //var containsForeignArea = areaFrom switch
                     //{
