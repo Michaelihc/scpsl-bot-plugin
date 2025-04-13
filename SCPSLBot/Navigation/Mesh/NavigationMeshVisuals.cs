@@ -191,14 +191,14 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     var vertexPosChanged = vertexVisual.Value.transform.position != vertexVisual.Key.Position;
 
-                    if (!NavigationMesh.LocalVerticesByRoomOrConnector.Values.Any(l => l.Contains(vertexVisual.Key)) || vertexPosChanged)
+                    if (!NavigationMesh.LocalMeshesByRoom.Values.Any(m => m.Vertices.Contains(vertexVisual.Key)) || vertexPosChanged)
                     {
                         NetworkServer.Destroy(vertexVisual.Value.gameObject);
                         VertexVisuals.Remove(vertexVisual.Key);
                     }
                 }
 
-                foreach (var (roomOrConnector, localVertex) in NavigationMesh.LocalVerticesByRoomOrConnector.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
+                foreach (var (room, localVertex) in NavigationMesh.LocalMeshesByRoom.SelectMany(p => p.Value.Vertices.Select(a => ((p.Key, a)))))
                 {
                     if (!VertexVisuals.TryGetValue(localVertex, out var visual))
                     {
@@ -207,7 +207,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                         // NetworkServer.Spawn(visual.gameObject);
 
-                        visual.transform.position = roomOrConnector.transform.TransformPoint(localVertex.Position);
+                        visual.transform.position = room.transform.TransformPoint(localVertex.Position);
                         visual.transform.localScale = Vector3.one * 0.125f;
                         visual.NetworkPrimitiveFlags &= ~PrimitiveFlags.Collidable;
 
@@ -260,14 +260,14 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 foreach (var areaVisual in AreaVisuals.Where(p => p.Value.gameObject.activeInHierarchy).ToArray())
                 {
-                    if (!NavigationMesh.LocalAreasByRoomOrConnector.Values.Any(l => l.Contains(areaVisual.Key)))
+                    if (!NavigationMesh.LocalMeshesByRoom.Values.Any(m => m.Areas.Contains(areaVisual.Key)))
                     {
                         NetworkServer.Destroy(areaVisual.Value.gameObject);
                         AreaVisuals.Remove(areaVisual.Key);
                     }
                 }
 
-                foreach (var (roomOrConnector, localArea) in NavigationMesh.LocalAreasByRoomOrConnector.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
+                foreach (var (room, localArea) in NavigationMesh.LocalMeshesByRoom.SelectMany(p => p.Value.Areas.Select(a => ((p.Key, a)))))
                 {
                     if (!AreaVisuals.TryGetValue(localArea, out var visual))
                     {
@@ -285,7 +285,7 @@ namespace SCPSLBot.Navigation.Mesh
                         AreaVisuals.Add(localArea, visual);
                     }
 
-                    visual.transform.position = roomOrConnector.transform.TransformPoint(localArea.CenterPosition);
+                    visual.transform.position = room.transform.TransformPoint(localArea.CenterPosition);
 
                     var isWithinRange = Vector3.SqrMagnitude(PlayerEnabledVisualsFor.Position - visual.transform.position) < Mathf.Pow(20f, 2);
                     if (isWithinRange && !visual.gameObject.activeInHierarchy)
@@ -356,7 +356,7 @@ namespace SCPSLBot.Navigation.Mesh
                     }
                 }
 
-                foreach (var (roomOrConnector, localArea) in NavigationMesh.LocalAreasByRoomOrConnector.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
+                foreach (var (room, localArea) in NavigationMesh.LocalMeshesByRoom.SelectMany(p => p.Value.Areas.Select(a => ((p.Key, a)))))
                 {
                     foreach (var localEdge in localArea.Edges)
                     {
@@ -366,11 +366,11 @@ namespace SCPSLBot.Navigation.Mesh
                             newEdgeVisual.gameObject.SetActive(false);
 
                             newEdgeVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
-                            newEdgeVisual.transform.position = Vector3.Lerp(roomOrConnector.transform.TransformPoint(localEdge.From.Position), roomOrConnector.transform.TransformPoint(localEdge.To.Position), 0.5f);
-                            newEdgeVisual.transform.LookAt(roomOrConnector.transform.TransformPoint(localEdge.To.Position));
+                            newEdgeVisual.transform.position = Vector3.Lerp(room.transform.TransformPoint(localEdge.From.Position), room.transform.TransformPoint(localEdge.To.Position), 0.5f);
+                            newEdgeVisual.transform.LookAt(room.transform.TransformPoint(localEdge.To.Position));
                             newEdgeVisual.transform.RotateAround(newEdgeVisual.transform.position, newEdgeVisual.transform.right, 90f);
                             newEdgeVisual.transform.localScale = Vector3.forward * 0.01f + Vector3.right * 0.01f;
-                            newEdgeVisual.transform.localScale += Vector3.up * Vector3.Distance(roomOrConnector.transform.TransformPoint(localEdge.From.Position), roomOrConnector.transform.TransformPoint(localEdge.To.Position)) * 0.5f;
+                            newEdgeVisual.transform.localScale += Vector3.up * Vector3.Distance(room.transform.TransformPoint(localEdge.From.Position), room.transform.TransformPoint(localEdge.To.Position)) * 0.5f;
                             newEdgeVisual.NetworkPrimitiveFlags &= ~PrimitiveFlags.Collidable;
 
                             // NetworkServer.Spawn(newEdgeVisual.gameObject);
@@ -459,9 +459,9 @@ namespace SCPSLBot.Navigation.Mesh
                     }
                 }
 
-                //foreach (var (roomOrConnector, areaFrom) in NavigationMesh.AreasByRoomOrConnector.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
+                //foreach (var (room, areaFrom) in NavigationMesh.AreasByRoom.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
                 //{
-                //    var roomFrom = roomOrConnector;
+                //    var roomFrom = room;
                 //    if (!roomFrom)
                 //    {
                 //        continue;

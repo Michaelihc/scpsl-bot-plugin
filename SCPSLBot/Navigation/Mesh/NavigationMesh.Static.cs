@@ -12,40 +12,33 @@ namespace SCPSLBot.Navigation.Mesh
     internal partial class NavigationMesh
     {
         public static Dictionary<string, NavigationMesh> MeshesByRoomForm { get; } = new();
-        public static Dictionary<string, NavigationMesh> MeshesByConnectorForm { get; } = new();
-        public static Dictionary<(
-            string RoomForm,
-                Vector3Int Direction,
-                    string ConnectorForm,
-                        Vector3Int Orientation), NavigationMesh> MeshesByRoomConnectorForm { get; } = new();
 
         public static Dictionary<Vertex, string> FormsByVertices { get; } = new();
         public static Dictionary<Area, string> FormsByAreas { get; } = new();
 
 
-        public static Dictionary<string, List<GameObject>> RoomsOrConnectorsByForm { get; } = new();
+        public static Dictionary<string, List<GameObject>> RoomsByForm { get; } = new();
 
-        public static Dictionary<GameObject, IReadOnlyList<Vertex>> LocalVerticesByRoomOrConnector { get; } = new();
-        public static Dictionary<
-            GameObject, Dictionary<(
-                Vector3Int Direction,
-                    Transform Connector,
-                        Vector3Int Orientation), IReadOnlyList<Vertex>>> LocalVerticesByRoomDirectionConnectorOrientation { get; } = new();
-
-        public static Dictionary<GameObject, IReadOnlyList<Area>> LocalAreasByRoomOrConnector { get; } = new();
-        public static Dictionary<
-            GameObject, Dictionary<(
-                Vector3Int Direction,
-                    Transform Connector,
-                        Vector3Int Orientation), IReadOnlyList<Area>>> LocalAreasByRoomDirectionConnectorOrientation { get; } = new();
+        public static Dictionary<GameObject, NavigationMesh> LocalMeshesByRoom { get; } = new();
 
         public static Dictionary<TransformArea, List<TransformArea>> ForeignConnectedAreas = new();
 
-        public static NavigationMesh Create(string form)
+        public static NavigationMesh CreateRoom(string form)
         {
             var mesh = new NavigationMesh();
 
-            BindMesh(mesh, form);
+            MeshesByRoomForm.Add(form, mesh);
+
+            if (!RoomsByForm.TryGetValue(form, out var rooms))
+            {
+                rooms = new();
+                RoomsByForm.Add(form, rooms);
+            }
+
+            foreach (var room in rooms)
+            {
+                LocalMeshesByRoom[room] = mesh;
+            }
 
             mesh.VertexCreated += vertex => FormsByVertices.Add(vertex, form);
             mesh.VertexDeleted += vertex => FormsByVertices.Remove(vertex);
@@ -59,34 +52,19 @@ namespace SCPSLBot.Navigation.Mesh
             return mesh;
         }
 
-        private static void BindMesh(NavigationMesh mesh, string form)
-        {
-            if (!RoomsOrConnectorsByForm.TryGetValue(form, out var roomsOrConnectors))
-            {
-                roomsOrConnectors = new();
-                RoomsOrConnectorsByForm.Add(form, roomsOrConnectors);
-            }
-
-            foreach (var roomOrConnector in roomsOrConnectors)
-            {
-                LocalVerticesByRoomOrConnector[roomOrConnector] = mesh.Vertices;
-                LocalAreasByRoomOrConnector[roomOrConnector] = mesh.Areas;
-            }
-        }
-
         private static void AddForeignConnectedAreasList(Area area, string form)
         {
-            foreach (var roomOrConnector in RoomsOrConnectorsByForm[form])
+            foreach (var room in RoomsByForm[form])
             {
-                ForeignConnectedAreas.Add(new(area, roomOrConnector.transform), new());
+                ForeignConnectedAreas.Add(new(area, room.transform), new());
             }
         }
 
         private static void RemoveForeignConnectedAreasList(Area area, string form)
         {
-            foreach (var roomOrConnector in RoomsOrConnectorsByForm[form])
+            foreach (var room in RoomsByForm[form])
             {
-                ForeignConnectedAreas.Remove(new(area, roomOrConnector.transform));
+                ForeignConnectedAreas.Remove(new(area, room.transform));
             }
         }
 
@@ -105,39 +83,20 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 return new (roomArea, room.transform);
             }
-
-            var areasByDirectionConnectorOrientation = LocalAreasByRoomDirectionConnectorOrientation[room.gameObject];
-
-            var roomTransform = room.transform;
-
-            var roomConnectorAreas = areasByDirectionConnectorOrientation.Values.SelectMany(l => l);
-            var roomConnectorArea = roomConnectorAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, roomTransform.InverseTransformPoint(position)));
-            if (roomConnectorArea != null)
-            {
-                return new (roomConnectorArea, room.transform);
-            }
-
-            var connectorAreas = areasByDirectionConnectorOrientation.Keys
-                .SelectMany(c => LocalAreasByRoomOrConnector[c.Connector.gameObject]
-                    .Select(a => new TransformArea(a, c.Connector)
-                ));
-            return connectorAreas
-                .Where(t => IsLocalPointWithinArea(t.Local, t.Transform.InverseTransformPoint(position)))
-                .Select(t => new TransformArea?(t))
-                .FirstOrDefault();
+            return null;
         }
 
         public static Area GetRoomAreaWithin(Vector3 position, RoomIdentifier room = null)
         {
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room || !LocalAreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
+            if (!room || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
             {
                 return null;
             }
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            return roomAreas.FirstOrDefault(a => IsLocalPointWithinArea(a, localPosition));
+            return roomMesh.Areas.FirstOrDefault(a => IsLocalPointWithinArea(a, localPosition));
         }
 
         public static bool IsAtPositiveEdgeSide(Vector3 position, TransformEdge transformEdge)
@@ -159,14 +118,14 @@ namespace SCPSLBot.Navigation.Mesh
 
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
 
-            if (!room || !LocalAreasByRoomOrConnector.TryGetValue(room.gameObject, out var roomAreas))
+            if (!room || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
             {
                 return null;
             }
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var hit = roomAreas.SelectMany(a => a.Edges)
+            var hit = roomMesh.Areas.SelectMany(a => a.Edges)
                 .Select(roomEdge => (roomEdge, planeDist: GetPointDistToEdgePlane(roomEdge, localPosition, out var planeClosest), planeClosest))
                 .Where(t => t.planeDist <= 0f)
 
@@ -262,20 +221,14 @@ namespace SCPSLBot.Navigation.Mesh
         public static Vertex GetVertexNearby(Vector3 position, float radius = 1f)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room || !LocalVerticesByRoomOrConnector.TryGetValue(room.gameObject, out var roomVertexs))
+            if (!room || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
             {
                 return null;
             }
 
             var radiusSqr = Mathf.Pow(radius, 2);
 
-            var verticesAtDirectionConnectorOrientation = LocalVerticesByRoomDirectionConnectorOrientation[room.gameObject];
-            var connectorVertices = verticesAtDirectionConnectorOrientation.Keys.SelectMany(c => LocalVerticesByRoomOrConnector[c.Connector.gameObject]);
-            var roomConnectorVertices = verticesAtDirectionConnectorOrientation.Values.SelectMany(l => l);
-
-            var verticesWithinRadius = roomVertexs
-                .Concat(roomConnectorVertices)
-                .Concat(connectorVertices)
+            var verticesWithinRadius = roomMesh.Vertices
                 .Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.Position - position)))
                 .Where(t => t.distSqr < radiusSqr);
 
@@ -301,10 +254,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static NavigationMesh GetMesh(string form)
         {
-            if (!MeshesByRoomForm.TryGetValue(form, out var mesh))
-            {
-                MeshesByConnectorForm.TryGetValue(form, out mesh);
-            }
+            MeshesByRoomForm.TryGetValue(form, out var mesh);
             return mesh;
         }
 
@@ -360,29 +310,9 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var roomForm = binaryReader.ReadString();
 
-                var formMesh = Create(roomForm);
-                MeshesByRoomForm.Add(roomForm, formMesh);
+                var formMesh = CreateRoom(roomForm);
 
                 formMesh.ReadMesh(binaryReader);
-            }
-
-            if (version == 4)
-            {
-                ///
-                /// Connectors reading
-                ///
-
-                var connectorFormCount = binaryReader.ReadInt32();
-
-                for (var i = 0; i < connectorFormCount; i++)
-                {
-                    var connectorForm = binaryReader.ReadString();
-
-                    var formMesh = Create(connectorForm);
-                    MeshesByConnectorForm.Add(connectorForm, formMesh);
-
-                    formMesh.ReadMesh(binaryReader);
-                }
             }
         }
 
@@ -403,19 +333,6 @@ namespace SCPSLBot.Navigation.Mesh
 
                 mesh.WriteMesh(binaryWriter);
             }
-
-            ///
-            /// Connectors writing
-            ///
-
-            binaryWriter.Write(MeshesByConnectorForm.Count);
-
-            foreach (var (connectorForm, mesh) in MeshesByConnectorForm)
-            {
-                binaryWriter.Write(connectorForm);
-
-                mesh.WriteMesh(binaryWriter);
-            }
         }
 
         #endregion
@@ -426,70 +343,25 @@ namespace SCPSLBot.Navigation.Mesh
             foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier.gameObject))
             {
                 var roomForm = GetForm(room);
-                if (!RoomsOrConnectorsByForm.TryGetValue(roomForm, out var rooms))
+                if (!RoomsByForm.TryGetValue(roomForm, out var rooms))
                 {
                     rooms = new();
-                    RoomsOrConnectorsByForm.Add(roomForm, rooms);
+                    RoomsByForm.Add(roomForm, rooms);
                 }
                 rooms.Add(room);
 
-                LocalVerticesByRoomOrConnector.Add(room.gameObject, new List<Vertex>());
-                LocalAreasByRoomOrConnector.Add(room.gameObject, new List<Area>());
-
-                LocalVerticesByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
-                LocalAreasByRoomDirectionConnectorOrientation.Add(room.gameObject, new());
+                LocalMeshesByRoom.Add(room.gameObject, new());
             }
 
             var allConnectors = RoomConnector.AllConnectors.Select(c => (c.gameObject, c.Rooms));
             var allDoors = DoorVariant.AllDoors.Where(d => d.Rooms.Length >= 2).Select(c => (c.gameObject, c.Rooms));
-
-            foreach (var (connectorOrDoor, rooms) in allConnectors.Concat(allDoors))
-            {
-                if (rooms.Length != 2)
-                {
-                    Log.Warning($"Abnormal number {rooms.Length} of connected rooms at {connectorOrDoor}");
-                }
-
-                var connectorForm = GetForm(connectorOrDoor);
-                if (!RoomsOrConnectorsByForm.TryGetValue(connectorForm, out var connectors))
-                {
-                    connectors = new();
-                    RoomsOrConnectorsByForm.Add(connectorForm, connectors);
-                }
-                connectors.Add(connectorOrDoor);
-
-                LocalVerticesByRoomOrConnector.Add(connectorOrDoor.gameObject, new List<Vertex>());
-                LocalAreasByRoomOrConnector.Add(connectorOrDoor.gameObject, new List<Area>());
-
-                foreach (var connectedRoom in rooms)
-                {
-                    var otherRoom = rooms.First(r => r != connectedRoom);
-                    var direction = GetDirectionToRoom(connectedRoom, otherRoom);
-                    var orientation = GetConnectorOrientation(connectedRoom, connectorOrDoor.transform.forward);
-
-                    LocalVerticesByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, connectorOrDoor.transform, orientation), new List<Vertex>());
-                    LocalAreasByRoomDirectionConnectorOrientation[connectedRoom.gameObject].Add((direction, connectorOrDoor.transform, orientation), new List<Area>());
-                }
-            }
-
-            //foreach (var (room, (dir, connectorTransform, orientation)) in VerticesByRoomDirectionConnectorOrientation.SelectMany(p => p.Value.Keys.Select(k => (p.Key, k))))
-            //{
-            //    Debug.Log($"{GetForm(room),-25}{dir,-12}{GetForm(connectorTransform.gameObject),-40}{orientation,-12}");
-            //}
         }
 
         public static void ResetMeshes()
         {
-            RoomsOrConnectorsByForm.Clear();
-
+            RoomsByForm.Clear();
             MeshesByRoomForm.Clear();
-            MeshesByConnectorForm.Clear();
-            MeshesByRoomConnectorForm.Clear();
-
-            LocalVerticesByRoomOrConnector.Clear();
-            LocalAreasByRoomOrConnector.Clear();
-            LocalVerticesByRoomDirectionConnectorOrientation.Clear();
-            LocalAreasByRoomDirectionConnectorOrientation.Clear();
+            LocalMeshesByRoom.Clear();
         }
 
         #endregion
@@ -542,28 +414,10 @@ namespace SCPSLBot.Navigation.Mesh
                 && edgeCenter.y < localPointYHighest;
         }
 
-        public static string GetRoomForm(string roomObjectName)
-        {
-            return roomObjectName.EndsWith("(Clone)") ? roomObjectName.Remove(roomObjectName.LastIndexOf("(Clone)")) : roomObjectName;
-        }
-
-        public static string GetForm<TBehaviour>(TBehaviour roomConnector)
-            where TBehaviour : MonoBehaviour
-        {
-            return GetForm(roomConnector?.gameObject);
-        }
-
         public static string GetForm(GameObject gameObject)
         {
             var gameObjectName = gameObject?.name;
             return (gameObjectName?.EndsWith("(Clone)") ?? false) ? gameObjectName.Remove(gameObjectName.LastIndexOf("(Clone)")) : gameObjectName;
-        }
-
-        public static bool StartsWithForm<TBehaviour>(TBehaviour behaviour, string comparingForm)
-            where TBehaviour : MonoBehaviour
-        {
-            var gameObjectName = behaviour.gameObject.name;
-            return gameObjectName.Equals(gameObjectName.EndsWith("(Clone)") ? $"{comparingForm}(Clone)" : comparingForm);
         }
 
         public static bool StartsWithForm(GameObject gameObject, string comparingForm)

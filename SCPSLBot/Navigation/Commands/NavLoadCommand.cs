@@ -32,7 +32,7 @@ namespace SCPSLBot.Navigation.Commands
             NavigationMesh.ResetMeshes();
 
             NavigationMesh.InitMeshes();
-            NavigationSystem.Instance.LoadMeshes();
+            NavigationSystem.Instance.LoadMeshes(NavigationSystem.Instance.MeshFileName);
 
             response = $"Navigation mesh re-loaded.";
             return true;

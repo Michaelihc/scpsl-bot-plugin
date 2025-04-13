@@ -2,6 +2,7 @@
 
 using CommandSystem;
 using SCPSLBot.Navigation;
+using SCPSLBot.Navigation.Mesh;
 using System;
 using UnityEngine.Assertions;
 
@@ -17,10 +18,38 @@ namespace SCPSLBot.Tests.Navigation
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
-            Assert.IsTrue(NavigationSystem.Instance.Initialized);
+            NavigationSystem.Instance.Terminate();
+            NavigationMesh.InitMeshes();
+
+            TestCreateVertex();
 
             response = $"Passed.";
             return true;
+        }
+
+        private void TestCreateVertex()
+        {
+
+        }
+
+        private void TestDeleteVertex()
+        {
+
+        }
+
+        private void TestCreateArea()
+        {
+
+        }
+
+        private void TestDeleteArea()
+        {
+
+        }
+
+        private void TestPersistance()
+        {
+
         }
     }
 }

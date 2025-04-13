@@ -19,6 +19,7 @@ namespace SCPSLBot.Navigation
         public static NavigationSystem Instance { get; } = new NavigationSystem();
 
         public string BaseDir { get; set; }
+        public string MeshFileName { get; } = "navmesh.slnmf";
 
         public bool Initialized { get; private set; } = false;
 
@@ -55,7 +56,7 @@ namespace SCPSLBot.Navigation
             NavigationMesh.InitMeshes();
 
             Log.Info($"Loading meshes.");
-            LoadMeshes();
+            LoadMeshes(MeshFileName);
 
             Log.Info($"Connecting areas between elevator destinations.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
@@ -88,9 +89,8 @@ namespace SCPSLBot.Navigation
             Log.Info($"Connecting areas finished.");
         }
 
-        public void LoadMeshes()
+        public void LoadMeshes(string fileName)
         {
-            var fileName = "navmesh.slnmf";
             var path = Path.Combine(BaseDir, fileName);
 
             if (!File.Exists(path))
@@ -104,9 +104,8 @@ namespace SCPSLBot.Navigation
             NavigationMesh.ReadMeshes(binaryReader);
         }
 
-        public void SaveMeshes()
+        public void SaveMeshes(string fileName)
         {
-            var fileName = "navmesh.slnmf";
             var path = Path.Combine(BaseDir, fileName);
 
             using var fileStream = File.Open(path, FileMode.Create, FileAccess.Write);

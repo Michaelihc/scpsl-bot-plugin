@@ -88,7 +88,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 if (nearestEdge.HasValue)
                 {
                     var nearestLocalEdge = new Edge(nearestEdge.Value.From, nearestEdge.Value.To);
-                    targetArea = NavigationMesh.LocalAreasByRoomOrConnector[goalRoom.gameObject]
+                    targetArea = NavigationMesh.LocalMeshesByRoom[goalRoom.gameObject].Areas
                         .Where(a => a.Edges.Any(e => e == nearestLocalEdge))
                         .Select(a => new TransformArea?(new (a, goalRoom.transform)))
                         .FirstOrDefault();

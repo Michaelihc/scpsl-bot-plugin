@@ -28,7 +28,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            NavigationSystem.Instance.SaveMeshes();
+            NavigationSystem.Instance.SaveMeshes(NavigationSystem.Instance.MeshFileName);
 
             response = $"Navigation mesh saved.";
             return true;

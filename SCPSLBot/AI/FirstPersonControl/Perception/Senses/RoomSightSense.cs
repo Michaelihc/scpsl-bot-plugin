@@ -63,7 +63,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
             {
                 ForeignRoomsAreas.Clear();
 
-                foreach (var localArea in NavigationMesh.LocalAreasByRoomOrConnector[RoomWithin.gameObject])
+                foreach (var localArea in NavigationMesh.LocalMeshesByRoom[RoomWithin.gameObject].Areas)
                 {
                     var transformArea = new TransformArea(localArea, RoomWithin.transform);
                     foreach (var fa in NavigationMesh.ForeignConnectedAreas[transformArea].Where(fa => fa.Transform.GetComponent<RoomIdentifier>()))
