@@ -45,8 +45,10 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void AddConnection(Area connectingArea)
         {
+            var connectingEdge = connectingArea.Edges.First(te => Edges.Contains(new Edge(te.To, te.From)));
+
             ConnectedAreas.Add(connectingArea);
-            ConnectedAreaEdges.Add(connectingArea, connectingArea.Edges.First(te => Edges.Contains(new Edge(te.To, te.From))));
+            ConnectedAreaEdges.Add(connectingArea, connectingEdge);
         }
 
         public void RemoveConnection(Area connectedArea)
