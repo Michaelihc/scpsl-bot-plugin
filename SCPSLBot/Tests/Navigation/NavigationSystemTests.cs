@@ -29,40 +29,36 @@ namespace SCPSLBot.Tests.Navigation
             TestCreateMesh(existingForm);
             TestCreateMesh("Non_Existing");
 
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
+            TestCreateVertex(existingForm);     // #0
+            TestCreateVertex(existingForm);     // #1
+            TestCreateVertex(existingForm);     // #2
+            TestCreateVertex(existingForm);     // #3
+            TestCreateVertex(existingForm);     // #4
 
-            TestDeleteVertex(existingForm, 2);
-            TestCreateVertex(existingForm);
+            TestDeleteVertex(existingForm, 2);  // #3
+            TestCreateVertex(existingForm);     // #4
 
-            TestMakeArea(existingForm, 0, 1, 2);
+            TestMakeArea(existingForm, 0, 1, 2);        // #0
+            TestMakeArea(existingForm, 2, 1, 3, 4);     // #1
 
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
-            TestMakeArea(existingForm, 3, 4, 5, 6);
+            TestCreateVertex(existingForm);     // #5
+            TestCreateVertex(existingForm);     // #6
+            TestCreateVertex(existingForm);     // #7
+            TestCreateVertex(existingForm);     // #8
 
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
-            TestCreateVertex(existingForm);
+            TestMakeArea(existingForm, 2, 3, 7, 8);     // #2
 
-            TestMakeArea(existingForm, 2, 3, 7, 8);
-
-            TestRemoveArea(existingForm, 1);
-            TestMakeArea(existingForm, 3, 4, 5, 6);
+            TestRemoveArea(existingForm, 2);            // #1
+            TestMakeArea(existingForm, 4, 3, 5, 6);     // #2
 
             TestAddConnection(existingForm, 0, 1);
             TestAddConnection(existingForm, 1, 0);
-            TestAddConnection(existingForm, 0, 2);
+            TestAddConnection(existingForm, 1, 2);
 
-            TestRemoveConnection(existingForm, 0, 2);
-            TestAddConnection(existingForm, 0, 2);
+            TestRemoveConnection(existingForm, 1, 2);
+            TestAddConnection(existingForm, 1, 2);
 
-            TestRemoveArea(existingForm, 2);
+            TestRemoveArea(existingForm, 2);            // #1
 
             response = $"Passed.";
             return true;
@@ -165,6 +161,7 @@ namespace SCPSLBot.Tests.Navigation
         {
             var mesh = NavigationMesh.MeshesByRoomForm[form];
             var vertices = vertexIdxs.Select(idx => mesh.Vertices[idx]);
+            var edges = vertices.Zip(vertices.Skip(1), (v1, v2) => new Edge(v1, v2)).Append(new(vertices.Last(), vertices.First()));
 
             Area emittedArea = null;
             void createdHandler(Area a)
@@ -174,6 +171,18 @@ namespace SCPSLBot.Tests.Navigation
             mesh.AreaCreated += createdHandler;
 
             var area = mesh.MakeArea(vertices);
+
+            Assert.AreEqual(vertexIdxs.Length, area.Vertices.Count);
+            foreach (var (vertex, areaVertex) in vertices.Zip(area.Vertices, (vertex, areaVertex) => (vertex, areaVertex)))
+            {
+                Assert.AreEqual(vertex, areaVertex);
+            }
+
+            Assert.AreEqual(edges.Count(), area.Edges.Count());
+            foreach (var (edge, areaEdge) in edges.Zip(area.Edges, (edge, areaEdge) => (edge, areaEdge)))
+            {
+                Assert.AreEqual(edge, areaEdge);
+            }
 
             Assert.IsNotNull(area);
             Assert.IsTrue(mesh.Areas.Contains(area));
@@ -253,12 +262,16 @@ namespace SCPSLBot.Tests.Navigation
 
             Assert.IsTrue(fromArea.ConnectedAreas.Contains(toArea));
 
+            Assert.IsTrue(fromArea.ConnectedAreaEdges.TryGetValue(toArea, out var connectedEdge));
+            Assert.AreEqual(toArea.Edges.First(te => fromArea.Edges.Contains(new Edge(te.To, te.From))), connectedEdge);
+
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
             {
                 foreach (var room in rooms)
                 {
                     var fromTransformArea = new TransformArea(fromArea, room.transform);
                     var toTransformArea = new TransformArea(toArea, room.transform);
+
                     Assert.IsTrue(fromTransformArea.ConnectedAreas.Contains(toTransformArea));
                 }
             }
@@ -275,6 +288,7 @@ namespace SCPSLBot.Tests.Navigation
             fromArea.RemoveConnection(toArea);
 
             Assert.IsFalse(fromArea.ConnectedAreas.Contains(toArea));
+            Assert.IsFalse(fromArea.ConnectedAreaEdges.ContainsKey(toArea));
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
             {

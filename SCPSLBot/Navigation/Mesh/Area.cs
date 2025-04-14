@@ -46,11 +46,13 @@ namespace SCPSLBot.Navigation.Mesh
         public void AddConnection(Area connectingArea)
         {
             ConnectedAreas.Add(connectingArea);
+            ConnectedAreaEdges.Add(connectingArea, connectingArea.Edges.First(te => Edges.Contains(new Edge(te.To, te.From))));
         }
 
         public void RemoveConnection(Area connectedArea)
         {
             ConnectedAreas.Remove(connectedArea);
+            ConnectedAreaEdges.Remove(connectedArea);
         }
     }
 }
