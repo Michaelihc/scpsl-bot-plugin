@@ -172,6 +172,8 @@ namespace SCPSLBot.Tests.Navigation
 
             var area = mesh.MakeArea(vertices);
 
+            Assert.IsNotNull(area);
+
             Assert.AreEqual(vertexIdxs.Length, area.Vertices.Count);
             foreach (var (vertex, areaVertex) in vertices.Zip(area.Vertices, (vertex, areaVertex) => (vertex, areaVertex)))
             {
@@ -184,7 +186,6 @@ namespace SCPSLBot.Tests.Navigation
                 Assert.AreEqual(edge, areaEdge);
             }
 
-            Assert.IsNotNull(area);
             Assert.IsTrue(mesh.Areas.Contains(area));
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
@@ -192,6 +193,7 @@ namespace SCPSLBot.Tests.Navigation
                 foreach (var room in rooms)
                 {
                     var transformArea = new TransformArea(area, room.transform);
+                    Assert.AreEqual(room.transform.TransformPoint(area.CenterPosition), transformArea.CenterPosition);
                     Assert.IsTrue(NavigationMesh.ForeignConnectedAreas.ContainsKey(transformArea));
                     Assert.IsNotNull(NavigationMesh.ForeignConnectedAreas[transformArea]);
                 }
@@ -228,6 +230,7 @@ namespace SCPSLBot.Tests.Navigation
             foreach (var otherArea in mesh.Areas)
             {
                 Assert.IsFalse(otherArea.ConnectedAreas.Contains(area));
+                Assert.IsFalse(otherArea.ConnectedAreaEdges.ContainsKey(area));
             }
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
@@ -239,6 +242,7 @@ namespace SCPSLBot.Tests.Navigation
                     {
                         var otherTransformArea = new TransformArea(otherArea, room.transform);
                         Assert.IsFalse(otherTransformArea.ConnectedAreas.Contains(transformArea));
+                        Assert.IsFalse(otherTransformArea.ConnectedAreaEdges.ContainsKey(transformArea));
                     }
 
                     Assert.IsFalse(NavigationMesh.ForeignConnectedAreas.ContainsKey(transformArea));
@@ -262,8 +266,9 @@ namespace SCPSLBot.Tests.Navigation
 
             Assert.IsTrue(fromArea.ConnectedAreas.Contains(toArea));
 
+            var edge = toArea.Edges.First(te => fromArea.Edges.Contains(new Edge(te.To, te.From)));
             Assert.IsTrue(fromArea.ConnectedAreaEdges.TryGetValue(toArea, out var connectedEdge));
-            Assert.AreEqual(toArea.Edges.First(te => fromArea.Edges.Contains(new Edge(te.To, te.From))), connectedEdge);
+            Assert.AreEqual(edge, connectedEdge);
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
             {
@@ -273,6 +278,8 @@ namespace SCPSLBot.Tests.Navigation
                     var toTransformArea = new TransformArea(toArea, room.transform);
 
                     Assert.IsTrue(fromTransformArea.ConnectedAreas.Contains(toTransformArea));
+                    Assert.IsTrue(fromTransformArea.ConnectedAreaEdges.TryGetValue(toTransformArea, out var transformEdge));
+                    Assert.AreEqual(new TransformEdge(edge, room.transform), transformEdge);
                 }
             }
 
@@ -297,6 +304,7 @@ namespace SCPSLBot.Tests.Navigation
                     var fromTransformArea = new TransformArea(fromArea, room.transform);
                     var toTransformArea = new TransformArea(toArea, room.transform);
                     Assert.IsFalse(fromTransformArea.ConnectedAreas.Contains(toTransformArea));
+                    Assert.IsFalse(fromTransformArea.ConnectedAreaEdges.ContainsKey(toTransformArea));
                 }
             }
 
