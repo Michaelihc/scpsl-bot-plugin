@@ -68,7 +68,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
                     var transformCell = new TransformCell(localCell, RoomWithin.transform);
                     foreach (var fa in NavigationMesh.ForeignConnectedCells[transformCell].Where(fa => fa.Transform.GetComponent<RoomIdentifier>()))
                     {
-                        var faa = fa.ConnectedCells.First();
+                        var faa = fa.AdjacentCells.First();
                         ForeignRoomsCells.Add(faa);
                     }
                 }

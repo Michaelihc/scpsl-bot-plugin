@@ -144,15 +144,15 @@ namespace SCPSLBot.Navigation.Mesh
                     {
                         var nearestCell = NearestCell.Value;
 
-                        if (nearestCell.Local.ConnectedCells.Contains(cachedCell.Local) && cachedCell.Local.ConnectedCells.Contains(nearestCell.Local))
+                        if (nearestCell.Local.AdjacentCells.Contains(cachedCell.Local) && cachedCell.Local.AdjacentCells.Contains(nearestCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (nearestCell.Local.ConnectedCells.Contains(cachedCell.Local))
+                        else if (nearestCell.Local.AdjacentCells.Contains(cachedCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (cachedCell.Local.ConnectedCells.Contains(nearestCell.Local))
+                        else if (cachedCell.Local.AdjacentCells.Contains(nearestCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
@@ -172,15 +172,15 @@ namespace SCPSLBot.Navigation.Mesh
                     {
                         var nearestCell = NearestCell.Value;
 
-                        if (nearestCell.Local.ConnectedCells.Contains(facingCell.Local) && facingCell.Local.ConnectedCells.Contains(nearestCell.Local))
+                        if (nearestCell.Local.AdjacentCells.Contains(facingCell.Local) && facingCell.Local.AdjacentCells.Contains(nearestCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (nearestCell.Local.ConnectedCells.Contains(facingCell.Local))
+                        else if (nearestCell.Local.AdjacentCells.Contains(facingCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (facingCell.Local.ConnectedCells.Contains(nearestCell.Local))
+                        else if (facingCell.Local.AdjacentCells.Contains(nearestCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
@@ -312,7 +312,7 @@ namespace SCPSLBot.Navigation.Mesh
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
-                        else if (NearestCell?.Local.ConnectedCells.Contains(localCell) ?? false)
+                        else if (NearestCell?.Local.AdjacentCells.Contains(localCell) ?? false)
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
@@ -415,7 +415,7 @@ namespace SCPSLBot.Navigation.Mesh
                         var cell = nextCell;
                         nextCell = pathEnumerator.Current;
 
-                        if (!cell.ConnectedCellEdges.TryGetValue(nextCell, out var connectedEdge))
+                        if (!cell.AdjacentCellEdges.TryGetValue(nextCell, out var connectedEdge))
                         {
                             continue;
                         }

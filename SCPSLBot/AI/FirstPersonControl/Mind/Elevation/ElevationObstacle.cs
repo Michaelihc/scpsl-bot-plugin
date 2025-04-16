@@ -21,7 +21,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         private void OnAfterSightSensing()
         {
-            var edgelessSegment = navigator.CellPathSegments.FirstOrDefault(s => !s.Cell.ConnectedCellEdges.ContainsKey(s.NextCell));
+            var edgelessSegment = navigator.CellPathSegments.FirstOrDefault(s => !s.Cell.AdjacentCellEdges.ContainsKey(s.NextCell));
             if (edgelessSegment.NextCell == null)
             {
                 if (DestinationCell != null && DestinationCell == navigator.GetCellWithin())

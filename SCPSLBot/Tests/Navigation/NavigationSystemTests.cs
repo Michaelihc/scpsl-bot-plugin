@@ -51,13 +51,6 @@ namespace SCPSLBot.Tests.Navigation
             TestRemoveCell(existingForm, 2);            // #1
             TestMakeCell(existingForm, 4, 3, 5, 6);     // #2
 
-            TestAddConnection(existingForm, 0, 1);
-            TestAddConnection(existingForm, 1, 0);
-            TestAddConnection(existingForm, 1, 2);
-
-            TestRemoveConnection(existingForm, 1, 2);
-            TestAddConnection(existingForm, 1, 2);
-
             TestRemoveCell(existingForm, 2);            // #1
 
             response = $"Passed.";
@@ -186,6 +179,20 @@ namespace SCPSLBot.Tests.Navigation
                 Assert.AreEqual(edge, cellEdge);
             }
 
+            foreach (var edge in edges)
+            {
+                var adjacentEdge = new Edge(edge.To, edge.From);
+                var adjacentCells = mesh.Cells.Where(c => c.Edges.Contains(adjacentEdge));
+                foreach (var adjacentCell in adjacentCells)
+                {
+                    Assert.IsTrue(cell.AdjacentCellEdges.TryGetValue(adjacentCell, out var cellAdjacentEdge), "Cell does not contain expected adjacent cell.");
+                    Assert.AreEqual(adjacentEdge, cellAdjacentEdge, "Cell does not contain expected edge of adjacent cell.");
+
+                    Assert.IsTrue(adjacentCell.AdjacentCellEdges.TryGetValue(cell, out var cellAdjacentAdjacentEdge), "Adjacent cell does not contain expected cell.");
+                    Assert.AreEqual(edge, cellAdjacentAdjacentEdge, "Adjacent cell does not contain expected edge of cell.");
+                }
+            }
+
             Assert.IsTrue(mesh.Cells.Contains(cell));
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
@@ -194,8 +201,24 @@ namespace SCPSLBot.Tests.Navigation
                 {
                     var transformCell = new TransformCell(cell, room.transform);
                     Assert.AreEqual(room.transform.TransformPoint(cell.CenterPosition), transformCell.CenterPosition);
+
                     Assert.IsTrue(NavigationMesh.ForeignConnectedCells.ContainsKey(transformCell));
                     Assert.IsNotNull(NavigationMesh.ForeignConnectedCells[transformCell]);
+
+                    foreach (var transformEdge in edges.Select(e => new TransformEdge(e, room.transform)))
+                    {
+                        var adjacentTransformEdge = new TransformEdge(transformEdge.To, transformEdge.From, room.transform);
+                        var adjacentTransformCells = mesh.Cells.Where(c => c.Edges.Select(e => new TransformEdge(e, room.transform)).Contains(adjacentTransformEdge))
+                            .Select(c => new TransformCell(c, room.transform));
+                        foreach (var adjacentTransformCell in adjacentTransformCells)
+                        {
+                            Assert.IsTrue(transformCell.AdjacentCellEdges.TryGetValue(adjacentTransformCell, out var cellAdjacentEdge), "Transform cell does not contain expected adjacent transform cell.");
+                            Assert.AreEqual(adjacentTransformEdge, cellAdjacentEdge, "Transform cell does not contain expected edge of adjacent transform cell.");
+                            
+                            Assert.IsTrue(adjacentTransformCell.AdjacentCellEdges.TryGetValue(transformCell, out var cellAdjacentAdjacentEdge), "Transform adjacent cell does not contain expected transform cell.");
+                            Assert.AreEqual(transformEdge, cellAdjacentAdjacentEdge, "Transform adjacent cell does not contain expected edge of transform cell.");
+                        }
+                    }
                 }
             }
 
@@ -229,8 +252,8 @@ namespace SCPSLBot.Tests.Navigation
 
             foreach (var otherCell in mesh.Cells)
             {
-                Assert.IsFalse(otherCell.ConnectedCells.Contains(cell));
-                Assert.IsFalse(otherCell.ConnectedCellEdges.ContainsKey(cell));
+                Assert.IsFalse(otherCell.AdjacentCells.Contains(cell));
+                Assert.IsFalse(otherCell.AdjacentCellEdges.ContainsKey(cell));
             }
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
@@ -241,8 +264,8 @@ namespace SCPSLBot.Tests.Navigation
                     foreach (var otherCell in mesh.Cells)
                     {
                         var otherTransformCell = new TransformCell(otherCell, room.transform);
-                        Assert.IsFalse(otherTransformCell.ConnectedCells.Contains(transformCell));
-                        Assert.IsFalse(otherTransformCell.ConnectedCellEdges.ContainsKey(transformCell));
+                        Assert.IsFalse(otherTransformCell.AdjacentCells.Contains(transformCell));
+                        Assert.IsFalse(otherTransformCell.AdjacentCellEdges.ContainsKey(transformCell));
                     }
 
                     Assert.IsFalse(NavigationMesh.ForeignConnectedCells.ContainsKey(transformCell));
@@ -254,61 +277,6 @@ namespace SCPSLBot.Tests.Navigation
             mesh.CellDeleted -= deletedHandler;
 
             Log.Info($"{nameof(TestRemoveCell)}({form}, {cellIdx})");
-        }
-
-        private void TestAddConnection(string form, int fromIdx, int toIdx)
-        {
-            var mesh = NavigationMesh.MeshesByRoomForm[form];
-            var fromCell = mesh.Cells[fromIdx];
-            var toCell = mesh.Cells[toIdx];
-
-            fromCell.AddConnection(toCell);
-
-            Assert.IsTrue(fromCell.ConnectedCells.Contains(toCell));
-
-            var edge = toCell.Edges.First(te => fromCell.Edges.Contains(new Edge(te.To, te.From)));
-            Assert.IsTrue(fromCell.ConnectedCellEdges.TryGetValue(toCell, out var connectedEdge));
-            Assert.AreEqual(edge, connectedEdge);
-
-            if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
-            {
-                foreach (var room in rooms)
-                {
-                    var fromTransformCell = new TransformCell(fromCell, room.transform);
-                    var toTransformCell = new TransformCell(toCell, room.transform);
-
-                    Assert.IsTrue(fromTransformCell.ConnectedCells.Contains(toTransformCell));
-                    Assert.IsTrue(fromTransformCell.ConnectedCellEdges.TryGetValue(toTransformCell, out var transformEdge));
-                    Assert.AreEqual(new TransformEdge(edge, room.transform), transformEdge);
-                }
-            }
-
-            Log.Info($"{nameof(TestAddConnection)}({form}, {fromIdx}, {toIdx})");
-        }
-
-        private void TestRemoveConnection(string form, int fromIdx, int toIdx)
-        {
-            var mesh = NavigationMesh.MeshesByRoomForm[form];
-            var fromCell = mesh.Cells[fromIdx];
-            var toCell = mesh.Cells[toIdx];
-
-            fromCell.RemoveConnection(toCell);
-
-            Assert.IsFalse(fromCell.ConnectedCells.Contains(toCell));
-            Assert.IsFalse(fromCell.ConnectedCellEdges.ContainsKey(toCell));
-
-            if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
-            {
-                foreach (var room in rooms)
-                {
-                    var fromTransformCell = new TransformCell(fromCell, room.transform);
-                    var toTransformCell = new TransformCell(toCell, room.transform);
-                    Assert.IsFalse(fromTransformCell.ConnectedCells.Contains(toTransformCell));
-                    Assert.IsFalse(fromTransformCell.ConnectedCellEdges.ContainsKey(toTransformCell));
-                }
-            }
-
-            Log.Info($"{nameof(TestRemoveConnection)}({form}, {fromIdx}, {toIdx})");
         }
 
         private void TestPersistance()

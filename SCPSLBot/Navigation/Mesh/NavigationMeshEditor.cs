@@ -286,7 +286,6 @@ namespace SCPSLBot.Navigation.Mesh
             mesh = NavigationMesh.MeshesByRoomForm[form];
 
             var newCell = mesh.MakeCell(SelectedVertices);
-            ConnectAdjacentCells(newCell, form);
 
             Log.Info($"Cell #{mesh.Cells.IndexOf(newCell)} at local center position {newCell.CenterPosition} added under {form}.");
 
@@ -485,42 +484,6 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        public bool CreateConnection()
-        {
-            if (Visuals.CachedCell == null || Visuals.NearestCell == null)
-            {
-                return false;
-            }
-
-            var cachedCell = Visuals.CachedCell.Value;
-            var targetCell = Visuals.NearestCell.Value;
-
-            var form = NavigationMesh.GetForm(cachedCell.Transform.gameObject);
-            var mesh = NavigationMesh.GetMesh(form);
-
-            mesh.CreateCellConnection(cachedCell.Local, targetCell.Local);
-
-            return true;
-        }
-
-        public bool DeleteConnection()
-        {
-            if (Visuals.CachedCell == null || Visuals.NearestCell == null)
-            {
-                return false;
-            }
-
-            var cachedCell = Visuals.CachedCell.Value;
-            var targetCell = Visuals.NearestCell.Value;
-
-            var form = NavigationMesh.GetForm(cachedCell.Transform.gameObject);
-            var mesh = NavigationMesh.GetMesh(form);
-
-            mesh.DeleteCellConnection(cachedCell.Local, targetCell.Local);
-
-            return true;
-        }
-
         private Vector3 GetProjectedPosition(Vector3 position)
         {
             var lineSegment = (from: SelectedVertices.First(), to: SelectedVertices.Last());
@@ -531,23 +494,6 @@ namespace SCPSLBot.Navigation.Mesh
             var projected = (dirToProj + lineSegment.from.Position);
 
             return projected;
-        }
-
-        private void ConnectAdjacentCells(Cell localCell, string form)
-        {
-            var mesh = NavigationMesh.GetMesh(form);
-
-            foreach (var edge in localCell.Edges)
-            {
-                var inversedEdge = new Edge(edge.To, edge.From);
-
-                var connectedCell = mesh.Cells.Find(a => a != localCell && a.Edges.Contains(inversedEdge));
-                if (connectedCell != null)
-                {
-                    localCell.AddConnection(connectedCell);
-                    connectedCell.AddConnection(localCell);
-                }
-            }
         }
 
         private void UpdateEditing()

@@ -1,8 +1,10 @@
-﻿using System;
+﻿using SCPSLBot.Navigation.Commands;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using static UnityEngine.RectTransform;
 
 namespace SCPSLBot.Navigation.Mesh
 {
@@ -65,9 +67,27 @@ namespace SCPSLBot.Navigation.Mesh
             var newCell = new Cell(vertices);
             Cells.Add(newCell);
 
+            AddAdjacentCells(newCell);
+
             CellCreated?.Invoke(newCell);
 
             return newCell;
+        }
+
+        private void AddAdjacentCells(Cell newCell)
+        {
+            foreach (var adjacentCell in Cells)
+            {
+                foreach (var edge in newCell.Edges)
+                {
+                    var adjacentEdge = new Edge(edge.To, edge.From);
+                    if (adjacentCell.Edges.Contains(adjacentEdge))
+                    {
+                        newCell.AddAdjacentCell(adjacentCell, adjacentEdge);
+                        adjacentCell.AddAdjacentCell(newCell, edge);
+                    }
+                }
+            }
         }
 
         public bool RemoveCell(Cell cell)
@@ -78,29 +98,19 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            RemoveConnectionsToCell(cell);
+            RemoveAdjacentCell(cell);
 
             CellDeleted?.Invoke(cell);
 
             return true;
         }
 
-        private void RemoveConnectionsToCell(Cell cell)
+        private void RemoveAdjacentCell(Cell cell)
         {
             foreach (var otherCell in Cells)
             {
-                otherCell.RemoveConnection(cell);
+                otherCell.RemoveAdjacentCell(cell);
             }
-        }
-
-        public void CreateCellConnection(Cell fromCell, Cell toCell)
-        {
-            fromCell.AddConnection(toCell);
-        }
-
-        public void DeleteCellConnection(Cell fromCell, Cell toCell)
-        {
-            fromCell.RemoveConnection(toCell);
         }
 
         public void AddVertexToCell(Cell cell, Vertex vertex, Vertex beforeVertex)
@@ -142,8 +152,6 @@ namespace SCPSLBot.Navigation.Mesh
 
             for (var j = 0; j < cellsCount; j++)
             {
-                var newCell = MakeCell(Enumerable.Empty<Vertex>());
-
                 var cellVerticesCount = binaryReader.ReadInt32();
                 var cellVertices = new int[cellVerticesCount];
                 for (var k = 0; k < cellVerticesCount; k++)
@@ -152,6 +160,8 @@ namespace SCPSLBot.Navigation.Mesh
                 }
                 cellsVertices[j] = cellVertices;
 
+                var newCell = MakeCell(cellVertices.Select(vertexIdx => Vertices[vertexIdx]));
+
                 var connectedCellsCount = binaryReader.ReadInt32();
                 var connectedCells = new int[connectedCellsCount];
                 for (var k = 0; k < connectedCellsCount; k++)
@@ -159,22 +169,6 @@ namespace SCPSLBot.Navigation.Mesh
                     connectedCells[k] = binaryReader.ReadInt32();
                 }
                 cellsConnections[j] = connectedCells;
-            }
-
-            foreach (var (cell, vertices) in cellsVertices.Select((vertices, cellIndex) => (Cells[cellIndex], vertices)))
-            {
-                foreach (var cellVertex in vertices.Select(vertexIdx => Vertices[vertexIdx]))
-                {
-                    cell.AddVertex(cellVertex);
-                }
-            }
-
-            foreach (var (cell, conns) in cellsConnections.Select((conns, cellIndex) => (Cells[cellIndex], conns)))
-            {
-                foreach (var connectingCell in conns.Select(connectedIndex => Cells[connectedIndex]))
-                {
-                    cell.AddConnection(connectingCell);
-                }
             }
         }
 
@@ -195,12 +189,6 @@ namespace SCPSLBot.Navigation.Mesh
                 foreach (var vertexIdx in cell.Vertices.Select(cellVertex => Vertices.IndexOf(cellVertex)))
                 {
                     binaryWriter.Write(vertexIdx);
-                }
-
-                binaryWriter.Write(cell.ConnectedCells.Count);
-                foreach (var connIdx in cell.ConnectedCells.Select(connCell => Cells.IndexOf(connCell)))
-                {
-                    binaryWriter.Write(connIdx);
                 }
             }
         }

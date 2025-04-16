@@ -65,7 +65,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 do
                 {
                     var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
-                    var nextTargetCellEdge = this.currentCell.ConnectedCellEdges[nextTargetCell];
+                    var nextTargetCellEdge = this.currentCell.AdjacentCellEdges[nextTargetCell];
 
                     isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetCellEdge);
                     if (isEdgeReached)
@@ -130,7 +130,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 var partialPath = false;
                 foreach (var (cell, nextCell) in CellPathSegments)
                 {
-                    if (!cell.ConnectedCellEdges.TryGetValue(nextCell, out var e))
+                    if (!cell.AdjacentCellEdges.TryGetValue(nextCell, out var e))
                     {
                         partialPath = true;
                         break;
@@ -159,7 +159,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             var playerPosition = botPlayer.PlayerPosition;
 
             var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
-            if (!currentCell.ConnectedCellEdges.TryGetValue(nextTargetCell, out var targetCellEdge))
+            if (!currentCell.AdjacentCellEdges.TryGetValue(nextTargetCell, out var targetCellEdge))
             {
                 return currentCell.CenterPosition;
             }
@@ -178,7 +178,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                     to: targetCellEdge.To.Position - playerPosition);
 
                 var aheadTargetCell = this.CellsPath[aheadPathIdx];
-                if (!nextTargetCell.ConnectedCellEdges.TryGetValue(aheadTargetCell, out var aheadTargetCellEdge))
+                if (!nextTargetCell.AdjacentCellEdges.TryGetValue(aheadTargetCell, out var aheadTargetCellEdge))
                 {
                     goalPosition = nextTargetCell.CenterPosition;
                     break;

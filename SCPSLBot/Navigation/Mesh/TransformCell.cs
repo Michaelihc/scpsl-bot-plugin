@@ -7,11 +7,11 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal partial record struct TransformCell(Cell Local, Transform Transform)
     {
-        public readonly SelectingEnumerable<IEnumerable<Cell>, TransformCell, Cell> ConnectedCells
-            => new(Local.ConnectedCells, ToTransformCell);
+        public readonly SelectingEnumerable<IEnumerable<Cell>, TransformCell, Cell> AdjacentCells
+            => new(Local.AdjacentCells, ToTransformCell);
 
-        public readonly SelectingDictionary<TransformCell, TransformEdge, Cell, Edge> ConnectedCellEdges
-            => new(Local.ConnectedCellEdges, ToLocalCell, ToTransformCell, ToTransformEdge);
+        public readonly SelectingDictionary<TransformCell, TransformEdge, Cell, Edge> AdjacentCellEdges
+            => new(Local.AdjacentCellEdges, ToLocalCell, ToTransformCell, ToTransformEdge);
 
         public readonly Vector3 CenterPosition => Transform.TransformPoint(Local.CenterPosition);
 
