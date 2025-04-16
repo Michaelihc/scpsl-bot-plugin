@@ -10,14 +10,14 @@ using System.Threading.Tasks;
 
 namespace SCPSLBot.Navigation.Commands
 {
-    [CommandHandler(typeof(NavArea))]
-    internal class NavAreaDissolveCommand : ICommand
+    [CommandHandler(typeof(NavCell))]
+    internal class NavCellDissolveCommand : ICommand
     {
         public string Command { get; } = "dissolve";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Dissolves navigation mesh area within.";
+        public string Description { get; } = "Dissolves navigation mesh cell within.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,13 +33,13 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.DissolveArea(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.DissolveCell(playerCommandSender.ReferenceHub.transform.position))
             {
-                response = $"No area to be dissolved.";
+                response = $"No cell to be dissolved.";
                 return false;
             }
 
-            response = $"Area dissolved.";
+            response = $"Cell dissolved.";
             return true;
         }
     }

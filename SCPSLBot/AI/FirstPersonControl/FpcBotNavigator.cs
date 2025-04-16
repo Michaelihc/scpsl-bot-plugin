@@ -10,12 +10,12 @@ namespace SCPSLBot.AI.FirstPersonControl
     internal class FpcBotNavigator
     {
         private Vector3 lastPlayerPosition;
-        private TransformArea? areaWithin;
+        private TransformCell? cellWithin;
 
-        private TransformArea currentArea;
-        private TransformArea goalArea;
-        public List<TransformArea> AreasPath { get; } = new();
-        public IEnumerable<(TransformArea Area, TransformArea NextArea)> AreaPathSegments { get; }
+        private TransformCell currentCell;
+        private TransformCell goalCell;
+        public List<TransformCell> CellsPath { get; } = new();
+        public IEnumerable<(TransformCell Cell, TransformCell NextCell)> CellPathSegments { get; }
         private int currentPathIdx = -1;
 
         public Vector3 GoalPosition { get; private set; }
@@ -23,7 +23,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         public IEnumerable<(Vector3 point, Vector3 nextPoint)> PathSegments { get; }
 
         private bool isGoalOutside;
-        private Vector3 targetAreaClosestPositionToGoal;
+        private Vector3 targetCellClosestPositionToGoal;
 
         private readonly FpcBotPlayer botPlayer;
 
@@ -32,23 +32,23 @@ namespace SCPSLBot.AI.FirstPersonControl
             this.botPlayer = botPlayer;
 
             this.PathSegments = PointsPath.Zip(PointsPath.Skip(1), (point, nextPoint) => (point, nextPoint));
-            this.AreaPathSegments = AreasPath.Zip(AreasPath.Skip(1), (area, nextArea) => (area, nextArea));
+            this.CellPathSegments = CellsPath.Zip(CellsPath.Skip(1), (cell, nextCell) => (cell, nextCell));
         }
 
         public Vector3 GetPositionTowards(Vector3 goalPosition)
         {
             this.UpdateNavigationTo(goalPosition);
 
-            if (!IsAtLastArea())
+            if (!IsAtLastCell())
             {
                 Vector3 nextTargetPosition = GetNextCorner(goalPosition);
                 return nextTargetPosition;
             }
             else 
             {
-                if (goalArea != null && isGoalOutside)
+                if (goalCell != null && isGoalOutside)
                 {
-                    return targetAreaClosestPositionToGoal;
+                    return targetCellClosestPositionToGoal;
                 }
 
                 return goalPosition;
@@ -59,28 +59,28 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             var playerPosition = botPlayer.FpcRole.FpcModule.transform.position;
 
-            if (!IsAtLastArea())
+            if (!IsAtLastCell())
             {
                 bool isEdgeReached;
                 do
                 {
-                    var nextTargetArea = this.AreasPath[this.currentPathIdx + 1];
-                    var nextTargetAreaEdge = this.currentArea.ConnectedAreaEdges[nextTargetArea];
+                    var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
+                    var nextTargetCellEdge = this.currentCell.ConnectedCellEdges[nextTargetCell];
 
-                    isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetAreaEdge);
+                    isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetCellEdge);
                     if (isEdgeReached)
                     {
-                        this.currentArea = this.AreasPath[++this.currentPathIdx];
-                        //Log.Debug($"New current area {this.currentArea}.");
+                        this.currentCell = this.CellsPath[++this.currentPathIdx];
+                        //Log.Debug($"New current cell {this.currentCell}.");
                     }
                 }
-                while (isEdgeReached && !IsAtLastArea());
+                while (isEdgeReached && !IsAtLastCell());
             }
 
-            var withinArea = GetAreaWithin();
-            var targetArea = NavigationMesh.GetAreaWithin(goalPosition);
+            var withinCell = GetCellWithin();
+            var targetCell = NavigationMesh.GetCellWithin(goalPosition);
 
-            if (targetArea == null)
+            if (targetCell == null)
             {
                 var goalRoom = RoomIdUtils.RoomAtPositionRaycasts(goalPosition);
 
@@ -88,11 +88,11 @@ namespace SCPSLBot.AI.FirstPersonControl
                 if (nearestEdge.HasValue)
                 {
                     var nearestLocalEdge = new Edge(nearestEdge.Value.From, nearestEdge.Value.To);
-                    targetArea = NavigationMesh.LocalMeshesByRoom[goalRoom.gameObject].Areas
+                    targetCell = NavigationMesh.LocalMeshesByRoom[goalRoom.gameObject].Cells
                         .Where(a => a.Edges.Any(e => e == nearestLocalEdge))
-                        .Select(a => new TransformArea?(new (a, goalRoom.transform)))
+                        .Select(a => new TransformCell?(new (a, goalRoom.transform)))
                         .FirstOrDefault();
-                    targetAreaClosestPositionToGoal = closestPoint;
+                    targetCellClosestPositionToGoal = closestPoint;
                 }
                 else
                 {
@@ -106,20 +106,20 @@ namespace SCPSLBot.AI.FirstPersonControl
                 isGoalOutside = false;
             }
 
-            if (withinArea != null && targetArea != null && (targetArea.Value != this.goalArea || withinArea.Value != this.currentArea))
+            if (withinCell != null && targetCell != null && (targetCell.Value != this.goalCell || withinCell.Value != this.currentCell))
             {
-                this.currentArea = withinArea.Value;
-                this.goalArea = targetArea.Value;
-                //Log.Debug($"New start area {withinArea}.");
-                //Log.Debug($"New goal area {targetArea}.");
+                this.currentCell = withinCell.Value;
+                this.goalCell = targetCell.Value;
+                //Log.Debug($"New start cell {withinCell}.");
+                //Log.Debug($"New goal cell {targetCell}.");
 
-                NavigationMesh.FindShortestPath(withinArea.Value, targetArea.Value, this.AreasPath);
+                NavigationMesh.FindShortestPath(withinCell.Value, targetCell.Value, this.CellsPath);
                 this.currentPathIdx = 0;
 
-                //Log.Debug($"New path of {this.AreasPath.Count} areas:");
-                //foreach (var areaInPath in AreasPath)
+                //Log.Debug($"New path of {this.CellsPath.Count} cells:");
+                //foreach (var cellInPath in CellsPath)
                 //{
-                //    Log.Debug($"Area {areaInPath}.");
+                //    Log.Debug($"Cell {cellInPath}.");
                 //}
 
                 this.GoalPosition = goalPosition;
@@ -128,9 +128,9 @@ namespace SCPSLBot.AI.FirstPersonControl
                 this.PointsPath.Add(playerPosition);
 
                 var partialPath = false;
-                foreach (var (area, nextArea) in AreaPathSegments)
+                foreach (var (cell, nextCell) in CellPathSegments)
                 {
-                    if (!area.ConnectedAreaEdges.TryGetValue(nextArea, out var e))
+                    if (!cell.ConnectedCellEdges.TryGetValue(nextCell, out var e))
                     {
                         partialPath = true;
                         break;
@@ -145,48 +145,48 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
         }
 
-        public TransformArea? GetAreaWithin()
+        public TransformCell? GetCellWithin()
         {
             var playerPosition = botPlayer.PlayerPosition;
-            areaWithin = NavigationMesh.GetAreaWithin(playerPosition);
+            cellWithin = NavigationMesh.GetCellWithin(playerPosition);
             lastPlayerPosition = playerPosition;
 
-            return areaWithin;
+            return cellWithin;
         }
 
         private Vector3 GetNextCorner(Vector3 goalPosition)
         {
             var playerPosition = botPlayer.PlayerPosition;
 
-            var nextTargetArea = this.AreasPath[this.currentPathIdx + 1];
-            if (!currentArea.ConnectedAreaEdges.TryGetValue(nextTargetArea, out var targetAreaEdge))
+            var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
+            if (!currentCell.ConnectedCellEdges.TryGetValue(nextTargetCell, out var targetCellEdge))
             {
-                return currentArea.CenterPosition;
+                return currentCell.CenterPosition;
             }
-            var nextTargetEdgeMiddlePosition = Vector3.Lerp(targetAreaEdge.From.Position, targetAreaEdge.To.Position, 0.5f);
+            var nextTargetEdgeMiddlePosition = Vector3.Lerp(targetCellEdge.From.Position, targetCellEdge.To.Position, 0.5f);
 
             var nextTargetPosition = nextTargetEdgeMiddlePosition;
 
             var aheadPathIdx = this.currentPathIdx + 1;
 
-            while (nextTargetEdgeMiddlePosition == nextTargetPosition && aheadPathIdx < this.AreasPath.Count - 1)
+            while (nextTargetEdgeMiddlePosition == nextTargetPosition && aheadPathIdx < this.CellsPath.Count - 1)
             {
                 aheadPathIdx++;
 
                 var relTargetEdgePos = (
-                    from: targetAreaEdge.From.Position - playerPosition,
-                    to: targetAreaEdge.To.Position - playerPosition);
+                    from: targetCellEdge.From.Position - playerPosition,
+                    to: targetCellEdge.To.Position - playerPosition);
 
-                var aheadTargetArea = this.AreasPath[aheadPathIdx];
-                if (!nextTargetArea.ConnectedAreaEdges.TryGetValue(aheadTargetArea, out var aheadTargetAreaEdge))
+                var aheadTargetCell = this.CellsPath[aheadPathIdx];
+                if (!nextTargetCell.ConnectedCellEdges.TryGetValue(aheadTargetCell, out var aheadTargetCellEdge))
                 {
-                    goalPosition = nextTargetArea.CenterPosition;
+                    goalPosition = nextTargetCell.CenterPosition;
                     break;
                 }
 
                 var relAheadTargetEdgePos = (
-                    from: aheadTargetAreaEdge.From.Position - playerPosition,
-                    to: aheadTargetAreaEdge.To.Position - playerPosition);
+                    from: aheadTargetCellEdge.From.Position - playerPosition,
+                    to: aheadTargetCellEdge.To.Position - playerPosition);
 
                 var dirToAheadTargetEdgeNormals = (
                     from: Vector3.Cross(relAheadTargetEdgePos.from, Vector3.up),
@@ -194,26 +194,26 @@ namespace SCPSLBot.AI.FirstPersonControl
 
                 if (Vector3.Dot(relTargetEdgePos.from, dirToAheadTargetEdgeNormals.from) < 0)
                 {
-                    targetAreaEdge.From = aheadTargetAreaEdge.From;
+                    targetCellEdge.From = aheadTargetCellEdge.From;
                 }
 
                 if (Vector3.Dot(relTargetEdgePos.to, dirToAheadTargetEdgeNormals.to) > 0)
                 {
-                    targetAreaEdge.To = aheadTargetAreaEdge.To;
+                    targetCellEdge.To = aheadTargetCellEdge.To;
                 }
 
 
                 if (Vector3.Dot(relTargetEdgePos.from, dirToAheadTargetEdgeNormals.to) > 0)
                 {
-                    nextTargetPosition = targetAreaEdge.From.Position;
+                    nextTargetPosition = targetCellEdge.From.Position;
                 }
 
                 if (Vector3.Dot(relTargetEdgePos.to, dirToAheadTargetEdgeNormals.from) < 0)
                 {
-                    nextTargetPosition = targetAreaEdge.To.Position;
+                    nextTargetPosition = targetCellEdge.To.Position;
                 }
 
-                nextTargetArea = aheadTargetArea;
+                nextTargetCell = aheadTargetCell;
             }
 
             if (nextTargetPosition == nextTargetEdgeMiddlePosition)
@@ -221,29 +221,29 @@ namespace SCPSLBot.AI.FirstPersonControl
                 nextTargetPosition = goalPosition;
 
                 var relNextTargetEdgePos = (
-                    from: targetAreaEdge.From.Position - playerPosition,
-                    to: targetAreaEdge.To.Position - playerPosition);
+                    from: targetCellEdge.From.Position - playerPosition,
+                    to: targetCellEdge.To.Position - playerPosition);
 
                 var relGoalPos = goalPosition - playerPosition;
                 var dirToGoalNormal = Vector3.Cross(relGoalPos, Vector3.up);
 
                 if (Vector3.Dot(relNextTargetEdgePos.from, dirToGoalNormal) > 0)
                 {
-                    nextTargetPosition = targetAreaEdge.From.Position;
+                    nextTargetPosition = targetCellEdge.From.Position;
                 }
 
                 if (Vector3.Dot(relNextTargetEdgePos.to, dirToGoalNormal) < 0)
                 {
-                    nextTargetPosition = targetAreaEdge.To.Position;
+                    nextTargetPosition = targetCellEdge.To.Position;
                 }
             }
 
             return nextTargetPosition;
         }
 
-        private bool IsAtLastArea()
+        private bool IsAtLastCell()
         {
-            return this.currentPathIdx >= this.AreasPath.Count - 1;
+            return this.currentPathIdx >= this.CellsPath.Count - 1;
         }
     }
 }

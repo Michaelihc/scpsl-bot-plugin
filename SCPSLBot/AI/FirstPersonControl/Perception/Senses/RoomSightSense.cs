@@ -12,11 +12,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 {
     internal class RoomSightSense : SightSense, ISense
     {
-        public List<TransformArea> ForeignRoomsAreas { get; } = new();
+        public List<TransformCell> ForeignRoomsCells { get; } = new();
         public IEnumerable<RoomIdentifier> ForeignRooms { get; }
         public RoomIdentifier RoomWithin { get; private set; }
 
-        public event Action<TransformArea> OnSensedForeignRoomArea;
+        public event Action<TransformCell> OnSensedForeignRoomCell;
         public event Action OnAfterSensedForeignRooms;
 
         public event Action<RoomIdentifier> OnSensedRoomWithin;
@@ -27,17 +27,17 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
         {
             _fpcBotPlayer = botPlayer;
 
-            ForeignRooms = ForeignRoomsAreas.Select(fa => fa.Transform.GetComponent<RoomIdentifier>()).Distinct();
+            ForeignRooms = ForeignRoomsCells.Select(fa => fa.Transform.GetComponent<RoomIdentifier>()).Distinct();
         }
 
         public override void ProcessSightSensedItems()
         {
             UpdateRoomWithin();
-            UpdateForeignRoomsAreas();
+            UpdateForeignRoomsCells();
 
-            foreach (var sensedForeignRoomArea in ForeignRoomsAreas)
+            foreach (var sensedForeignRoomCell in ForeignRoomsCells)
             {
-                OnSensedForeignRoomArea?.Invoke(sensedForeignRoomArea);
+                OnSensedForeignRoomCell?.Invoke(sensedForeignRoomCell);
             }
             OnAfterSensedForeignRooms?.Invoke();
         }
@@ -57,19 +57,19 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
             RoomWithin = newRoomWithin;
         }
 
-        private void UpdateForeignRoomsAreas()
+        private void UpdateForeignRoomsCells()
         {
             if (RoomWithin)
             {
-                ForeignRoomsAreas.Clear();
+                ForeignRoomsCells.Clear();
 
-                foreach (var localArea in NavigationMesh.LocalMeshesByRoom[RoomWithin.gameObject].Areas)
+                foreach (var localCell in NavigationMesh.LocalMeshesByRoom[RoomWithin.gameObject].Cells)
                 {
-                    var transformArea = new TransformArea(localArea, RoomWithin.transform);
-                    foreach (var fa in NavigationMesh.ForeignConnectedAreas[transformArea].Where(fa => fa.Transform.GetComponent<RoomIdentifier>()))
+                    var transformCell = new TransformCell(localCell, RoomWithin.transform);
+                    foreach (var fa in NavigationMesh.ForeignConnectedCells[transformCell].Where(fa => fa.Transform.GetComponent<RoomIdentifier>()))
                     {
-                        var faa = fa.ConnectedAreas.First();
-                        ForeignRoomsAreas.Add(faa);
+                        var faa = fa.ConnectedCells.First();
+                        ForeignRoomsCells.Add(faa);
                     }
                 }
             }

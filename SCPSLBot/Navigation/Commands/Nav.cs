@@ -22,7 +22,7 @@ namespace SCPSLBot.Navigation.Commands
             this.RegisterCommand(new NavLoadCommand());
             this.RegisterCommand(new NavSaveCommand());
             this.RegisterCommand(new NavVertex());
-            //this.RegisterCommand(new NavArea());
+            //this.RegisterCommand(new NavCell());
         }
 
         protected override bool ExecuteParent(ArraySegment<string> arguments, ICommandSender sender, out string response)

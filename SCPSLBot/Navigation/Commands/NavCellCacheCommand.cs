@@ -10,14 +10,14 @@ using System.Threading.Tasks;
 
 namespace SCPSLBot.Navigation.Commands
 {
-    [CommandHandler(typeof(NavArea))]
-    internal class NavAreaTraceCommand : ICommand
+    [CommandHandler(typeof(NavCell))]
+    internal class NavCellCacheCommand : ICommand
     {
-        public string Command { get; } = "trace";
+        public string Command { get; } = "cache";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Traces areas path from cached area to area at current position.";
+        public string Description { get; } = "Caches navigation graph cell at current position.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,13 +33,13 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.TracePath(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.CacheNearestCell())
             {
-                response = $"Failed to trace areas path.";
+                response = $"Failed to cache cell.";
                 return false;
             }
 
-            response = $"Path traced.";
+            response = $"Cell cached.";
             return true;
         }
     }

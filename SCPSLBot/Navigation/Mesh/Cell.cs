@@ -4,10 +4,10 @@ using UnityEngine;
 
 namespace SCPSLBot.Navigation.Mesh
 {
-    internal class Area
+    internal class Cell
     {
         public List<Vertex> Vertices { get; } = new();
-        public List<Area> ConnectedAreas { get; } = new();
+        public List<Cell> ConnectedCells { get; } = new();
 
         public IEnumerable<Edge> Edges => Vertices.Zip(Vertices.Skip(1), (v1, v2) => new Edge(v1, v2))
             .Append(new Edge(Vertices.Last(), Vertices.First()));
@@ -15,9 +15,9 @@ namespace SCPSLBot.Navigation.Mesh
         public Vector3 CenterPosition => Vertices.Select(v => v.Position)
             .Aggregate(Vector3.zero, (a, u) => a + u) / Vertices.Count;
 
-        public Dictionary<Area, Edge> ConnectedAreaEdges { get; } = new();
+        public Dictionary<Cell, Edge> ConnectedCellEdges { get; } = new();
 
-        public Area(IEnumerable<Vertex> vertices)
+        public Cell(IEnumerable<Vertex> vertices)
         {
             Vertices.AddRange(vertices);
         }
@@ -43,18 +43,18 @@ namespace SCPSLBot.Navigation.Mesh
             Vertices.Remove(vertex);
         }
 
-        public void AddConnection(Area connectingArea)
+        public void AddConnection(Cell connectingCell)
         {
-            var connectingEdge = connectingArea.Edges.First(te => Edges.Contains(new Edge(te.To, te.From)));
+            var connectingEdge = connectingCell.Edges.First(te => Edges.Contains(new Edge(te.To, te.From)));
 
-            ConnectedAreas.Add(connectingArea);
-            ConnectedAreaEdges.Add(connectingArea, connectingEdge);
+            ConnectedCells.Add(connectingCell);
+            ConnectedCellEdges.Add(connectingCell, connectingEdge);
         }
 
-        public void RemoveConnection(Area connectedArea)
+        public void RemoveConnection(Cell connectedCell)
         {
-            ConnectedAreas.Remove(connectedArea);
-            ConnectedAreaEdges.Remove(connectedArea);
+            ConnectedCells.Remove(connectedCell);
+            ConnectedCellEdges.Remove(connectedCell);
         }
     }
 }

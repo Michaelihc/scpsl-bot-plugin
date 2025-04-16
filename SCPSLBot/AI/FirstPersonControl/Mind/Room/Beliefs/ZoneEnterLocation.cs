@@ -31,10 +31,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
                 return;
             }
 
-            var foreignRoomAreaOfTargetZone = this.roomSightSense.ForeignRoomsAreas.Find(r => r.Transform.GetComponent<RoomIdentifier>().Zone == Zone);
-            if (foreignRoomAreaOfTargetZone != null && foreignRoomAreaOfTargetZone.Transform.GetComponent<RoomIdentifier>().Zone != this.roomSightSense.RoomWithin.Zone)
+            var foreignRoomCellOfTargetZone = this.roomSightSense.ForeignRoomsCells.Find(r => r.Transform.GetComponent<RoomIdentifier>().Zone == Zone);
+            if (foreignRoomCellOfTargetZone != null && foreignRoomCellOfTargetZone.Transform.GetComponent<RoomIdentifier>().Zone != this.roomSightSense.RoomWithin.Zone)
             {
-                var enterPosition = foreignRoomAreaOfTargetZone.CenterPosition;
+                var enterPosition = foreignRoomCellOfTargetZone.CenterPosition;
                 AddPosition(enterPosition);
             }
         }

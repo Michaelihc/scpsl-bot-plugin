@@ -13,12 +13,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
     {
         public Scp914Location(RoomSightSense roomSightSense)
         {
-            roomSightSense.OnSensedForeignRoomArea += OnSensedRoom;
+            roomSightSense.OnSensedForeignRoomCell += OnSensedRoom;
         }
 
-        private void OnSensedRoom(TransformArea foreignRoomArea)
+        private void OnSensedRoom(TransformCell foreignRoomCell)
         {
-            var foreignRoom = foreignRoomArea.Transform.GetComponent<RoomIdentifier>();
+            var foreignRoom = foreignRoomCell.Transform.GetComponent<RoomIdentifier>();
             if (foreignRoom.Name != RoomName.Lcz914)
             {
                 return;

@@ -39,14 +39,14 @@ namespace SCPSLBot.Navigation.Mesh
                 Timing.RunCoroutine(RunEachFrame(UpdateFacingVertex)),
                 Timing.RunCoroutine(RunEachFrame(UpdateVertexAutoSelect)),
 
-                Timing.RunCoroutine(RunEachFrame(UpdateNearestArea)),
-                Timing.RunCoroutine(RunEachFrame(UpdateCachedArea)),
-                Timing.RunCoroutine(RunEachFrame(UpdateFacingArea)),
+                Timing.RunCoroutine(RunEachFrame(UpdateNearestCell)),
+                Timing.RunCoroutine(RunEachFrame(UpdateCachedCell)),
+                Timing.RunCoroutine(RunEachFrame(UpdateFacingCell)),
 
                 Timing.RunCoroutine(RunEachFrame(Visuals.UpdateBroadcastMessage)),
 
                 Timing.RunCoroutine(RunEachFrame(Visuals.UpdateVertexVisuals)),
-                Timing.RunCoroutine(RunEachFrame(Visuals.UpdateAreaVisuals)),
+                Timing.RunCoroutine(RunEachFrame(Visuals.UpdateCellVisuals)),
                 Timing.RunCoroutine(RunEachFrame(Visuals.UpdateEdgeVisuals)),
                 Timing.RunCoroutine(RunEachFrame(Visuals.UpdateConnectionVisuals)),
             };
@@ -77,7 +77,7 @@ namespace SCPSLBot.Navigation.Mesh
             return targetVertex;
         }
 
-        public Area FindClosestRoomAreaByCenter(Vector3 position, float radius = 1f)
+        public Cell FindClosestRoomCellByCenter(Vector3 position, float radius = 1f)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             if (!room)
@@ -94,31 +94,31 @@ namespace SCPSLBot.Navigation.Mesh
             var radiusSqr = Mathf.Pow(radius, 2);
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var areasWithinRadius = mesh.Areas.Select(area => (area, distSqr: Vector3.SqrMagnitude(area.CenterPosition - localPosition)))
+            var cellsWithinRadius = mesh.Cells.Select(cell => (cell, distSqr: Vector3.SqrMagnitude(cell.CenterPosition - localPosition)))
                 .Where(t => t.distSqr < radiusSqr);
 
-            if (!areasWithinRadius.Any())
+            if (!cellsWithinRadius.Any())
             {
                 return null;
             }
 
-            return areasWithinRadius
+            return cellsWithinRadius
                 .Aggregate((a, c) => c.distSqr < a.distSqr ? c : a)
-                .area;
+                .cell;
         }
 
-        public Area FindClosestAreaFacingAt(GameObject room, Vector3 localPosition, Vector3 localDirection)
+        public Cell FindClosestCellFacingAt(GameObject room, Vector3 localPosition, Vector3 localDirection)
         {
-            var areas = NavigationMesh.LocalMeshesByRoom[room].Areas;
+            var cells = NavigationMesh.LocalMeshesByRoom[room].Cells;
 
-            var targetArea = areas
+            var targetCell = cells
                 .Select(a => (n: a, d: Vector3.SqrMagnitude(a.CenterPosition - localPosition)))
                 .Where(t => t.d < 50f && t.d > 1f)
                 .OrderBy(t => t.d)
                 .Select(t => t.n)
                 .FirstOrDefault(a => Vector3.Dot(Vector3.Normalize(a.CenterPosition - localPosition), localDirection) > 0.999848f);
 
-            return targetArea;
+            return targetCell;
         }
 
         public Vertex CreateVertex(Vector3 position)
@@ -172,13 +172,13 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            foreach (var area in mesh.Areas.ToArray())
+            foreach (var cell in mesh.Cells.ToArray())
             {
-                if (area.Vertices.Count < 3)
+                if (cell.Vertices.Count < 3)
                 {
-                    mesh.RemoveArea(area);
+                    mesh.RemoveCell(cell);
 
-                    Log.Warning($"Area at local center position {area.CenterPosition} dissolved under {form}.");
+                    Log.Warning($"Cell at local center position {cell.CenterPosition} dissolved under {form}.");
                 }
             }
 
@@ -266,7 +266,7 @@ namespace SCPSLBot.Navigation.Mesh
             AutoSelectModeEnabled = isEnabled;
         }
 
-        public Area MakeArea(Vector3 position)
+        public Cell MakeCell(Vector3 position)
         {
             if (SelectedVertices.Count < 3)
             {
@@ -285,16 +285,16 @@ namespace SCPSLBot.Navigation.Mesh
             form = NavigationMesh.GetForm(room.gameObject);
             mesh = NavigationMesh.MeshesByRoomForm[form];
 
-            var newArea = mesh.MakeArea(SelectedVertices);
-            ConnectAdjacentAreas(newArea, form);
+            var newCell = mesh.MakeCell(SelectedVertices);
+            ConnectAdjacentCells(newCell, form);
 
-            Log.Info($"Area #{mesh.Areas.IndexOf(newArea)} at local center position {newArea.CenterPosition} added under {form}.");
+            Log.Info($"Cell #{mesh.Cells.IndexOf(newCell)} at local center position {newCell.CenterPosition} added under {form}.");
 
             SelectedVertices.Clear();
             AutoSelectModeEnabled = false;
-            PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on area creation.", 3f);
+            PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on cell creation.", 3f);
 
-            return newArea;
+            return newCell;
         }
 
         public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, out Vector3Int orientation, out RoomIdentifier outRoom)
@@ -318,32 +318,32 @@ namespace SCPSLBot.Navigation.Mesh
             return closestConnector;
         }
 
-        public bool DissolveArea(Vector3 position)
+        public bool DissolveCell(Vector3 position)
         {
-            if (Visuals.NearestArea == null)
+            if (Visuals.NearestCell == null)
             {
-                Log.Warning($"No area found within to remove.");
+                Log.Warning($"No cell found within to remove.");
                 return false;
             }
-            var area = Visuals.NearestArea.Value;
+            var cell = Visuals.NearestCell.Value;
 
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             if (!room)
             {
-                Log.Warning($"No room to dissolve area on.");
+                Log.Warning($"No room to dissolve cell on.");
                 return false;
             }
 
-            var form = NavigationMesh.GetForm(area.Transform.gameObject);
+            var form = NavigationMesh.GetForm(cell.Transform.gameObject);
             var mesh = NavigationMesh.GetMesh(form);
 
-            if (!mesh.RemoveArea(area.Local))
+            if (!mesh.RemoveCell(cell.Local))
             {
-                Log.Warning($"Area already does not exist in collection by {form}.");
+                Log.Warning($"Cell already does not exist in collection by {form}.");
             }
             else
             {
-                Log.Info($"Area at local center position {area.Local.CenterPosition} removed under {form}.");
+                Log.Info($"Cell at local center position {cell.Local.CenterPosition} removed under {form}.");
             }
 
             return true;
@@ -361,35 +361,35 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            var (newVertexPos, area, edge) = mesh.Areas
-                .SelectMany(a => a.Edges.Select(e => (edge: (from: e.From, to: e.To), area: a)))
+            var (newVertexPos, cell, edge) = mesh.Cells
+                .SelectMany(a => a.Edges.Select(e => (edge: (from: e.From, to: e.To), cell: a)))
                 .Select(t => (
                     t.edge,
                     dirTo2: (t.edge.to.Position - t.edge.from.Position),
                     dirToPoint: (localPosition - t.edge.from.Position),
-                    t.area))
-                .Select(t => (t.edge, t.dirTo2, dirToProj: (Vector3.Project(t.dirToPoint, t.dirTo2)), t.area))
+                    t.cell))
+                .Select(t => (t.edge, t.dirTo2, dirToProj: (Vector3.Project(t.dirToPoint, t.dirTo2)), t.cell))
                 .Where(t => Vector3.Dot(t.dirToProj, t.dirTo2) > 0f && t.dirToProj.sqrMagnitude < t.dirTo2.sqrMagnitude)
-                .Select(t => (projected: (t.dirToProj + t.edge.from.Position), t.area, t.edge))
+                .Select(t => (projected: (t.dirToProj + t.edge.from.Position), t.cell, t.edge))
 
                 .OrderBy(t => Vector3.SqrMagnitude(t.projected - localPosition))
                 .FirstOrDefault();
 
-            if (area == null)
+            if (cell == null)
             {
                 return false;
             }
 
             var vertex = mesh.AddVertex(newVertexPos);
 
-            mesh.AddVertexToArea(area, vertex, edge.to);
+            mesh.AddVertexToCell(cell, vertex, edge.to);
 
-            Log.Info($"Vertex #{mesh.Vertices.IndexOf(vertex)} created on edge of area #{mesh.Areas.IndexOf(area)}");
+            Log.Info($"Vertex #{mesh.Vertices.IndexOf(vertex)} created on edge of cell #{mesh.Cells.IndexOf(cell)}");
 
             return true;
         }
 
-        public bool SliceClosestRoomAreaEdge(Vector3 position, Vector3 direction)
+        public bool SliceClosestRoomCellEdge(Vector3 position, Vector3 direction)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             var roomForm = NavigationMesh.GetForm(room.gameObject);
@@ -404,79 +404,79 @@ namespace SCPSLBot.Navigation.Mesh
 
             var lookPlane = new Plane(Vector3.Cross(localDirection, Vector3.up), localPosition);
 
-            var (newVertexPos, area, edge) = mesh.Areas
-                .SelectMany(a => a.Edges.Select(e => (edge: (from: e.From, to: e.To), area: a)))
+            var (newVertexPos, cell, edge) = mesh.Cells
+                .SelectMany(a => a.Edges.Select(e => (edge: (from: e.From, to: e.To), cell: a)))
                 .Select(t => (
                     t.edge,
                     dirTo2: (t.edge.to.Position - t.edge.from.Position),
-                    t.area))
+                    t.cell))
                 .Select(t => (
                     t.edge, 
                     t.dirTo2, 
                     rayTo2: new Ray(t.edge.from.Position, t.dirTo2), 
-                    t.area))
+                    t.cell))
                 .Select(t => (
                     t.edge, 
                     t.dirTo2, 
                     t.rayTo2,
                     isHit: lookPlane.Raycast(t.rayTo2, out var distToHit),
                     distToHit,
-                    t.area))
+                    t.cell))
                 .Where(t => t.isHit)
                 .Select(t => (
                     t.edge, 
                     t.dirTo2,
                     hitPoint: t.rayTo2.GetPoint(t.distToHit),
-                    t.area))
+                    t.cell))
                 .Select(t => (
                     t.edge, 
                     t.dirTo2,
                     t.hitPoint,
                     dirToHit: t.hitPoint - t.edge.from.Position,
-                    t.area))
+                    t.cell))
                 .Where(t => Vector3.Dot(t.dirToHit, t.dirTo2) > 0f && t.dirToHit.sqrMagnitude < t.dirTo2.sqrMagnitude)
 
                 .OrderBy(t => Vector3.SqrMagnitude(t.hitPoint - localPosition))
-                .Select(t => (t.hitPoint, t.area, t.edge))
+                .Select(t => (t.hitPoint, t.cell, t.edge))
                 .FirstOrDefault();
 
-            if (area == null)
+            if (cell == null)
             {
                 return false;
             }
 
             var vertex = mesh.AddVertex(newVertexPos);
 
-            mesh.AddVertexToArea(area, vertex, edge.to);
+            mesh.AddVertexToCell(cell, vertex, edge.to);
 
-            Log.Info($"Vertex #{mesh.Vertices.IndexOf(vertex)} created on edge of area #{mesh.Areas.IndexOf(area)}");
+            Log.Info($"Vertex #{mesh.Vertices.IndexOf(vertex)} created on edge of cell #{mesh.Cells.IndexOf(cell)}");
 
             return true;
         }
 
-        public bool CacheNearestArea()
+        public bool CacheNearestCell()
         {
-            Visuals.CachedArea = Visuals.NearestArea;
+            Visuals.CachedCell = Visuals.NearestCell;
 
-            return Visuals.CachedArea != null;
+            return Visuals.CachedCell != null;
         }
 
         public bool TracePath(Vector3 position)
         {
-            if (Visuals.CachedArea == null)
+            if (Visuals.CachedCell == null)
             {
                 return false;
             }
 
-            var targetArea = Visuals.NearestArea;
-            if (targetArea == null)
+            var targetCell = Visuals.NearestCell;
+            if (targetCell == null)
             {
                 return false;
             }
 
             Visuals.Path.Clear();
 
-            NavigationMesh.FindShortestPath(Visuals.CachedArea.Value, targetArea.Value, Visuals.Path);
+            NavigationMesh.FindShortestPath(Visuals.CachedCell.Value, targetCell.Value, Visuals.Path);
             if (Visuals.Path.Count == 0)
             {
                 Log.Warning($"No path found.");
@@ -487,36 +487,36 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool CreateConnection()
         {
-            if (Visuals.CachedArea == null || Visuals.NearestArea == null)
+            if (Visuals.CachedCell == null || Visuals.NearestCell == null)
             {
                 return false;
             }
 
-            var cachedArea = Visuals.CachedArea.Value;
-            var targetArea = Visuals.NearestArea.Value;
+            var cachedCell = Visuals.CachedCell.Value;
+            var targetCell = Visuals.NearestCell.Value;
 
-            var form = NavigationMesh.GetForm(cachedArea.Transform.gameObject);
+            var form = NavigationMesh.GetForm(cachedCell.Transform.gameObject);
             var mesh = NavigationMesh.GetMesh(form);
 
-            mesh.CreateAreaConnection(cachedArea.Local, targetArea.Local);
+            mesh.CreateCellConnection(cachedCell.Local, targetCell.Local);
 
             return true;
         }
 
         public bool DeleteConnection()
         {
-            if (Visuals.CachedArea == null || Visuals.NearestArea == null)
+            if (Visuals.CachedCell == null || Visuals.NearestCell == null)
             {
                 return false;
             }
 
-            var cachedArea = Visuals.CachedArea.Value;
-            var targetArea = Visuals.NearestArea.Value;
+            var cachedCell = Visuals.CachedCell.Value;
+            var targetCell = Visuals.NearestCell.Value;
 
-            var form = NavigationMesh.GetForm(cachedArea.Transform.gameObject);
+            var form = NavigationMesh.GetForm(cachedCell.Transform.gameObject);
             var mesh = NavigationMesh.GetMesh(form);
 
-            mesh.DeleteAreaConnection(cachedArea.Local, targetArea.Local);
+            mesh.DeleteCellConnection(cachedCell.Local, targetCell.Local);
 
             return true;
         }
@@ -533,19 +533,19 @@ namespace SCPSLBot.Navigation.Mesh
             return projected;
         }
 
-        private void ConnectAdjacentAreas(Area localArea, string form)
+        private void ConnectAdjacentCells(Cell localCell, string form)
         {
             var mesh = NavigationMesh.GetMesh(form);
 
-            foreach (var edge in localArea.Edges)
+            foreach (var edge in localCell.Edges)
             {
                 var inversedEdge = new Edge(edge.To, edge.From);
 
-                var connectedArea = mesh.Areas.Find(a => a != localArea && a.Edges.Contains(inversedEdge));
-                if (connectedArea != null)
+                var connectedCell = mesh.Cells.Find(a => a != localCell && a.Edges.Contains(inversedEdge));
+                if (connectedCell != null)
                 {
-                    localArea.AddConnection(connectedArea);
-                    connectedArea.AddConnection(localArea);
+                    localCell.AddConnection(connectedCell);
+                    connectedCell.AddConnection(localCell);
                 }
             }
         }
@@ -650,20 +650,20 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        private void UpdateNearestArea()
+        private void UpdateNearestCell()
         {
             if (PlayerEditing != null && PlayerEditing.Camera)
             {
                 var playerPosition = PlayerEditing.Position;
-                Visuals.NearestArea = NavigationMesh.GetAreaWithin(playerPosition);
+                Visuals.NearestCell = NavigationMesh.GetCellWithin(playerPosition);
             }
         }
 
-        private void UpdateCachedArea()
+        private void UpdateCachedCell()
         {
         }
 
-        private void UpdateFacingArea()
+        private void UpdateFacingCell()
         {
             if (PlayerEditing != null)
             {
@@ -671,14 +671,14 @@ namespace SCPSLBot.Navigation.Mesh
                 var cameraPosition = PlayerEditing.Camera.position;
                 var cameraForward = PlayerEditing.Camera.forward;
 
-                Visuals.FacingArea = Enumerable.Empty<Transform>().Prepend(room.transform)
+                Visuals.FacingCell = Enumerable.Empty<Transform>().Prepend(room.transform)
                     .Select(transform => (
                         room: transform.gameObject,
                         localPosition: transform.InverseTransformPoint(cameraPosition),
                         localForward: transform.InverseTransformDirection(cameraForward)))
-                    .Select(t => new TransformArea(FindClosestAreaFacingAt(t.room, t.localPosition, t.localForward), t.room.transform))
+                    .Select(t => new TransformCell(FindClosestCellFacingAt(t.room, t.localPosition, t.localForward), t.room.transform))
                     .Where(ta => ta.Local != null)
-                    .Select(ta => new TransformArea?(ta))
+                    .Select(ta => new TransformCell?(ta))
                     .FirstOrDefault();
             }
         }

@@ -16,7 +16,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static Dictionary<GameObject, NavigationMesh> LocalMeshesByRoom { get; } = new();
 
-        public static Dictionary<TransformArea, List<TransformArea>> ForeignConnectedAreas = new();
+        public static Dictionary<TransformCell, List<TransformCell>> ForeignConnectedCells = new();
 
         public static NavigationMesh CreateRoom(string form)
         {
@@ -31,32 +31,32 @@ namespace SCPSLBot.Navigation.Mesh
                     LocalMeshesByRoom[room] = mesh;
                 }
 
-                mesh.AreaCreated += area => AddForeignConnectedAreasList(area, form);
-                mesh.AreaDeleted += area => RemoveForeignConnectedAreasList(area, form);
+                mesh.CellCreated += cell => AddForeignConnectedCellsList(cell, form);
+                mesh.CellDeleted += cell => RemoveForeignConnectedCellsList(cell, form);
             }
 
             return mesh;
         }
 
-        private static void AddForeignConnectedAreasList(Area area, string form)
+        private static void AddForeignConnectedCellsList(Cell cell, string form)
         {
             foreach (var room in RoomsByForm[form])
             {
-                ForeignConnectedAreas.Add(new(area, room.transform), new());
+                ForeignConnectedCells.Add(new(cell, room.transform), new());
             }
         }
 
-        private static void RemoveForeignConnectedAreasList(Area area, string form)
+        private static void RemoveForeignConnectedCellsList(Cell cell, string form)
         {
             foreach (var room in RoomsByForm[form])
             {
-                ForeignConnectedAreas.Remove(new(area, room.transform));
+                ForeignConnectedCells.Remove(new(cell, room.transform));
             }
         }
 
         #region Mesh querying
 
-        public static TransformArea? GetAreaWithin(Vector3 position)
+        public static TransformCell? GetCellWithin(Vector3 position)
         {
             var room = RoomIdUtils.RoomAtPositionRaycasts(position);
             if (!room)
@@ -64,15 +64,15 @@ namespace SCPSLBot.Navigation.Mesh
                 return null;
             }
 
-            var roomArea = GetRoomAreaWithin(position, room);
-            if (roomArea != null)
+            var roomCell = GetRoomCellWithin(position, room);
+            if (roomCell != null)
             {
-                return new (roomArea, room.transform);
+                return new (roomCell, room.transform);
             }
             return null;
         }
 
-        public static Area GetRoomAreaWithin(Vector3 position, RoomIdentifier room = null)
+        public static Cell GetRoomCellWithin(Vector3 position, RoomIdentifier room = null)
         {
             room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
             if (!room || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
@@ -82,7 +82,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            return roomMesh.Areas.FirstOrDefault(a => IsLocalPointWithinArea(a, localPosition));
+            return roomMesh.Cells.FirstOrDefault(a => IsLocalPointWithinCell(a, localPosition));
         }
 
         public static bool IsAtPositiveEdgeSide(Vector3 position, TransformEdge transformEdge)
@@ -111,7 +111,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var hit = roomMesh.Areas.SelectMany(a => a.Edges)
+            var hit = roomMesh.Cells.SelectMany(a => a.Edges)
                 .Select(roomEdge => (roomEdge, planeDist: GetPointDistToEdgePlane(roomEdge, localPosition, out var planeClosest), planeClosest))
                 .Where(t => t.planeDist <= 0f)
 
@@ -136,69 +136,69 @@ namespace SCPSLBot.Navigation.Mesh
             return (roomFormEdge.From, roomFormEdge.To);
         }
 
-        public static void FindShortestPath(TransformArea startingArea, TransformArea endArea, List<TransformArea> results)
+        public static void FindShortestPath(TransformCell startingCell, TransformCell endCell, List<TransformCell> results)
         {
-            var areasWithPriorityToEvaluate = new Dictionary<TransformArea, float>();
-            var cameFromAreas = new Dictionary<TransformArea, TransformArea>();
-            var costsTill = new Dictionary<TransformArea, float>();
+            var cellsWithPriorityToEvaluate = new Dictionary<TransformCell, float>();
+            var cameFromCells = new Dictionary<TransformCell, TransformCell>();
+            var costsTill = new Dictionary<TransformCell, float>();
 
             var cost = 0f;
-            var heuristic = Vector3.Magnitude(endArea.CenterPosition - startingArea.CenterPosition);
+            var heuristic = Vector3.Magnitude(endCell.CenterPosition - startingCell.CenterPosition);
 
-            areasWithPriorityToEvaluate.Add(startingArea, cost + heuristic);
-            costsTill.Add(startingArea, cost);
+            cellsWithPriorityToEvaluate.Add(startingCell, cost + heuristic);
+            costsTill.Add(startingCell, cost);
 
-            var area = startingArea;
+            var cell = startingCell;
 
             do
             {
-                area = areasWithPriorityToEvaluate.Aggregate((a, c) => c.Value < a.Value ? c : a).Key;
+                cell = cellsWithPriorityToEvaluate.Aggregate((a, c) => c.Value < a.Value ? c : a).Key;
 
-                //var areaIdx = AreasByRoom[area.Room].IndexOf(area);
-                //Log.Debug($"Evaluating connections for area #{areaIdx} with priority value {areasWithPriorityToEvaluate[area]} {area.FormArea.RoomForm}");
+                //var cellIdx = CellsByRoom[cell.Room].IndexOf(cell);
+                //Log.Debug($"Evaluating connections for cell #{cellIdx} with priority value {cellsWithPriorityToEvaluate[cell]} {cell.FormCell.RoomForm}");
 
-                areasWithPriorityToEvaluate.Remove(area);
+                cellsWithPriorityToEvaluate.Remove(cell);
 
-                if (area == endArea)
+                if (cell == endCell)
                 {
                     break;
                 }
 
-                cost = costsTill[area];
+                cost = costsTill[cell];
 
-                //Log.Debug($"Area evaluating connections #{areaIdx} cost so far {cost}");
+                //Log.Debug($"Cell evaluating connections #{cellIdx} cost so far {cost}");
 
-                foreach (var connectedArea in area.ConnectedAreas.Concat(ForeignConnectedAreas[area]))
+                foreach (var connectedCell in cell.ConnectedCells.Concat(ForeignConnectedCells[cell]))
                 {
-                    var connectedCost = cost + Vector3.Magnitude(connectedArea.CenterPosition - area.CenterPosition);
+                    var connectedCost = cost + Vector3.Magnitude(connectedCell.CenterPosition - cell.CenterPosition);
 
-                    //var connAreaIdx = AreasByRoom[connectedArea.Room].IndexOf(connectedArea);
-                    //Log.Debug($"Connected area #{connAreaIdx} cost so far {connectedCost} {connectedArea.FormArea.RoomForm}");
+                    //var connCellIdx = CellsByRoom[connectedCell.Room].IndexOf(connectedCell);
+                    //Log.Debug($"Connected cell #{connCellIdx} cost so far {connectedCost} {connectedCell.FormCell.RoomForm}");
 
-                    if (!costsTill.ContainsKey(connectedArea) || connectedCost < costsTill[connectedArea])
+                    if (!costsTill.ContainsKey(connectedCell) || connectedCost < costsTill[connectedCell])
                     {
-                        costsTill[connectedArea] = connectedCost;
-                        heuristic = Vector3.Magnitude(endArea.CenterPosition - connectedArea.CenterPosition);
-                        areasWithPriorityToEvaluate[connectedArea] = connectedCost + heuristic;
-                        cameFromAreas[connectedArea] = area;
+                        costsTill[connectedCell] = connectedCost;
+                        heuristic = Vector3.Magnitude(endCell.CenterPosition - connectedCell.CenterPosition);
+                        cellsWithPriorityToEvaluate[connectedCell] = connectedCost + heuristic;
+                        cameFromCells[connectedCell] = cell;
 
-                        //Log.Debug($"Connected area #{connAreaIdx} adding for evaluation with heuristic {heuristic} {connectedArea.FormArea.RoomForm}");
+                        //Log.Debug($"Connected cell #{connCellIdx} adding for evaluation with heuristic {heuristic} {connectedCell.FormCell.RoomForm}");
                     }
                 }
             }
-            while (areasWithPriorityToEvaluate.Any());
+            while (cellsWithPriorityToEvaluate.Any());
 
             results.Clear();
             var shortestPath = results;
 
-            if (cameFromAreas.ContainsKey(endArea))
+            if (cameFromCells.ContainsKey(endCell))
             {
-                area = endArea;
+                cell = endCell;
                 do
                 {
-                    shortestPath.Add(area);
+                    shortestPath.Add(cell);
                 }
-                while (cameFromAreas.TryGetValue(area, out area));
+                while (cameFromCells.TryGetValue(cell, out cell));
 
                 shortestPath.Reverse();
             }
@@ -336,17 +336,17 @@ namespace SCPSLBot.Navigation.Mesh
             RoomsByForm.Clear();
             MeshesByRoomForm.Clear();
             LocalMeshesByRoom.Clear();
-            ForeignConnectedAreas.Clear();
+            ForeignConnectedCells.Clear();
         }
 
         #endregion
 
-        private static bool IsLocalPointWithinArea(Area area, Vector3 pointLocalPosition)
+        private static bool IsLocalPointWithinCell(Cell cell, Vector3 pointLocalPosition)
         {
-            var areaLocalEdges = area.Edges;
+            var cellLocalEdges = cell.Edges;
 
             var isAnyVertexWithinVerticalRange = false;
-            foreach (var e in areaLocalEdges)
+            foreach (var e in cellLocalEdges)
             {
                 if (GetPointDistToEdgePlane(e, pointLocalPosition) <= 0f)
                 {

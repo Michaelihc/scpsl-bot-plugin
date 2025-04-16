@@ -40,17 +40,17 @@ namespace SCPSLBot.Navigation
         [PluginEvent(PluginAPI.Enums.ServerEventType.MapGenerated)]
         public void OnMapGenerated()
         {
-            Timing.RunCoroutine(ConnectForeignAreasAsync());
+            Timing.RunCoroutine(ConnectForeignCellsAsync());
         }
 
-        private IEnumerator<float> ConnectForeignAreasAsync()
+        private IEnumerator<float> ConnectForeignCellsAsync()
         {
             yield return Timing.WaitUntilTrue(() => SeedSynchronizer.MapGenerated);
 
-            ConnectForeignAreas();
+            ConnectForeignCells();
         }
 
-        private void ConnectForeignAreas()
+        private void ConnectForeignCells()
         {
             Log.Info($"Initializing meshes.");
             NavigationMesh.InitMeshes();
@@ -58,7 +58,7 @@ namespace SCPSLBot.Navigation
             Log.Info($"Loading meshes.");
             LoadMeshes(MeshFileName);
 
-            Log.Info($"Connecting areas between elevator destinations.");
+            Log.Info($"Connecting cells between elevator destinations.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
             foreach (ElevatorGroup group in elevatorGroups)
             {
@@ -72,21 +72,21 @@ namespace SCPSLBot.Navigation
                 var doorTransform = elevatorDoors[0].transform;
                 var doorPosition = doorTransform.position;
                 var doorForward = doorTransform.forward;
-                var areaAt0InShaft = NavigationMesh.GetAreaWithin(doorPosition - doorForward + Vector3.up);
+                var cellAt0InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward + Vector3.up);
 
                 doorTransform = elevatorDoors[1].transform;
                 doorPosition = doorTransform.position;
                 doorForward = doorTransform.forward;
-                var areaAt1InShaft = NavigationMesh.GetAreaWithin(doorPosition - doorForward + Vector3.up);
+                var cellAt1InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward + Vector3.up);
 
-                if (areaAt0InShaft != null && areaAt1InShaft != null)
+                if (cellAt0InShaft != null && cellAt1InShaft != null)
                 {
                     // Connect
-                    NavigationMesh.ForeignConnectedAreas[areaAt0InShaft.Value].Add(areaAt1InShaft.Value);
-                    NavigationMesh.ForeignConnectedAreas[areaAt1InShaft.Value].Add(areaAt0InShaft.Value);
+                    NavigationMesh.ForeignConnectedCells[cellAt0InShaft.Value].Add(cellAt1InShaft.Value);
+                    NavigationMesh.ForeignConnectedCells[cellAt1InShaft.Value].Add(cellAt0InShaft.Value);
                 }
             }
-            Log.Info($"Connecting areas finished.");
+            Log.Info($"Connecting cells finished.");
         }
 
         public void LoadMeshes(string fileName)

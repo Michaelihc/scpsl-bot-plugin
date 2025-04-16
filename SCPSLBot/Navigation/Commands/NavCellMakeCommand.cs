@@ -6,14 +6,14 @@ using System;
 
 namespace SCPSLBot.Navigation.Commands
 {
-    [CommandHandler(typeof(NavArea))]
-    internal class NavAreaMakeCommand : ICommand
+    [CommandHandler(typeof(NavCell))]
+    internal class NavCellMakeCommand : ICommand
     {
         public string Command { get; } = "make";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Makes new navigation mesh area from selected vertices.";
+        public string Description { get; } = "Makes new navigation mesh cell from selected vertices.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -35,24 +35,24 @@ namespace SCPSLBot.Navigation.Commands
                 formType = arguments[0];
             }
 
-            Area formArea;
+            Cell formCell;
             switch (formType)
             {
                 case "room": 
-                    formArea = NavigationMeshEditor.Instance.MakeArea(playerCommandSender.ReferenceHub.transform.position);
+                    formCell = NavigationMeshEditor.Instance.MakeCell(playerCommandSender.ReferenceHub.transform.position);
                     break;
                 default:
                     response = "Unrecognized form type argument!";
                     return false;
             }
 
-            if (formArea == null)
+            if (formCell == null)
             {
-                response = $"Failed to create {formType} form area!";
+                response = $"Failed to create {formType} form cell!";
                 return false;
             }
 
-            response = $"Area at local center position {formArea.CenterPosition} created.";
+            response = $"Cell at local center position {formCell.CenterPosition} created.";
             return true;
         }
     }

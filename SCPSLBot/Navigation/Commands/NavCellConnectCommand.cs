@@ -6,14 +6,14 @@ using System;
 
 namespace SCPSLBot.Navigation.Commands
 {
-    [CommandHandler(typeof(NavArea))]
-    internal class NavAreaDisconnectCommand : ICommand
+    [CommandHandler(typeof(NavCell))]
+    internal class NavCellConnectCommand : ICommand
     {
-        public string Command { get; } = "disconnect";
+        public string Command { get; } = "connect";
 
         public string[] Aliases { get; } = new string[] { };
 
-        public string Description { get; } = "Deletes connection from cached area to area within.";
+        public string Description { get; } = "Creates connection from cached cell to cell within.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -29,13 +29,13 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.DeleteConnection())
+            if (!NavigationMeshEditor.Instance.CreateConnection())
             {
-                response = "Failed to delete connection!";
+                response = "Failed to create connection!";
                 return false;
             }
 
-            response = $"Connection from cached area to area within is deleted.";
+            response = $"Connection from cached cell to cell within created.";
             return true;
         }
     }

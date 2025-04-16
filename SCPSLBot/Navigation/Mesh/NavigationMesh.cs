@@ -12,13 +12,13 @@ namespace SCPSLBot.Navigation.Mesh
         public event Action<Vertex> VertexCreated;
         public event Action<Vertex> VertexDeleted;
 
-        public List<Area> Areas { get; } = new();
-        public event Action<Area> AreaCreated;
-        public event Action<Area> AreaDeleted;
+        public List<Cell> Cells { get; } = new();
+        public event Action<Cell> CellCreated;
+        public event Action<Cell> CellDeleted;
 
         private NavigationMesh()
         {
-            VertexDeleted += RemoveVertexFromAreas;
+            VertexDeleted += RemoveVertexFromCells;
         }
 
         #region Mesh manipulation
@@ -45,11 +45,11 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        private void RemoveVertexFromAreas(Vertex vertex)
+        private void RemoveVertexFromCells(Vertex vertex)
         {
-            foreach (var area in Areas)
+            foreach (var cell in Cells)
             {
-                area.RemoveVertex(vertex);
+                cell.RemoveVertex(vertex);
             }
         }
 
@@ -60,52 +60,52 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        public Area MakeArea(IEnumerable<Vertex> vertices)
+        public Cell MakeCell(IEnumerable<Vertex> vertices)
         {
-            var newArea = new Area(vertices);
-            Areas.Add(newArea);
+            var newCell = new Cell(vertices);
+            Cells.Add(newCell);
 
-            AreaCreated?.Invoke(newArea);
+            CellCreated?.Invoke(newCell);
 
-            return newArea;
+            return newCell;
         }
 
-        public bool RemoveArea(Area area)
+        public bool RemoveCell(Cell cell)
         {
-            var areas = Areas;
-            if (!areas.Remove(area))
+            var cells = Cells;
+            if (!cells.Remove(cell))
             {
                 return false;
             }
 
-            RemoveConnectionsToArea(area);
+            RemoveConnectionsToCell(cell);
 
-            AreaDeleted?.Invoke(area);
+            CellDeleted?.Invoke(cell);
 
             return true;
         }
 
-        private void RemoveConnectionsToArea(Area area)
+        private void RemoveConnectionsToCell(Cell cell)
         {
-            foreach (var otherArea in Areas)
+            foreach (var otherCell in Cells)
             {
-                otherArea.RemoveConnection(area);
+                otherCell.RemoveConnection(cell);
             }
         }
 
-        public void CreateAreaConnection(Area fromArea, Area toArea)
+        public void CreateCellConnection(Cell fromCell, Cell toCell)
         {
-            fromArea.AddConnection(toArea);
+            fromCell.AddConnection(toCell);
         }
 
-        public void DeleteAreaConnection(Area fromArea, Area toArea)
+        public void DeleteCellConnection(Cell fromCell, Cell toCell)
         {
-            fromArea.RemoveConnection(toArea);
+            fromCell.RemoveConnection(toCell);
         }
 
-        public void AddVertexToArea(Area area, Vertex vertex, Vertex beforeVertex)
+        public void AddVertexToCell(Cell cell, Vertex vertex, Vertex beforeVertex)
         {
-            area.AddVertex(vertex, beforeVertex);
+            cell.AddVertex(vertex, beforeVertex);
         }
 
         #endregion
@@ -132,48 +132,48 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             ///
-            /// Areas reading
+            /// Cells reading
             ///
 
-            var areasCount = binaryReader.ReadInt32();
+            var cellsCount = binaryReader.ReadInt32();
 
-            var areasVertices = new int[areasCount][];
-            var areasConnections = new int[areasCount][];
+            var cellsVertices = new int[cellsCount][];
+            var cellsConnections = new int[cellsCount][];
 
-            for (var j = 0; j < areasCount; j++)
+            for (var j = 0; j < cellsCount; j++)
             {
-                var newArea = MakeArea(Enumerable.Empty<Vertex>());
+                var newCell = MakeCell(Enumerable.Empty<Vertex>());
 
-                var areaVerticesCount = binaryReader.ReadInt32();
-                var areaVertices = new int[areaVerticesCount];
-                for (var k = 0; k < areaVerticesCount; k++)
+                var cellVerticesCount = binaryReader.ReadInt32();
+                var cellVertices = new int[cellVerticesCount];
+                for (var k = 0; k < cellVerticesCount; k++)
                 {
-                    areaVertices[k] = binaryReader.ReadInt32();
+                    cellVertices[k] = binaryReader.ReadInt32();
                 }
-                areasVertices[j] = areaVertices;
+                cellsVertices[j] = cellVertices;
 
-                var connectedAreasCount = binaryReader.ReadInt32();
-                var connectedAreas = new int[connectedAreasCount];
-                for (var k = 0; k < connectedAreasCount; k++)
+                var connectedCellsCount = binaryReader.ReadInt32();
+                var connectedCells = new int[connectedCellsCount];
+                for (var k = 0; k < connectedCellsCount; k++)
                 {
-                    connectedAreas[k] = binaryReader.ReadInt32();
+                    connectedCells[k] = binaryReader.ReadInt32();
                 }
-                areasConnections[j] = connectedAreas;
+                cellsConnections[j] = connectedCells;
             }
 
-            foreach (var (area, vertices) in areasVertices.Select((vertices, areaIndex) => (Areas[areaIndex], vertices)))
+            foreach (var (cell, vertices) in cellsVertices.Select((vertices, cellIndex) => (Cells[cellIndex], vertices)))
             {
-                foreach (var areaVertex in vertices.Select(vertexIdx => Vertices[vertexIdx]))
+                foreach (var cellVertex in vertices.Select(vertexIdx => Vertices[vertexIdx]))
                 {
-                    area.AddVertex(areaVertex);
+                    cell.AddVertex(cellVertex);
                 }
             }
 
-            foreach (var (area, conns) in areasConnections.Select((conns, areaIndex) => (Areas[areaIndex], conns)))
+            foreach (var (cell, conns) in cellsConnections.Select((conns, cellIndex) => (Cells[cellIndex], conns)))
             {
-                foreach (var connectingArea in conns.Select(connectedIndex => Areas[connectedIndex]))
+                foreach (var connectingCell in conns.Select(connectedIndex => Cells[connectedIndex]))
                 {
-                    area.AddConnection(connectingArea);
+                    cell.AddConnection(connectingCell);
                 }
             }
         }
@@ -188,17 +188,17 @@ namespace SCPSLBot.Navigation.Mesh
                 binaryWriter.Write(vertex.Position.z);
             }
 
-            binaryWriter.Write(Areas.Count);
-            foreach (var area in Areas)
+            binaryWriter.Write(Cells.Count);
+            foreach (var cell in Cells)
             {
-                binaryWriter.Write(area.Vertices.Count);
-                foreach (var vertexIdx in area.Vertices.Select(areaVertex => Vertices.IndexOf(areaVertex)))
+                binaryWriter.Write(cell.Vertices.Count);
+                foreach (var vertexIdx in cell.Vertices.Select(cellVertex => Vertices.IndexOf(cellVertex)))
                 {
                     binaryWriter.Write(vertexIdx);
                 }
 
-                binaryWriter.Write(area.ConnectedAreas.Count);
-                foreach (var connIdx in area.ConnectedAreas.Select(connArea => Areas.IndexOf(connArea)))
+                binaryWriter.Write(cell.ConnectedCells.Count);
+                foreach (var connIdx in cell.ConnectedCells.Select(connCell => Cells.IndexOf(connCell)))
                 {
                     binaryWriter.Write(connIdx);
                 }

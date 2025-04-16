@@ -56,15 +56,15 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
                 //var prevRandomState = Random.state;
                 //Random.InitState(seed);
 
-                var foreignRoomAreas = this.roomSightSense.ForeignRoomsAreas;
-                var enteringAreas = foreignRoomAreas
+                var foreignRoomCells = this.roomSightSense.ForeignRoomsCells;
+                var enteringCells = foreignRoomCells
                     .Where(fa => fa.Transform.GetComponent<RoomIdentifier>().Zone == roomWithin.Identifier.Zone)
                     .Where(fa => fa.Transform.GetComponent<RoomIdentifier>().Name == RoomName.Unnamed
                                     || fa.Transform.GetComponent<RoomIdentifier>().Name != roomWithin.Identifier.Name)
                     //.Where(fa => fa.Room.Identifier.Shape != RoomShape.Endroom || zoneTransitionRoomNames.Contains(fa.Room.Identifier.Name))
                     .OrderBy(fa => roomsLastVisitTime.TryGetValue(fa.Transform.GetComponent<RoomIdentifier>().ApiRoom, out var time) ? time : -Random.Range(0f, 4f));
 
-                SetPositions(enteringAreas.Select(a => a.CenterPosition));
+                SetPositions(enteringCells.Select(a => a.CenterPosition));
 
                 //Random.state = prevRandomState;
             }

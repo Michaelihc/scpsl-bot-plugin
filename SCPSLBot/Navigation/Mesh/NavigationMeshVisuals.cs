@@ -20,17 +20,17 @@ namespace SCPSLBot.Navigation.Mesh
 
         public List<Vertex> SelectedLocalVertices { get; set; }
 
-        public TransformArea? NearestArea { get; set; }
-        public TransformArea? FacingArea { get; set; }
-        public TransformArea? CachedArea { get; set; }
+        public TransformCell? NearestCell { get; set; }
+        public TransformCell? FacingCell { get; set; }
+        public TransformCell? CachedCell { get; set; }
 
-        public List<TransformArea> Path { get; } = new ();
+        public List<TransformCell> Path { get; } = new ();
 
         private Dictionary<Vertex, PrimitiveObjectToy> VertexVisuals { get; } = new();
-        private Dictionary<Edge, (PrimitiveObjectToy Visual, Area Area)> EdgeVisuals { get; } = new();
-        private Dictionary<(Area From, Area To), PrimitiveObjectToy> ConnectionVisuals { get; } = new();
+        private Dictionary<Edge, (PrimitiveObjectToy Visual, Cell Cell)> EdgeVisuals { get; } = new();
+        private Dictionary<(Cell From, Cell To), PrimitiveObjectToy> ConnectionVisuals { get; } = new();
 
-        private Dictionary<Area, PrimitiveObjectToy> AreaVisuals { get; } = new ();
+        private Dictionary<Cell, PrimitiveObjectToy> CellVisuals { get; } = new ();
 
         private string[] VisualsMessages { get; } = new string[2];
 
@@ -62,7 +62,7 @@ namespace SCPSLBot.Navigation.Mesh
                 VisualsMessages[1] = null;
 
                 UpdateVertexInfo();
-                UpdateAreaInfo();
+                UpdateCellInfo();
 
                 var messageLinesToSend = VisualsMessages.Where(m => m != null);
                 if (messageLinesToSend.Any())
@@ -116,71 +116,71 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public void UpdateAreaInfo()
+        public void UpdateCellInfo()
         {
             if (PlayerEnabledVisualsFor != null)
             {
-                if (NearestArea != null)
+                if (NearestCell != null)
                 {
-                    var nearestArea = NearestArea.Value;
+                    var nearestCell = NearestCell.Value;
 
-                    //var connectedIdsStr = string.Join(", ", NearestArea.ConnectedAreas.Select(c => $"#{c.Id}"));
-                    var form = NavigationMesh.GetForm(nearestArea.Transform.gameObject);
+                    //var connectedIdsStr = string.Join(", ", NearestCell.ConnectedCells.Select(c => $"#{c.Id}"));
+                    var form = NavigationMesh.GetForm(nearestCell.Transform.gameObject);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var NearestAreaId = mesh.Areas.IndexOf(nearestArea.Local);
-                    VisualsMessages[0] = $"Area #{NearestAreaId} in {form}";
+                    var NearestCellId = mesh.Cells.IndexOf(nearestCell.Local);
+                    VisualsMessages[0] = $"Cell #{NearestCellId} in {form}";
                 }
 
-                if (CachedArea != null)
+                if (CachedCell != null)
                 {
-                    var cachedArea = CachedArea.Value;
+                    var cachedCell = CachedCell.Value;
 
-                    var form = NavigationMesh.GetForm(cachedArea.Transform.gameObject);
+                    var form = NavigationMesh.GetForm(cachedCell.Transform.gameObject);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var cachedAreaId = mesh.Areas.IndexOf(cachedArea.Local);
-                    VisualsMessages[1] = $"Cached area #{cachedAreaId} in {form}";
+                    var cachedCellId = mesh.Cells.IndexOf(cachedCell.Local);
+                    VisualsMessages[1] = $"Cached cell #{cachedCellId} in {form}";
 
-                    if (NearestArea != null)
+                    if (NearestCell != null)
                     {
-                        var nearestArea = NearestArea.Value;
+                        var nearestCell = NearestCell.Value;
 
-                        if (nearestArea.Local.ConnectedAreas.Contains(cachedArea.Local) && cachedArea.Local.ConnectedAreas.Contains(nearestArea.Local))
+                        if (nearestCell.Local.ConnectedCells.Contains(cachedCell.Local) && cachedCell.Local.ConnectedCells.Contains(nearestCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (nearestArea.Local.ConnectedAreas.Contains(cachedArea.Local))
+                        else if (nearestCell.Local.ConnectedCells.Contains(cachedCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (cachedArea.Local.ConnectedAreas.Contains(nearestArea.Local))
+                        else if (cachedCell.Local.ConnectedCells.Contains(nearestCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
                     }
                 }
 
-                if (FacingArea != null)
+                if (FacingCell != null)
                 {
-                    var facingArea = FacingArea.Value;
+                    var facingCell = FacingCell.Value;
 
-                    var form = NavigationMesh.GetForm(facingArea.Transform.gameObject);
+                    var form = NavigationMesh.GetForm(facingCell.Transform.gameObject);
                     var mesh = NavigationMesh.GetMesh(form);
-                    var facingAreaId = mesh.Areas.IndexOf(facingArea.Local);
-                    VisualsMessages[1] = $"Facing area #{facingAreaId} in {form}";
+                    var facingCellId = mesh.Cells.IndexOf(facingCell.Local);
+                    VisualsMessages[1] = $"Facing cell #{facingCellId} in {form}";
 
-                    if (NearestArea != null)
+                    if (NearestCell != null)
                     {
-                        var nearestArea = NearestArea.Value;
+                        var nearestCell = NearestCell.Value;
 
-                        if (nearestArea.Local.ConnectedAreas.Contains(facingArea.Local) && facingArea.Local.ConnectedAreas.Contains(nearestArea.Local))
+                        if (nearestCell.Local.ConnectedCells.Contains(facingCell.Local) && facingCell.Local.ConnectedCells.Contains(nearestCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(bi-connected)";
                         }
-                        else if (nearestArea.Local.ConnectedAreas.Contains(facingArea.Local))
+                        else if (nearestCell.Local.ConnectedCells.Contains(facingCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected to)";
                         }
-                        else if (facingArea.Local.ConnectedAreas.Contains(nearestArea.Local))
+                        else if (facingCell.Local.ConnectedCells.Contains(nearestCell.Local))
                         {
                             VisualsMessages[1] += $" <color=green>(connected from)";
                         }
@@ -235,7 +235,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                     if (visual.gameObject.activeSelf)
                     {
-                        if (NearestArea?.Local.Vertices.Contains(localVertex) ?? false)
+                        if (NearestCell?.Local.Vertices.Contains(localVertex) ?? false)
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
@@ -260,22 +260,22 @@ namespace SCPSLBot.Navigation.Mesh
             }
         }
 
-        public void UpdateAreaVisuals()
+        public void UpdateCellVisuals()
         {
             if (PlayerEnabledVisualsFor != null)
             {
-                foreach (var areaVisual in AreaVisuals.Where(p => p.Value.gameObject.activeInHierarchy).ToArray())
+                foreach (var cellVisual in CellVisuals.Where(p => p.Value.gameObject.activeInHierarchy).ToArray())
                 {
-                    if (!NavigationMesh.LocalMeshesByRoom.Values.Any(m => m.Areas.Contains(areaVisual.Key)))
+                    if (!NavigationMesh.LocalMeshesByRoom.Values.Any(m => m.Cells.Contains(cellVisual.Key)))
                     {
-                        NetworkServer.Destroy(areaVisual.Value.gameObject);
-                        AreaVisuals.Remove(areaVisual.Key);
+                        NetworkServer.Destroy(cellVisual.Value.gameObject);
+                        CellVisuals.Remove(cellVisual.Key);
                     }
                 }
 
-                foreach (var (room, localArea) in NavigationMesh.LocalMeshesByRoom.SelectMany(p => p.Value.Areas.Select(a => ((p.Key, a)))))
+                foreach (var (room, localCell) in NavigationMesh.LocalMeshesByRoom.SelectMany(p => p.Value.Cells.Select(a => ((p.Key, a)))))
                 {
-                    if (!AreaVisuals.TryGetValue(localArea, out var visual))
+                    if (!CellVisuals.TryGetValue(localCell, out var visual))
                     {
                         visual = UnityEngine.Object.Instantiate(this.primPrefab);
                         visual.gameObject.SetActive(false);
@@ -288,10 +288,10 @@ namespace SCPSLBot.Navigation.Mesh
 
                         // NetworkServer.Spawn(visual.gameObject);
 
-                        AreaVisuals.Add(localArea, visual);
+                        CellVisuals.Add(localCell, visual);
                     }
 
-                    visual.transform.position = room.transform.TransformPoint(localArea.CenterPosition);
+                    visual.transform.position = room.transform.TransformPoint(localCell.CenterPosition);
 
                     var isWithinRange = Vector3.SqrMagnitude(PlayerEnabledVisualsFor.Position - visual.transform.position) < Mathf.Pow(20f, 2);
                     if (isWithinRange && !visual.gameObject.activeInHierarchy)
@@ -308,11 +308,11 @@ namespace SCPSLBot.Navigation.Mesh
 
                     if (visual.gameObject.activeSelf)
                     {
-                        if (NearestArea?.Local == localArea)
+                        if (NearestCell?.Local == localCell)
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
-                        else if (NearestArea?.Local.ConnectedAreas.Contains(localArea) ?? false)
+                        else if (NearestCell?.Local.ConnectedCells.Contains(localCell) ?? false)
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
@@ -323,19 +323,19 @@ namespace SCPSLBot.Navigation.Mesh
                     }
                 }
 
-                foreach (var area in Path)
+                foreach (var cell in Path)
                 {
-                    var areaVisual = AreaVisuals[area.Local];
-                    areaVisual.NetworkMaterialColor = Color.blue;
+                    var cellVisual = CellVisuals[cell.Local];
+                    cellVisual.NetworkMaterialColor = Color.blue;
                 }
             }
             else
             {
-                foreach (var areaVisual in AreaVisuals.Values)
+                foreach (var cellVisual in CellVisuals.Values)
                 {
-                    NetworkServer.Destroy(areaVisual.gameObject);
+                    NetworkServer.Destroy(cellVisual.gameObject);
                 }
-                AreaVisuals.Clear();
+                CellVisuals.Clear();
             }
         }
 
@@ -344,25 +344,25 @@ namespace SCPSLBot.Navigation.Mesh
             if (PlayerEnabledVisualsFor != null)
             {
                 var enabledEdgeVisuals = EdgeVisuals.Where(p => p.Value.Visual.gameObject.activeInHierarchy);
-                foreach (var (edge, (visual, area)) in enabledEdgeVisuals.Select(p => (p.Key, p.Value)).ToArray())
+                foreach (var (edge, (visual, cell)) in enabledEdgeVisuals.Select(p => (p.Key, p.Value)).ToArray())
                 {
-                    var isAreaRemoved = !NavigationMesh.LocalMeshesByRoom.Values.Distinct().Any(m => m.Areas.Contains(area));
+                    var isCellRemoved = !NavigationMesh.LocalMeshesByRoom.Values.Distinct().Any(m => m.Cells.Contains(cell));
 
                     Vector3 currentEdgeCenter() => Vector3.Lerp(edge.From.Position, edge.To.Position, 0.5f);
                     bool isEdgeCenterChanged() => currentEdgeCenter() != visual.transform.position;
 
-                    if (isAreaRemoved || !area.ContainsEdge(new(edge.From, edge.To)) || isEdgeCenterChanged())
+                    if (isCellRemoved || !cell.ContainsEdge(new(edge.From, edge.To)) || isEdgeCenterChanged())
                     {
                         NetworkServer.Destroy(visual.gameObject);
                         EdgeVisuals.Remove(edge);
                     }
                 }
 
-                foreach (var (room, localArea) in NavigationMesh.LocalMeshesByRoom.SelectMany(p => p.Value.Areas.Select(a => ((p.Key, a)))))
+                foreach (var (room, localCell) in NavigationMesh.LocalMeshesByRoom.SelectMany(p => p.Value.Cells.Select(a => ((p.Key, a)))))
                 {
-                    foreach (var localEdge in localArea.Edges)
+                    foreach (var localEdge in localCell.Edges)
                     {
-                        if (!EdgeVisuals.TryGetValue(localEdge, out var edgeVisualArea))
+                        if (!EdgeVisuals.TryGetValue(localEdge, out var edgeVisualCell))
                         {
                             var newEdgeVisual = UnityEngine.Object.Instantiate(this.primPrefab);
                             newEdgeVisual.gameObject.SetActive(false);
@@ -377,11 +377,11 @@ namespace SCPSLBot.Navigation.Mesh
 
                             // NetworkServer.Spawn(newEdgeVisual.gameObject);
 
-                            edgeVisualArea = (newEdgeVisual, localArea);
-                            EdgeVisuals.Add(localEdge, edgeVisualArea);
+                            edgeVisualCell = (newEdgeVisual, localCell);
+                            EdgeVisuals.Add(localEdge, edgeVisualCell);
                         }
 
-                        var (edgeVisual, _) = edgeVisualArea;
+                        var (edgeVisual, _) = edgeVisualCell;
 
                         var isWithinRange = Vector3.SqrMagnitude(PlayerEnabledVisualsFor.Position - edgeVisual.transform.position) < Mathf.Pow(20f, 2);
                         if (isWithinRange && !edgeVisual.gameObject.activeInHierarchy)
@@ -398,7 +398,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                         if (edgeVisual.gameObject.activeSelf)
                         {
-                            edgeVisual.NetworkMaterialColor = (NearestArea?.Local.Edges.Contains(localEdge) ?? false) ? Color.yellow : Color.white;
+                            edgeVisual.NetworkMaterialColor = (NearestCell?.Local.Edges.Contains(localEdge) ?? false) ? Color.yellow : Color.white;
                         }
                     }
                 }
@@ -408,14 +408,14 @@ namespace SCPSLBot.Navigation.Mesh
                     var pathEnumerator = Path.GetEnumerator();
 
                     pathEnumerator.MoveNext();
-                    var nextArea = pathEnumerator.Current;
+                    var nextCell = pathEnumerator.Current;
 
                     while (pathEnumerator.MoveNext())
                     {
-                        var area = nextArea;
-                        nextArea = pathEnumerator.Current;
+                        var cell = nextCell;
+                        nextCell = pathEnumerator.Current;
 
-                        if (!area.ConnectedAreaEdges.TryGetValue(nextArea, out var connectedEdge))
+                        if (!cell.ConnectedCellEdges.TryGetValue(nextCell, out var connectedEdge))
                         {
                             continue;
                         }
@@ -427,7 +427,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
             else
             {
-                foreach (var (edgeVisual, area) in EdgeVisuals.Values)
+                foreach (var (edgeVisual, cell) in EdgeVisuals.Values)
                 {
                     NetworkServer.Destroy(edgeVisual.gameObject);
                 }
@@ -439,25 +439,25 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEnabledVisualsFor != null)
             {
-                foreach (var ((areaFrom, areaTo), visual) in ConnectionVisuals.Select(p => (p.Key, p.Value)).ToArray())
+                foreach (var ((cellFrom, cellTo), visual) in ConnectionVisuals.Select(p => (p.Key, p.Value)).ToArray())
                 {
-                    var isAreaFromRemoved = !NavigationMesh.LocalMeshesByRoom.Values.Distinct().Any(m => m.Areas.Contains(areaFrom));
+                    var isCellFromRemoved = !NavigationMesh.LocalMeshesByRoom.Values.Distinct().Any(m => m.Cells.Contains(cellFrom));
 
-                    //var containsForeignArea = areaFrom switch
+                    //var containsForeignCell = cellFrom switch
                     //{
-                    //    Area roomArea => roomArea.ForeignConnectedAreas.Contains(areaTo),
+                    //    Cell roomCell => roomCell.ForeignConnectedCells.Contains(cellTo),
                     //    _ => throw new NotImplementedException()
                     //};
 
-                    //if (isAreaFromRemoved || (!containsForeignArea))
-                    if (isAreaFromRemoved)
+                    //if (isCellFromRemoved || (!containsForeignCell))
+                    if (isCellFromRemoved)
                     {
                         NetworkServer.Destroy(visual.gameObject);
-                        ConnectionVisuals.Remove((areaFrom, areaTo));
+                        ConnectionVisuals.Remove((cellFrom, cellTo));
                     }
                 }
 
-                //foreach (var (room, areaFrom) in NavigationMesh.AreasByRoom.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
+                //foreach (var (room, cellFrom) in NavigationMesh.CellsByRoom.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
                 //{
                 //    var roomFrom = room;
                 //    if (!roomFrom)
@@ -465,50 +465,50 @@ namespace SCPSLBot.Navigation.Mesh
                 //        continue;
                 //    }
 
-                //    foreach (var (areaTo, i) in areaFrom.ForeignConnectedAreas.Select((a, i) => (a, i)))
+                //    foreach (var (cellTo, i) in cellFrom.ForeignConnectedCells.Select((a, i) => (a, i)))
                 //    {
-                //        var roomTo = areaTo.Transform.GetComponent<RoomIdentifier>();
+                //        var roomTo = cellTo.Transform.GetComponent<RoomIdentifier>();
                 //        if (!roomTo)
                 //        {
                 //            continue;
                 //        }
 
-                //        if (!ConnectionVisuals.TryGetValue((areaFrom, areaTo), out var connectionVisual))
+                //        if (!ConnectionVisuals.TryGetValue((cellFrom, cellTo), out var connectionVisual))
                 //        {
                 //            var newConnectionVisual = UnityEngine.Object.Instantiate(this.primPrefab);
                 //            newConnectionVisual.NetworkPrimitiveFlags &= ~PrimitiveFlags.Collidable;
 
-                //            if (areaTo.ConnectedAreaEdges.TryGetValue(areaFrom, out var fromAreaEdge)
-                //                && areaFrom.ConnectedAreaEdges.TryGetValue(areaTo, out var toAreaEdge))
+                //            if (cellTo.ConnectedCellEdges.TryGetValue(cellFrom, out var fromCellEdge)
+                //                && cellFrom.ConnectedCellEdges.TryGetValue(cellTo, out var toCellEdge))
                 //            {
                 //                // Adjacent rooms connection
-                //                var fromAreaEdgePos = Vector3.Lerp(fromAreaEdge.From.Position, fromAreaEdge.To.Position, .5f);
-                //                var toAreaEdgePos = Vector3.Lerp(toAreaEdge.From.Position, toAreaEdge.To.Position, .5f);
+                //                var fromCellEdgePos = Vector3.Lerp(fromCellEdge.From.Position, fromCellEdge.To.Position, .5f);
+                //                var toCellEdgePos = Vector3.Lerp(toCellEdge.From.Position, toCellEdge.To.Position, .5f);
 
                 //                newConnectionVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
-                //                newConnectionVisual.transform.position = Vector3.Lerp(fromAreaEdgePos, toAreaEdgePos, 0.5f);
-                //                newConnectionVisual.transform.LookAt(toAreaEdgePos);
+                //                newConnectionVisual.transform.position = Vector3.Lerp(fromCellEdgePos, toCellEdgePos, 0.5f);
+                //                newConnectionVisual.transform.LookAt(toCellEdgePos);
                 //                newConnectionVisual.transform.RotateAround(newConnectionVisual.transform.position, newConnectionVisual.transform.right, 90f);
                 //                newConnectionVisual.transform.localScale = Vector3.forward * 0.01f + Vector3.right * 0.01f;
-                //                newConnectionVisual.transform.localScale += Vector3.up * Vector3.Distance(fromAreaEdgePos, toAreaEdgePos) * 0.5f;
+                //                newConnectionVisual.transform.localScale += Vector3.up * Vector3.Distance(fromCellEdgePos, toCellEdgePos) * 0.5f;
                 //            }
                 //            else
                 //            {
                 //                // Elevator/warping connection
-                //                var fromAreaCenterPosition = areaFrom.CenterPosition;
+                //                var fromCellCenterPosition = cellFrom.CenterPosition;
 
                 //                newConnectionVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
-                //                newConnectionVisual.transform.position = fromAreaCenterPosition;
+                //                newConnectionVisual.transform.position = fromCellCenterPosition;
                 //                newConnectionVisual.transform.localScale *= 0.01f;
                 //            }
 
                 //            NetworkServer.Spawn(newConnectionVisual.gameObject);
 
                 //            connectionVisual = newConnectionVisual;
-                //            ConnectionVisuals.Add((areaFrom, areaTo), connectionVisual);
+                //            ConnectionVisuals.Add((cellFrom, cellTo), connectionVisual);
                 //        }
 
-                //        //connectionVisual.NetworkMaterialColor = (NearestArea?.Edges.Contains(edge) ?? false) ? Color.yellow : Color.white;
+                //        //connectionVisual.NetworkMaterialColor = (NearestCell?.Edges.Contains(edge) ?? false) ? Color.yellow : Color.white;
 
                 //    }
                 //}

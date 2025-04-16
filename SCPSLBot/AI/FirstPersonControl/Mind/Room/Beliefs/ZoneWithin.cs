@@ -15,7 +15,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
 
         private void OnSensedRoomWithin(RoomIdentifier room)
         {
-            if (navigator.GetAreaWithin() != null)
+            if (navigator.GetCellWithin() != null)
             {
                 Update(room.Zone);
             }

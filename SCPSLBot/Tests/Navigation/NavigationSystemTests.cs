@@ -38,18 +38,18 @@ namespace SCPSLBot.Tests.Navigation
             TestDeleteVertex(existingForm, 2);  // #3
             TestCreateVertex(existingForm);     // #4
 
-            TestMakeArea(existingForm, 0, 1, 2);        // #0
-            TestMakeArea(existingForm, 2, 1, 3, 4);     // #1
+            TestMakeCell(existingForm, 0, 1, 2);        // #0
+            TestMakeCell(existingForm, 2, 1, 3, 4);     // #1
 
             TestCreateVertex(existingForm);     // #5
             TestCreateVertex(existingForm);     // #6
             TestCreateVertex(existingForm);     // #7
             TestCreateVertex(existingForm);     // #8
 
-            TestMakeArea(existingForm, 2, 3, 7, 8);     // #2
+            TestMakeCell(existingForm, 2, 3, 7, 8);     // #2
 
-            TestRemoveArea(existingForm, 2);            // #1
-            TestMakeArea(existingForm, 4, 3, 5, 6);     // #2
+            TestRemoveCell(existingForm, 2);            // #1
+            TestMakeCell(existingForm, 4, 3, 5, 6);     // #2
 
             TestAddConnection(existingForm, 0, 1);
             TestAddConnection(existingForm, 1, 0);
@@ -58,7 +58,7 @@ namespace SCPSLBot.Tests.Navigation
             TestRemoveConnection(existingForm, 1, 2);
             TestAddConnection(existingForm, 1, 2);
 
-            TestRemoveArea(existingForm, 2);            // #1
+            TestRemoveCell(existingForm, 2);            // #1
 
             response = $"Passed.";
             return true;
@@ -157,128 +157,128 @@ namespace SCPSLBot.Tests.Navigation
             Log.Info($"{nameof(TestDeleteVertex)}({form}, {vertexIdx})");
         }
 
-        private void TestMakeArea(string form, params int[] vertexIdxs)
+        private void TestMakeCell(string form, params int[] vertexIdxs)
         {
             var mesh = NavigationMesh.MeshesByRoomForm[form];
             var vertices = vertexIdxs.Select(idx => mesh.Vertices[idx]);
             var edges = vertices.Zip(vertices.Skip(1), (v1, v2) => new Edge(v1, v2)).Append(new(vertices.Last(), vertices.First()));
 
-            Area emittedArea = null;
-            void createdHandler(Area a)
+            Cell emittedCell = null;
+            void createdHandler(Cell a)
             {
-                emittedArea = a;
+                emittedCell = a;
             }
-            mesh.AreaCreated += createdHandler;
+            mesh.CellCreated += createdHandler;
 
-            var area = mesh.MakeArea(vertices);
+            var cell = mesh.MakeCell(vertices);
 
-            Assert.IsNotNull(area);
+            Assert.IsNotNull(cell);
 
-            Assert.AreEqual(vertexIdxs.Length, area.Vertices.Count);
-            foreach (var (vertex, areaVertex) in vertices.Zip(area.Vertices, (vertex, areaVertex) => (vertex, areaVertex)))
+            Assert.AreEqual(vertexIdxs.Length, cell.Vertices.Count);
+            foreach (var (vertex, cellVertex) in vertices.Zip(cell.Vertices, (vertex, cellVertex) => (vertex, cellVertex)))
             {
-                Assert.AreEqual(vertex, areaVertex);
-            }
-
-            Assert.AreEqual(edges.Count(), area.Edges.Count());
-            foreach (var (edge, areaEdge) in edges.Zip(area.Edges, (edge, areaEdge) => (edge, areaEdge)))
-            {
-                Assert.AreEqual(edge, areaEdge);
+                Assert.AreEqual(vertex, cellVertex);
             }
 
-            Assert.IsTrue(mesh.Areas.Contains(area));
+            Assert.AreEqual(edges.Count(), cell.Edges.Count());
+            foreach (var (edge, cellEdge) in edges.Zip(cell.Edges, (edge, cellEdge) => (edge, cellEdge)))
+            {
+                Assert.AreEqual(edge, cellEdge);
+            }
+
+            Assert.IsTrue(mesh.Cells.Contains(cell));
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
             {
                 foreach (var room in rooms)
                 {
-                    var transformArea = new TransformArea(area, room.transform);
-                    Assert.AreEqual(room.transform.TransformPoint(area.CenterPosition), transformArea.CenterPosition);
-                    Assert.IsTrue(NavigationMesh.ForeignConnectedAreas.ContainsKey(transformArea));
-                    Assert.IsNotNull(NavigationMesh.ForeignConnectedAreas[transformArea]);
+                    var transformCell = new TransformCell(cell, room.transform);
+                    Assert.AreEqual(room.transform.TransformPoint(cell.CenterPosition), transformCell.CenterPosition);
+                    Assert.IsTrue(NavigationMesh.ForeignConnectedCells.ContainsKey(transformCell));
+                    Assert.IsNotNull(NavigationMesh.ForeignConnectedCells[transformCell]);
                 }
             }
 
-            Assert.AreEqual(emittedArea, area);
+            Assert.AreEqual(emittedCell, cell);
 
-            mesh.AreaCreated -= createdHandler;
+            mesh.CellCreated -= createdHandler;
 
-            Log.Info($"{nameof(TestMakeArea)}({form}, {string.Join(", ", vertexIdxs)})");
+            Log.Info($"{nameof(TestMakeCell)}({form}, {string.Join(", ", vertexIdxs)})");
         }
 
-        private void TestRemoveArea(string form, int areaIdx)
+        private void TestRemoveCell(string form, int cellIdx)
         {
             var mesh = NavigationMesh.MeshesByRoomForm[form];
-            var area = mesh.Areas[areaIdx];
+            var cell = mesh.Cells[cellIdx];
 
-            Area emittedArea = null;
-            void deletedHandler(Area a)
+            Cell emittedCell = null;
+            void deletedHandler(Cell a)
             {
-                emittedArea = a;
+                emittedCell = a;
             }
-            mesh.AreaDeleted += deletedHandler;
+            mesh.CellDeleted += deletedHandler;
 
-            var countBefore = mesh.Areas.Count;
+            var countBefore = mesh.Cells.Count;
 
-            mesh.RemoveArea(area);
+            mesh.RemoveCell(cell);
 
-            var countAfter = mesh.Areas.Count;
+            var countAfter = mesh.Cells.Count;
 
-            Assert.IsFalse(mesh.Areas.Contains(area));
+            Assert.IsFalse(mesh.Cells.Contains(cell));
             Assert.AreEqual(1, countBefore - countAfter);
 
-            foreach (var otherArea in mesh.Areas)
+            foreach (var otherCell in mesh.Cells)
             {
-                Assert.IsFalse(otherArea.ConnectedAreas.Contains(area));
-                Assert.IsFalse(otherArea.ConnectedAreaEdges.ContainsKey(area));
+                Assert.IsFalse(otherCell.ConnectedCells.Contains(cell));
+                Assert.IsFalse(otherCell.ConnectedCellEdges.ContainsKey(cell));
             }
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
             {
                 foreach (var room in rooms)
                 {
-                    var transformArea = new TransformArea(area, room.transform);
-                    foreach (var otherArea in mesh.Areas)
+                    var transformCell = new TransformCell(cell, room.transform);
+                    foreach (var otherCell in mesh.Cells)
                     {
-                        var otherTransformArea = new TransformArea(otherArea, room.transform);
-                        Assert.IsFalse(otherTransformArea.ConnectedAreas.Contains(transformArea));
-                        Assert.IsFalse(otherTransformArea.ConnectedAreaEdges.ContainsKey(transformArea));
+                        var otherTransformCell = new TransformCell(otherCell, room.transform);
+                        Assert.IsFalse(otherTransformCell.ConnectedCells.Contains(transformCell));
+                        Assert.IsFalse(otherTransformCell.ConnectedCellEdges.ContainsKey(transformCell));
                     }
 
-                    Assert.IsFalse(NavigationMesh.ForeignConnectedAreas.ContainsKey(transformArea));
+                    Assert.IsFalse(NavigationMesh.ForeignConnectedCells.ContainsKey(transformCell));
                 }
             }
 
-            Assert.AreEqual(emittedArea, area);
+            Assert.AreEqual(emittedCell, cell);
 
-            mesh.AreaDeleted -= deletedHandler;
+            mesh.CellDeleted -= deletedHandler;
 
-            Log.Info($"{nameof(TestRemoveArea)}({form}, {areaIdx})");
+            Log.Info($"{nameof(TestRemoveCell)}({form}, {cellIdx})");
         }
 
         private void TestAddConnection(string form, int fromIdx, int toIdx)
         {
             var mesh = NavigationMesh.MeshesByRoomForm[form];
-            var fromArea = mesh.Areas[fromIdx];
-            var toArea = mesh.Areas[toIdx];
+            var fromCell = mesh.Cells[fromIdx];
+            var toCell = mesh.Cells[toIdx];
 
-            fromArea.AddConnection(toArea);
+            fromCell.AddConnection(toCell);
 
-            Assert.IsTrue(fromArea.ConnectedAreas.Contains(toArea));
+            Assert.IsTrue(fromCell.ConnectedCells.Contains(toCell));
 
-            var edge = toArea.Edges.First(te => fromArea.Edges.Contains(new Edge(te.To, te.From)));
-            Assert.IsTrue(fromArea.ConnectedAreaEdges.TryGetValue(toArea, out var connectedEdge));
+            var edge = toCell.Edges.First(te => fromCell.Edges.Contains(new Edge(te.To, te.From)));
+            Assert.IsTrue(fromCell.ConnectedCellEdges.TryGetValue(toCell, out var connectedEdge));
             Assert.AreEqual(edge, connectedEdge);
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
             {
                 foreach (var room in rooms)
                 {
-                    var fromTransformArea = new TransformArea(fromArea, room.transform);
-                    var toTransformArea = new TransformArea(toArea, room.transform);
+                    var fromTransformCell = new TransformCell(fromCell, room.transform);
+                    var toTransformCell = new TransformCell(toCell, room.transform);
 
-                    Assert.IsTrue(fromTransformArea.ConnectedAreas.Contains(toTransformArea));
-                    Assert.IsTrue(fromTransformArea.ConnectedAreaEdges.TryGetValue(toTransformArea, out var transformEdge));
+                    Assert.IsTrue(fromTransformCell.ConnectedCells.Contains(toTransformCell));
+                    Assert.IsTrue(fromTransformCell.ConnectedCellEdges.TryGetValue(toTransformCell, out var transformEdge));
                     Assert.AreEqual(new TransformEdge(edge, room.transform), transformEdge);
                 }
             }
@@ -289,22 +289,22 @@ namespace SCPSLBot.Tests.Navigation
         private void TestRemoveConnection(string form, int fromIdx, int toIdx)
         {
             var mesh = NavigationMesh.MeshesByRoomForm[form];
-            var fromArea = mesh.Areas[fromIdx];
-            var toArea = mesh.Areas[toIdx];
+            var fromCell = mesh.Cells[fromIdx];
+            var toCell = mesh.Cells[toIdx];
 
-            fromArea.RemoveConnection(toArea);
+            fromCell.RemoveConnection(toCell);
 
-            Assert.IsFalse(fromArea.ConnectedAreas.Contains(toArea));
-            Assert.IsFalse(fromArea.ConnectedAreaEdges.ContainsKey(toArea));
+            Assert.IsFalse(fromCell.ConnectedCells.Contains(toCell));
+            Assert.IsFalse(fromCell.ConnectedCellEdges.ContainsKey(toCell));
 
             if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
             {
                 foreach (var room in rooms)
                 {
-                    var fromTransformArea = new TransformArea(fromArea, room.transform);
-                    var toTransformArea = new TransformArea(toArea, room.transform);
-                    Assert.IsFalse(fromTransformArea.ConnectedAreas.Contains(toTransformArea));
-                    Assert.IsFalse(fromTransformArea.ConnectedAreaEdges.ContainsKey(toTransformArea));
+                    var fromTransformCell = new TransformCell(fromCell, room.transform);
+                    var toTransformCell = new TransformCell(toCell, room.transform);
+                    Assert.IsFalse(fromTransformCell.ConnectedCells.Contains(toTransformCell));
+                    Assert.IsFalse(fromTransformCell.ConnectedCellEdges.ContainsKey(toTransformCell));
                 }
             }
 

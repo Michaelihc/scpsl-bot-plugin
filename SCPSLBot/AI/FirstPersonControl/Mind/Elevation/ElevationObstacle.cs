@@ -21,10 +21,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         private void OnAfterSightSensing()
         {
-            var edgelessSegment = navigator.AreaPathSegments.FirstOrDefault(s => !s.Area.ConnectedAreaEdges.ContainsKey(s.NextArea));
-            if (edgelessSegment.NextArea == null)
+            var edgelessSegment = navigator.CellPathSegments.FirstOrDefault(s => !s.Cell.ConnectedCellEdges.ContainsKey(s.NextCell));
+            if (edgelessSegment.NextCell == null)
             {
-                if (DestinationArea != null && DestinationArea == navigator.GetAreaWithin())
+                if (DestinationCell != null && DestinationCell == navigator.GetCellWithin())
                 {
                     Update(null, null, null);
                 }
@@ -34,7 +34,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
             // path has edgeless segment
 
-            var lastPoint = edgelessSegment.Area.CenterPosition;
+            var lastPoint = edgelessSegment.Cell.CenterPosition;
 
             if (!sightSense.IsPositionWithinFov(lastPoint))
             {
@@ -53,7 +53,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 var elevator = hit.collider.GetComponentInParent<ElevatorChamber>();
                 if (elevator)
                 {
-                    Update(elevator, goalPosition, edgelessSegment.NextArea);
+                    Update(elevator, goalPosition, edgelessSegment.NextCell);
                 }
             }
         }
@@ -61,15 +61,15 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         public bool Has(Vector3 goalPos) => GoalPosition == goalPos;
         public ElevatorChamber Elevator { get; private set; }
         public Vector3? GoalPosition { get; private set; }
-        public TransformArea? DestinationArea { get; private set; }
+        public TransformCell? DestinationCell { get; private set; }
 
-        private void Update(ElevatorChamber newChamberValue, Vector3? goalPos, TransformArea? destinationArea)
+        private void Update(ElevatorChamber newChamberValue, Vector3? goalPos, TransformCell? destinationCell)
         {
             if (newChamberValue != Elevator) 
             { 
                 Elevator = newChamberValue;
                 GoalPosition = goalPos;
-                DestinationArea = destinationArea;
+                DestinationCell = destinationCell;
                 InvokeOnUpdate();
             }
         }
