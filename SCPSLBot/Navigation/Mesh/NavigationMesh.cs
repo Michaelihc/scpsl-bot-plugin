@@ -98,17 +98,18 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            RemoveAdjacentCell(cell);
+            RemoveAdjacentCells(cell);
 
             CellDeleted?.Invoke(cell);
 
             return true;
         }
 
-        private void RemoveAdjacentCell(Cell cell)
+        private void RemoveAdjacentCells(Cell cell)
         {
             foreach (var otherCell in Cells)
             {
+                cell.RemoveAdjacentCell(otherCell);
                 otherCell.RemoveAdjacentCell(cell);
             }
         }
@@ -116,6 +117,9 @@ namespace SCPSLBot.Navigation.Mesh
         public void AddVertexToCell(Cell cell, Vertex vertex, Vertex beforeVertex)
         {
             cell.AddVertex(vertex, beforeVertex);
+
+            RemoveAdjacentCells(cell);
+            AddAdjacentCells(cell);
         }
 
         #endregion

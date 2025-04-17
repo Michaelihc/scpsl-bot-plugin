@@ -27,11 +27,6 @@ namespace SCPSLBot.Navigation.Mesh
             return Edges.Contains(edge);
         }
 
-        public void AddVertex(Vertex vertex)
-        {
-            Vertices.Add(vertex);
-        }
-
         public void AddVertex(Vertex vertex, Vertex beforeVertex)
         {
             var atIdx = Vertices.IndexOf(beforeVertex);

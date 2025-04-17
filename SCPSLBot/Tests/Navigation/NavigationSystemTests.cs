@@ -52,6 +52,10 @@ namespace SCPSLBot.Tests.Navigation
             TestMakeCell(existingForm, 4, 3, 5, 6);     // #2
 
             TestRemoveCell(existingForm, 2);            // #1
+            TestMakeCell(existingForm, 4, 5, 6);        // #2
+
+            TestAddVertexToCell(existingForm, 2, 3, 5);
+            TestAddVertexToCell(existingForm, 2, 7, 3);
 
             response = $"Passed.";
             return true;
@@ -185,10 +189,12 @@ namespace SCPSLBot.Tests.Navigation
                 var adjacentCells = mesh.Cells.Where(c => c.Edges.Contains(adjacentEdge));
                 foreach (var adjacentCell in adjacentCells)
                 {
-                    Assert.IsTrue(cell.AdjacentCellEdges.TryGetValue(adjacentCell, out var cellAdjacentEdge), "Cell does not contain expected adjacent cell.");
+                    Assert.IsTrue(cell.AdjacentCells.Contains(adjacentCell), "Cell does not contain expected adjacent cell.");
+                    Assert.IsTrue(cell.AdjacentCellEdges.TryGetValue(adjacentCell, out var cellAdjacentEdge), "Cell does not contain edge of expected adjacent cell.");
                     Assert.AreEqual(adjacentEdge, cellAdjacentEdge, "Cell does not contain expected edge of adjacent cell.");
 
-                    Assert.IsTrue(adjacentCell.AdjacentCellEdges.TryGetValue(cell, out var cellAdjacentAdjacentEdge), "Adjacent cell does not contain expected cell.");
+                    Assert.IsTrue(adjacentCell.AdjacentCells.Contains(cell), "Adjacent cell does not contain expected cell.");
+                    Assert.IsTrue(adjacentCell.AdjacentCellEdges.TryGetValue(cell, out var cellAdjacentAdjacentEdge), "Adjacent cell does not contain edge of expected cell.");
                     Assert.AreEqual(edge, cellAdjacentAdjacentEdge, "Adjacent cell does not contain expected edge of cell.");
                 }
             }
@@ -212,10 +218,12 @@ namespace SCPSLBot.Tests.Navigation
                             .Select(c => new TransformCell(c, room.transform));
                         foreach (var adjacentTransformCell in adjacentTransformCells)
                         {
-                            Assert.IsTrue(transformCell.AdjacentCellEdges.TryGetValue(adjacentTransformCell, out var cellAdjacentEdge), "Transform cell does not contain expected adjacent transform cell.");
+                            Assert.IsTrue(transformCell.AdjacentCells.Contains(adjacentTransformCell), "Transform cell does not contain expected adjacent transform cell.");
+                            Assert.IsTrue(transformCell.AdjacentCellEdges.TryGetValue(adjacentTransformCell, out var cellAdjacentEdge), "Transform cell does not contain edge of expected adjacent transform cell.");
                             Assert.AreEqual(adjacentTransformEdge, cellAdjacentEdge, "Transform cell does not contain expected edge of adjacent transform cell.");
                             
-                            Assert.IsTrue(adjacentTransformCell.AdjacentCellEdges.TryGetValue(transformCell, out var cellAdjacentAdjacentEdge), "Transform adjacent cell does not contain expected transform cell.");
+                            Assert.IsTrue(adjacentTransformCell.AdjacentCells.Contains(transformCell), "Transform adjacent cell does not contain expected transform cell.");
+                            Assert.IsTrue(adjacentTransformCell.AdjacentCellEdges.TryGetValue(transformCell, out var cellAdjacentAdjacentEdge), "Transform adjacent cell does not contain edge of expected transform cell.");
                             Assert.AreEqual(transformEdge, cellAdjacentAdjacentEdge, "Transform adjacent cell does not contain expected edge of transform cell.");
                         }
                     }
@@ -277,6 +285,88 @@ namespace SCPSLBot.Tests.Navigation
             mesh.CellDeleted -= deletedHandler;
 
             Log.Info($"{nameof(TestRemoveCell)}({form}, {cellIdx})");
+        }
+
+        private void TestAddVertexToCell(string form, int cellIdx, int vertexIdx, int beforeVertexIdx)
+        {
+            // Arrange
+            var mesh = NavigationMesh.MeshesByRoomForm[form];
+            var cell = mesh.Cells[cellIdx];
+            var vertex = mesh.Vertices[vertexIdx];
+            var beforeVertex = mesh.Vertices[beforeVertexIdx];
+
+            var oldEdge = cell.Edges.First(e => e.To == beforeVertex);
+            var newEdges = new Edge[] {
+                new(oldEdge.From, vertex),
+                new(vertex, oldEdge.To)
+            };
+
+            var adjacentOldEdge = new Edge(oldEdge.To, oldEdge.From);
+            var adjacentOldCells = mesh.Cells.Where(c => c.Edges.Contains(adjacentOldEdge));
+
+            var adjacentNewEdges = newEdges.Select(ne => new Edge(ne.To, ne.From));
+            var adjacentNewCells = adjacentNewEdges.SelectMany(ane => mesh.Cells.Where(p => p.Edges.Contains(ane)).Select(c => (c, ane)));
+
+            // Act
+            mesh.AddVertexToCell(cell, vertex, beforeVertex);
+
+            // Assert
+            Assert.AreEqual(cell.Vertices.IndexOf(beforeVertex)-1, cell.Vertices.IndexOf(vertex), "Cell does not contain added vertex before other vertex.");
+
+            Assert.IsFalse(cell.Edges.Contains(oldEdge), $"Cell contain old edge {oldEdge}");
+            foreach (var newEdge in newEdges)
+            {
+                Assert.IsTrue(cell.Edges.Contains(newEdge), $"Cell does not contain new edge {newEdge}");
+            }
+
+            foreach (var ((adjacentNewCell, adjacentNewEdge), i) in adjacentNewCells.Select((t, i) => (t, i)))
+            {
+                Assert.IsTrue(cell.AdjacentCells.Contains(adjacentNewCell), $"Cell does not contain adjacent new cell.");
+                Assert.AreEqual(cell.AdjacentCellEdges[adjacentNewCell], adjacentNewEdge, $"Cell does not contain adjacent new edge.");
+
+                Assert.IsTrue(adjacentNewCell.AdjacentCells.Contains(cell), $"Adjacent new cell does not contain cell.");
+                Assert.AreEqual(adjacentNewCell.AdjacentCellEdges[cell], newEdges[i], $"Adjacent new cell does not contain new edge.");
+            }
+
+            foreach (var adjacentOldCell in adjacentOldCells)
+            {
+                Assert.IsFalse(cell.AdjacentCells.Contains(adjacentOldCell), $"Cell contain old adjacent cells");
+                Assert.IsFalse(cell.AdjacentCellEdges.ContainsKey(adjacentOldCell), $"Cell contain old adjacent cells of adjacent old edge");
+
+                Assert.IsFalse(adjacentOldCell.AdjacentCells.Contains(cell), $"Adjacent old cell contain cell.");
+                Assert.IsFalse(adjacentOldCell.AdjacentCellEdges.ContainsKey(cell), $"Adjacent old cell contain cell of old edge");
+            }
+
+            if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
+            {
+                foreach (var room in rooms)
+                {
+                    var transformCell = new TransformCell(cell, room.transform);
+                    var newTransformEdges = newEdges.Select(e => new TransformEdge(e, room.transform)).ToArray();
+                    foreach (var ((adjacentNewCell, adjacentNewEdge), i) in adjacentNewCells.Select((t, i) => (t, i)))
+                    {
+                        var adjacentNewTransformCell = new TransformCell(adjacentNewCell, room.transform);
+                        var adjacentNewTransformEdge = new TransformEdge(adjacentNewEdge, room.transform);
+                        Assert.IsTrue(transformCell.AdjacentCells.Contains(adjacentNewTransformCell), $"Transform cell does not contain adjacent new cell.");
+                        Assert.AreEqual(transformCell.AdjacentCellEdges[adjacentNewTransformCell], adjacentNewTransformEdge, $"Transform cell does not contain adjacent new edge.");
+
+                        Assert.IsTrue(adjacentNewTransformCell.AdjacentCells.Contains(transformCell), $"Adjacent new tranform cell does not contain cell.");
+                        Assert.AreEqual(adjacentNewTransformCell.AdjacentCellEdges[transformCell], newTransformEdges[i], $"Adjacent new tranform cell does not contain new edge.");
+                    }
+
+                    foreach (var adjacentOldCell in adjacentOldCells)
+                    {
+                        var adjacentOldTransformCell = new TransformCell(adjacentOldCell, room.transform);
+                        Assert.IsFalse(transformCell.AdjacentCells.Contains(adjacentOldTransformCell), $"Transform cell contain old adjacent cells");
+                        Assert.IsFalse(transformCell.AdjacentCellEdges.ContainsKey(adjacentOldTransformCell), $"Transform cell contain old adjacent cells of adjacent old edge");
+
+                        Assert.IsFalse(adjacentOldTransformCell.AdjacentCells.Contains(transformCell), $"Adjacent old tranform cell contain cell.");
+                        Assert.IsFalse(adjacentOldTransformCell.AdjacentCellEdges.ContainsKey(transformCell), $"Adjacent old tranform cell contain cell of old edge");
+                    }
+                }
+            }
+
+            Log.Info($"{nameof(TestAddVertexToCell)}({form}, {cellIdx}, {vertexIdx}, {beforeVertexIdx})");
         }
 
         private void TestPersistance()
