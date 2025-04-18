@@ -21,14 +21,14 @@ namespace SCPSLBot.Navigation.Mesh
 
         private Player LastPlayerEditing { get; set; }
 
-        private List<Vertex> SelectedVertices { get; } = new();
+        private List<TransformVertex> SelectedVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
 
         private CoroutineHandle[] handles;
 
         public void Init()
         {
-            Visuals.SelectedLocalVertices = SelectedVertices;
+            Visuals.SelectedVertices = SelectedVertices;
             Visuals.Init();
 
             handles = new [] {
@@ -169,7 +169,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var vertex = Visuals.NearestVertex.Value;
 
-            SelectedVertices.Remove(vertex.Local);
+            SelectedVertices.Remove(vertex);
 
             var form = NavigationMesh.GetForm(vertex.Transform.gameObject);
             var mesh = NavigationMesh.GetMesh(form);
@@ -231,14 +231,13 @@ namespace SCPSLBot.Navigation.Mesh
             var vertex = Visuals.NearestVertex.Value;
 
             var form = NavigationMesh.GetForm(vertex.Transform.gameObject);
-            var mesh = NavigationMesh.GetMesh(form);
-            if (SelectedVertices.Any() && !mesh.Vertices.Contains(SelectedVertices.First()))
+            if (SelectedVertices.Any() && SelectedVertices.First().Transform != vertex.Transform)
             {
                 Log.Warning($"Form of the vertex for selection is different than of first selected vertex.");
                 return false;
             }
 
-            SelectedVertices.Add(vertex.Local);
+            SelectedVertices.Add(vertex);
 
             Log.Info($"Vertex at local position {vertex.Local.Position} added to selection under {form}.");
 
@@ -254,7 +253,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
             var vertex = Visuals.NearestVertex.Value;
 
-            SelectedVertices.Remove(vertex.Local);
+            SelectedVertices.Remove(vertex);
 
             var form = NavigationMesh.GetForm(vertex.Transform.gameObject);
 
@@ -292,7 +291,7 @@ namespace SCPSLBot.Navigation.Mesh
             form = NavigationMesh.GetForm(room.gameObject);
             mesh = NavigationMesh.MeshesByRoomForm[form];
 
-            var newCell = mesh.MakeCell(SelectedVertices);
+            var newCell = mesh.MakeCell(SelectedVertices.Select(sv => sv.Local));
 
             Log.Info($"Cell #{mesh.Cells.IndexOf(newCell)} at local center position {newCell.CenterPosition} added under {form}.");
 
@@ -641,17 +640,16 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null && AutoSelectModeEnabled && Visuals.NearestVertex != null)
             {
-                var formOfNearest = NavigationMesh.GetForm(Visuals.NearestVertex.Value.Transform.gameObject);
-                if (SelectedVertices.Any() && !NavigationMesh.GetMesh(formOfNearest).Vertices.Contains(SelectedVertices.First()))
+                if (SelectedVertices.Any() && SelectedVertices.First().Transform != Visuals.NearestVertex.Value.Transform)
                 {
                     return;
                 }
 
-                if (!SelectedVertices.Contains(Visuals.NearestVertex.Value.Local))
+                if (!SelectedVertices.Contains(Visuals.NearestVertex.Value))
                 {
-                    SelectedVertices.Add(Visuals.NearestVertex.Value.Local);
+                    SelectedVertices.Add(Visuals.NearestVertex.Value);
                 }
-                else if (SelectedVertices.Count > 1 && SelectedVertices.FirstOrDefault() == Visuals.NearestVertex.Value.Local)
+                else if (SelectedVertices.Count > 1 && SelectedVertices.FirstOrDefault() == Visuals.NearestVertex.Value)
                 {
                     AutoSelectModeEnabled = false;
                     PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);

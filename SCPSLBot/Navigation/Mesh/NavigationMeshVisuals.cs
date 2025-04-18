@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using static UnityEngine.RectTransform;
 
 namespace SCPSLBot.Navigation.Mesh
 {
@@ -20,7 +19,7 @@ namespace SCPSLBot.Navigation.Mesh
         public TransformVertex? NearestVertex { get; set; }
         public TransformVertex? FacingVertex { get; set; }
 
-        public List<Vertex> SelectedLocalVertices { get; set; }
+        public List<TransformVertex> SelectedVertices { get; set; }
 
         public TransformCell? NearestCell { get; set; }
         public TransformCell? FacingCell { get; set; }
@@ -101,7 +100,7 @@ namespace SCPSLBot.Navigation.Mesh
                     var nearestVertexId = mesh.Vertices.IndexOf(nearestVertex.Local);
                     VisualsMessages[0] = $"Vertex #{nearestVertexId} in {form}";
 
-                    var selectedIdx = SelectedLocalVertices.IndexOf(nearestVertex.Local);
+                    var selectedIdx = SelectedVertices.IndexOf(nearestVertex);
                     if (selectedIdx >= 0)
                     {
                         VisualsMessages[0] += $" <color=green>(selected #{selectedIdx})</color>";
@@ -116,7 +115,7 @@ namespace SCPSLBot.Navigation.Mesh
                     var facingVertexId = mesh.Vertices.IndexOf(facingVertex.Local);
                     VisualsMessages[1] = $"Facing vertex #{facingVertexId} in {form}";
 
-                    var selectedIdx = SelectedLocalVertices.IndexOf(facingVertex.Local);
+                    var selectedIdx = SelectedVertices.IndexOf(facingVertex);
                     if (selectedIdx >= 0)
                     {
                         VisualsMessages[1] += $" <color=green>(selected #{selectedIdx})</color>";
@@ -248,7 +247,7 @@ namespace SCPSLBot.Navigation.Mesh
                         {
                             visual.NetworkMaterialColor = Color.yellow;
                         }
-                        else if (SelectedLocalVertices.Contains(vertex.Local))
+                        else if (SelectedVertices.Contains(vertex))
                         {
                             visual.NetworkMaterialColor = Color.green;
                         }
