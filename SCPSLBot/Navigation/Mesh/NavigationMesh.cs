@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using static UnityEngine.RectTransform;
 
 namespace SCPSLBot.Navigation.Mesh
 {
@@ -52,6 +51,9 @@ namespace SCPSLBot.Navigation.Mesh
             foreach (var cell in Cells)
             {
                 cell.RemoveVertex(vertex);
+
+                RemoveAdjacentCells(cell);
+                AddAdjacentCells(cell);
             }
         }
 

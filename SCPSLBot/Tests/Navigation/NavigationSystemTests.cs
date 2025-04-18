@@ -6,6 +6,7 @@ using SCPSLBot.Navigation;
 using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using UnityEngine.Assertions;
 
@@ -56,6 +57,9 @@ namespace SCPSLBot.Tests.Navigation
 
             TestAddVertexToCell(existingForm, 2, 3, 5);
             TestAddVertexToCell(existingForm, 2, 7, 3);
+
+            TestDeleteVertex(existingForm, 7);
+            TestDeleteVertex(existingForm, 3);
 
             response = $"Passed.";
             return true;
@@ -144,10 +148,48 @@ namespace SCPSLBot.Tests.Navigation
 
             var countAfter = mesh.Vertices.Count;
 
-            Assert.IsFalse(mesh.Vertices.Contains(vertex));
-            Assert.AreEqual(1, countBefore - countAfter);
+            Assert.IsFalse(mesh.Vertices.Contains(vertex), $"Mesh contain deleted vertex.");
+            Assert.AreEqual(1, countBefore - countAfter, $"Number of mesh vertices haven't decreased.");
 
-            Assert.AreEqual(emittedVertex, vertex);
+            Assert.AreEqual(emittedVertex, vertex, $"Event with expected vertex haven't raised.");;
+
+            foreach (var cell in mesh.Cells)
+            {
+                Assert.IsFalse(cell.Vertices.Contains(vertex), $"Cell contain deleted vertex.");
+                Assert.IsFalse(cell.Edges.Any(e => e.From == vertex || e.To == vertex), $"Cell contain edges with deleted vertex.");
+
+                var adjacentCells = cell.Edges
+                    .Select(e => new Edge(e.To, e.From))
+                    .SelectMany(ae => mesh.Cells.Where(oc => oc.Edges.Contains(ae)).Select(ac => (ac, ae)));
+
+                Assert.AreEqual(adjacentCells.Count(), cell.AdjacentCells.Count, $"Cell adjacent cells count does not match expected.");
+                Assert.AreEqual(adjacentCells.Count(), cell.AdjacentCellEdges.Count, $"Cell adjacent edges count does not match expected.");
+
+                foreach (var (adjacentCell, adjacentEdge) in adjacentCells)
+                {
+                    Assert.IsTrue(cell.AdjacentCells.Contains(adjacentCell), $"Cell does not contain adjacent cell.");
+                    Assert.AreEqual(adjacentEdge, cell.AdjacentCellEdges[adjacentCell], $"Cell does not contain adjacent edge.");
+                }
+
+                if (NavigationMesh.RoomsByForm.TryGetValue(form, out var rooms))
+                {
+                    foreach (var room in rooms)
+                    {
+                        var transformCell = new TransformCell(cell, room.transform);
+
+                        Assert.AreEqual(adjacentCells.Count(), transformCell.AdjacentCells.Count(), $"Tranform cell adjacent cells count does not match expected.");
+                        Assert.AreEqual(adjacentCells.Count(), transformCell.AdjacentCellEdges.Count, $"Transform cell adjacent edges count does not match expected.");
+
+                        foreach (var (adjacentCell, adjacentEdge) in adjacentCells)
+                        {
+                            var adjacentTransformCell = new TransformCell(adjacentCell, room.transform);
+                            var adjacentTransformEdge = new TransformEdge(adjacentEdge, room.transform);
+                            Assert.IsTrue(transformCell.AdjacentCells.Contains(adjacentTransformCell), $"Tranform cell does not contain adjacent cell.");
+                            Assert.AreEqual(adjacentTransformEdge, transformCell.AdjacentCellEdges[adjacentTransformCell], $"Tranform cell does not contain adjacent edge.");
+                        }
+                    }
+                }
+            }
 
             mesh.VertexDeleted -= vertexDeletedHandler;
 
