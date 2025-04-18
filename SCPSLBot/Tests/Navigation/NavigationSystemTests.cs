@@ -7,6 +7,7 @@ using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using UnityEngine.Assertions;
 
@@ -60,6 +61,8 @@ namespace SCPSLBot.Tests.Navigation
 
             TestDeleteVertex(existingForm, 7);
             TestDeleteVertex(existingForm, 3);
+
+            TestPersistance();
 
             response = $"Passed.";
             return true;
@@ -413,6 +416,84 @@ namespace SCPSLBot.Tests.Navigation
 
         private void TestPersistance()
         {
+            Log.Info($"{nameof(TestPersistance)}");
+
+            // Arrange
+            var meshesByRoomForm = NavigationMesh.MeshesByRoomForm.ToArray();
+
+            // Act
+            byte[] buffer;
+
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                NavigationMesh.WriteMeshes(writer);
+
+                buffer = stream.GetBuffer();
+            }
+
+            NavigationMesh.ResetMeshes();
+            NavigationMesh.InitMeshes();
+
+            using (var stream = new MemoryStream(buffer))
+            using (var reader = new BinaryReader(stream))
+            {
+                NavigationMesh.ReadMeshes(reader);
+            }
+
+            // Assert
+            Assert.AreEqual(meshesByRoomForm.Length, NavigationMesh.MeshesByRoomForm.Count, $"Number of mesh forms does not match.");
+            foreach (var (form, mesh) in meshesByRoomForm)
+            {
+                Assert.IsTrue(NavigationMesh.MeshesByRoomForm.ContainsKey(form), $"Does not contain room form of mesh.");
+
+                Assert.AreEqual(mesh.Vertices.Count, NavigationMesh.MeshesByRoomForm[form].Vertices.Count, $"Mesh vertices count do not match.");
+                foreach (var (vertexBefore, vertexAfter) in mesh.Vertices.Zip(NavigationMesh.MeshesByRoomForm[form].Vertices, (l, r) => (l, r)))
+                {
+                    AssertVertexSame(vertexBefore, vertexAfter, $"Mesh vertex is not same.");
+                }
+
+                Assert.AreEqual(mesh.Cells.Count, NavigationMesh.MeshesByRoomForm[form].Cells.Count, $"Mesh cells count do not match.");
+                foreach (var (cellBefore, cellAfter) in mesh.Cells.Zip(NavigationMesh.MeshesByRoomForm[form].Cells, (l, r) => (l, r)))
+                {
+                    AssertCellSame(cellBefore, cellAfter, $"Mesh cell is not same.");
+
+                    Assert.AreEqual(cellBefore.AdjacentCells.Count, cellAfter.AdjacentCells.Count, $"Mesh cell adjacent cells count do not match.");
+                    foreach (var (adjacentCellBefore, adjacentCellAfter) in cellBefore.AdjacentCells.Zip(cellAfter.AdjacentCells, (l, r) => (l, r)))
+                    {
+                        AssertCellSame(adjacentCellBefore, adjacentCellAfter, $"Mesh cell adjacent cell is not same.");
+                    }
+
+                    Assert.AreEqual(cellBefore.AdjacentCellEdges.Count, cellAfter.AdjacentCellEdges.Count, $"Mesh cell adjacent edges count do not match.");
+                    foreach (var (adjacentCellEdgeBefore, adjacentCellEdgeAfter) in cellBefore.AdjacentCellEdges.Zip(cellAfter.AdjacentCellEdges, (l, r) => (l, r)))
+                    {
+                        var (adjacentCellBefore, adjacentEdgeBefore) = adjacentCellEdgeBefore;
+                        var (adjacentCellAfter, adjacentEdgeAfter) = adjacentCellEdgeAfter;
+                        AssertCellSame(adjacentCellBefore, adjacentCellAfter, $"Mesh cell adjacent edge cell is not same.");
+                        AssertEdgeSame(adjacentEdgeBefore, adjacentEdgeAfter, $"Mesh cell adjacent edge is not equal.");
+                    }
+                }
+            }
+        }
+
+        private void AssertCellSame(Cell expected, Cell actual, string message)
+        {
+            Assert.AreEqual(expected.Vertices.Count, actual.Vertices.Count, $"{message} Cell vertices count do not match.");
+            foreach (var (cellVertexBefore, cellVertexAfter) in expected.Vertices.Zip(actual.Vertices, (l, r) => (l, r)))
+            {
+                AssertVertexSame(cellVertexBefore, cellVertexAfter, $"{message} Cell vertex is not same.");
+            }
+        }
+
+        private void AssertEdgeSame(in Edge expected, in Edge actual, string message)
+        {
+            AssertVertexSame(expected.From, actual.From, $"{message} Edge from is not equal.");
+            AssertVertexSame(expected.To, actual.To, $"{message} Edge to is not equal.");
+        }
+
+        private void AssertVertexSame(Vertex expected, Vertex actual, string message)
+        {
+            Assert.AreEqual(expected.Position, actual.Position, $"{message} Position do not match.");
         }
 
         private string GetRandomExistingForm()

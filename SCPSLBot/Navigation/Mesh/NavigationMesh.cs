@@ -127,7 +127,7 @@ namespace SCPSLBot.Navigation.Mesh
         #endregion
         #region Mesh reading/writing
 
-        public void ReadMesh(BinaryReader binaryReader)
+        public void ReadMesh(BinaryReader binaryReader, byte version)
         {
             ///
             /// Vertices reading
@@ -168,13 +168,16 @@ namespace SCPSLBot.Navigation.Mesh
 
                 var newCell = MakeCell(cellVertices.Select(vertexIdx => Vertices[vertexIdx]));
 
-                var connectedCellsCount = binaryReader.ReadInt32();
-                var connectedCells = new int[connectedCellsCount];
-                for (var k = 0; k < connectedCellsCount; k++)
+                if (version < 5)
                 {
-                    connectedCells[k] = binaryReader.ReadInt32();
+                    var connectedCellsCount = binaryReader.ReadInt32();
+                    var connectedCells = new int[connectedCellsCount];
+                    for (var k = 0; k < connectedCellsCount; k++)
+                    {
+                        connectedCells[k] = binaryReader.ReadInt32();
+                    }
+                    cellsConnections[j] = connectedCells;
                 }
-                cellsConnections[j] = connectedCells;
             }
         }
 

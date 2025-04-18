@@ -288,13 +288,13 @@ namespace SCPSLBot.Navigation.Mesh
 
                 var formMesh = CreateRoom(roomForm);
 
-                formMesh.ReadMesh(binaryReader);
+                formMesh.ReadMesh(binaryReader, version);
             }
         }
 
         public static void WriteMeshes(BinaryWriter binaryWriter)
         {
-            byte version = 4;
+            byte version = 5;
             binaryWriter.Write(version);
 
             ///
