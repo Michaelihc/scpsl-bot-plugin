@@ -26,6 +26,12 @@ namespace SCPSLBot.Navigation
         public void Init()
         {
             EventManager.RegisterEvents(this);
+
+            if (SeedSynchronizer.MapGenerated)
+            {
+                ConnectForeignCells();
+            }
+
             Initialized = true;
         }
 

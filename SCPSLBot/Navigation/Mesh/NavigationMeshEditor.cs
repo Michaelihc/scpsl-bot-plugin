@@ -61,6 +61,13 @@ namespace SCPSLBot.Navigation.Mesh
 
             Instance.IsEditing = false;
             Instance.PlayerEditing = null;
+
+            Visuals.UpdateBroadcastMessage();
+
+            Visuals.UpdateVertexVisuals();
+            Visuals.UpdateCellVisuals();
+            Visuals.UpdateEdgeVisuals();
+            Visuals.UpdateConnectionVisuals();
         }
 
         public Vertex FindClosestVertexFacingAt(GameObject room, Vector3 localPosition, Vector3 localDirection)
@@ -591,6 +598,7 @@ namespace SCPSLBot.Navigation.Mesh
                         localPosition: transform.InverseTransformPoint(cameraPosition),
                         localForward: transform.InverseTransformDirection(cameraForward)))
                     .Select(t => FindClosestVertexFacingAt(t.room, t.localPosition, t.localForward))
+                    .Where(v => v != null)
                     .Select(v => new TransformVertex?(new(v, room.transform)))
                     .FirstOrDefault();
             }
