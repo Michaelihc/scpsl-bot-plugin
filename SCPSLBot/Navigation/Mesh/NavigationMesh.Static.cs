@@ -213,9 +213,10 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             var radiusSqr = Mathf.Pow(radius, 2);
+            var localPosition = room.transform.InverseTransformPoint(position);
 
             var verticesWithinRadius = roomMesh.Vertices
-                .Select(vertex => (vertex, distSqr: Vector3.SqrMagnitude(vertex.Position - position)))
+                .Select(localVertex => (localVertex, distSqr: Vector3.SqrMagnitude(localVertex.Position - localPosition)))
                 .Where(t => t.distSqr < radiusSqr);
 
             if (!verticesWithinRadius.Any())
@@ -225,7 +226,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             return new (verticesWithinRadius
                 .Aggregate((a, c) => c.distSqr < a.distSqr ? c : a)
-                .vertex, room.transform);
+                .localVertex, room.transform);
         }
 
         public static NavigationMesh GetMesh(string form)

@@ -60,7 +60,17 @@ namespace SCPSLBot.Navigation.Mesh
             handles = null;
 
             Instance.IsEditing = false;
-            Instance.PlayerEditing = null;
+
+            UpdateEditing();
+            UpdateMeshEventLogging();
+
+            UpdateNearestVertex();
+            UpdateFacingVertex();
+            UpdateVertexAutoSelect();
+
+            UpdateNearestCell();
+            UpdateCachedCell();
+            UpdateFacingCell();
 
             Visuals.UpdateBroadcastMessage();
 

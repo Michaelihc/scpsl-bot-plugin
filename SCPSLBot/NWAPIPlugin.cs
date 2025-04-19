@@ -36,10 +36,10 @@ namespace SCPSLBot
         [PluginUnload]
         public void OnUnload()
         {
-            NavigationSystem.Instance.Terminate();
-            NavigationMeshEditor.Instance.Terminate();
-
             BotManager.Instance.Terminate();
+
+            NavigationMeshEditor.Instance.Terminate();
+            NavigationSystem.Instance.Terminate();
 
             HarmonyInstance.UnpatchAll();
 
