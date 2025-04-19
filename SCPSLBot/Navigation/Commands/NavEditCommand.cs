@@ -29,10 +29,9 @@ namespace SCPSLBot.Navigation.Commands
 
             var navMeshEditor = NavigationMeshEditor.Instance;
 
-            navMeshEditor.IsEditing = !navMeshEditor.IsEditing;
-            navMeshEditor.PlayerEditing = navMeshEditor.IsEditing ? Player.Get(playerCommandSender) : null;
+            navMeshEditor.PlayerEditing = navMeshEditor.PlayerEditing == null ? Player.Get(playerCommandSender) : null;
 
-            response = $"Nav mesh editing is now {(navMeshEditor.IsEditing ? "enabled" : "disabled")}.";
+            response = $"Nav mesh editing is now {navMeshEditor.PlayerEditing}.";
             return true;
         }
     }

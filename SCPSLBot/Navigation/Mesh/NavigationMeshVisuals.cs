@@ -62,11 +62,11 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void UpdateBroadcastMessage()
         {
+            VisualsMessages[0] = null;
+            VisualsMessages[1] = null;
+
             if (PlayerEnabledVisualsFor != null)
             {
-                VisualsMessages[0] = null;
-                VisualsMessages[1] = null;
-
                 UpdateVertexInfo();
                 UpdateCellInfo();
 

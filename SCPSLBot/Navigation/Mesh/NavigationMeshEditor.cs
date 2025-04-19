@@ -14,7 +14,6 @@ namespace SCPSLBot.Navigation.Mesh
     {
         public static NavigationMeshEditor Instance { get; } = new();
 
-        public bool IsEditing { get; set; }
         public Player PlayerEditing { get; set; }
 
         private NavigationMeshVisuals Visuals { get; } = new();
@@ -59,7 +58,7 @@ namespace SCPSLBot.Navigation.Mesh
             Timing.KillCoroutines(handles);
             handles = null;
 
-            Instance.IsEditing = false;
+            Instance.PlayerEditing = null;
 
             UpdateEditing();
             UpdateMeshEventLogging();
