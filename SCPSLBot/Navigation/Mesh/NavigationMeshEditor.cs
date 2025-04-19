@@ -499,12 +499,12 @@ namespace SCPSLBot.Navigation.Mesh
             return true;
         }
 
-        private Vector3 GetProjectedPosition(Vector3 position)
+        private Vector3 GetProjectedPosition(Vector3 localPosition)
         {
-            var lineSegment = (from: SelectedVertices.First(), to: SelectedVertices.Last());
+            var lineSegment = (from: SelectedVertices.First().Local, to: SelectedVertices.Last().Local);
 
             var dirTo2 = (lineSegment.to.Position - lineSegment.from.Position);
-            var dirToPoint = (position - lineSegment.from.Position);
+            var dirToPoint = (localPosition - lineSegment.from.Position);
             var dirToProj = (Vector3.Project(dirToPoint, dirTo2));
             var projected = (dirToProj + lineSegment.from.Position);
 

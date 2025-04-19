@@ -33,7 +33,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.DeleteNearestVertex())
+            if (!NavigationMeshEditor.Instance.AddNearestVertexToSelection())
             {
                 response = $"No vertex nearby to select.";
                 return false;
