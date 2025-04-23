@@ -182,15 +182,10 @@ namespace SCPSLBot.Navigation.Mesh
 
             var form = NavigationMesh.GetForm(vertex.Transform.gameObject);
             var mesh = NavigationMesh.GetMesh(form);
-            if (!mesh.DeleteVertex(vertex.Local))
-            {
-                Log.Warning($"No vertices at {form} to remove vertex from.");
-                return false;
-            }
 
             foreach (var cell in mesh.Cells.ToArray())
             {
-                if (cell.Vertices.Count < 3)
+                if (cell.Vertices.Contains(vertex.Local) && cell.Vertices.Count <= 3)
                 {
                     mesh.RemoveCell(cell);
 
@@ -198,17 +193,23 @@ namespace SCPSLBot.Navigation.Mesh
                 }
             }
 
+            if (!mesh.DeleteVertex(vertex.Local))
+            {
+                Log.Warning($"No vertices at {form} to remove vertex from.");
+                return false;
+            }
+
             return true;
         }
 
-        public bool MoveNearestVertex(Vector3 newPosition)
+        public bool MoveVertex(Vector3 newPosition)
         {
-            if (Visuals.NearestVertex == null)
+            var foundVertex = NavigationMesh.GetVertexNearby(PlayerEditing.Position, 1f);
+            if (foundVertex == null)
             {
-                Log.Info($"No vertex found nearby to move.");
                 return false;
             }
-            var vertex = Visuals.NearestVertex.Value;
+            var vertex = foundVertex.Value;
 
             var form = NavigationMesh.GetForm(vertex.Transform.gameObject);
             var transform = vertex.Transform;

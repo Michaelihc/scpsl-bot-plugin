@@ -17,7 +17,7 @@ namespace SCPSLBot.Navigation.Commands
 
         public string[] Aliases { get; } = new string[] { "nvm" };
 
-        public string Description { get; } = "Moves nearby or selected navigation mesh vertex to current position.";
+        public string Description { get; } = "Moves closest or selected navigation mesh vertex to current position.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
@@ -33,7 +33,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            if (!NavigationMeshEditor.Instance.MoveNearestVertex(playerCommandSender.ReferenceHub.transform.position))
+            if (!NavigationMeshEditor.Instance.MoveVertex(playerCommandSender.ReferenceHub.transform.position))
             {
                 response = $"No vertex nearby or no selected vertex to perform operation on.";
                 return false;
