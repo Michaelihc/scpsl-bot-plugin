@@ -17,6 +17,7 @@ namespace SCPSLBot.Navigation.Mesh
         public static Dictionary<GameObject, NavigationMesh> LocalMeshesByRoom { get; } = new();
 
         public static Dictionary<TransformCell, List<TransformCell>> ForeignConnectedCells = new();
+        public static Dictionary<TransformCell, Dictionary<TransformCell, TransformEdge>> ForeignConnectedCellEdges = new();
 
         public static NavigationMesh CreateRoom(string form)
         {
@@ -43,6 +44,7 @@ namespace SCPSLBot.Navigation.Mesh
             foreach (var room in RoomsByForm[form])
             {
                 ForeignConnectedCells.Add(new(cell, room.transform), new());
+                ForeignConnectedCellEdges.Add(new(cell, room.transform), new());
             }
         }
 
@@ -51,6 +53,7 @@ namespace SCPSLBot.Navigation.Mesh
             foreach (var room in RoomsByForm[form])
             {
                 ForeignConnectedCells.Remove(new(cell, room.transform));
+                ForeignConnectedCellEdges.Remove(new(cell, room.transform));
             }
         }
 
@@ -97,7 +100,19 @@ namespace SCPSLBot.Navigation.Mesh
             return GetPointDistToEdgePlane(edge, position) > 0f;
         }
 
-        public static (Vertex From, Vertex To)? GetNearestEdge(Vector3 position, RoomIdentifier room = null) => GetNearestEdge(position, out _, room);
+        public static TransformEdge? GetNearestEdge(Vector3 position, RoomIdentifier room = null)
+        {
+            var nearestEdgeNullable = GetNearestEdge(position, out _, room);
+            if (!nearestEdgeNullable.HasValue)
+            {
+                return null;
+            }
+
+            var (from, to) = nearestEdgeNullable.Value;
+
+            return new TransformEdge((from, to, room.transform));
+        }
+
         public static (Vertex From, Vertex To)? GetNearestEdge(Vector3 position, out Vector3 closestPoint, RoomIdentifier room = null)
         {
             closestPoint = Vector3.zero;

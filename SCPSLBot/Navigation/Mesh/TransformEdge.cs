@@ -4,6 +4,8 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal record struct TransformEdge(TransformVertex From, TransformVertex To, Transform Transform)
     {
+        public readonly Edge Local => new (From.Local, To.Local);
+
         public TransformEdge((Vertex From, Vertex To, Transform Tranform) tuple)
             : this(new(tuple.From, tuple.Tranform), new(tuple.To, tuple.Tranform), tuple.Tranform)
         { }

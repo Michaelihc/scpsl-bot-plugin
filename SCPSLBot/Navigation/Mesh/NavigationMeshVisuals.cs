@@ -450,76 +450,58 @@ namespace SCPSLBot.Navigation.Mesh
                 foreach (var ((cellFrom, cellTo), visual) in ConnectionVisuals.Select(p => (p.Key, p.Value)).ToArray())
                 {
                     var isCellFromRemoved = !NavigationMesh.LocalMeshesByRoom.Values.Any(m => m.Cells.Contains(cellFrom.Local));
+                    var containsForeignCell = NavigationMesh.ForeignConnectedCells[cellFrom].Contains(cellTo);
 
-                    //var containsForeignCell = cellFrom switch
-                    //{
-                    //    Cell roomCell => roomCell.ForeignConnectedCells.Contains(cellTo),
-                    //    _ => throw new NotImplementedException()
-                    //};
-
-                    //if (isCellFromRemoved || (!containsForeignCell))
-                    if (isCellFromRemoved)
+                    if (isCellFromRemoved || !containsForeignCell)
                     {
                         NetworkServer.Destroy(visual.gameObject);
                         ConnectionVisuals.Remove((cellFrom, cellTo));
                     }
                 }
 
-                //foreach (var (room, cellFrom) in NavigationMesh.CellsByRoom.SelectMany(p => p.Value.Select(a => ((p.Key, a)))))
-                //{
-                //    var roomFrom = room;
-                //    if (!roomFrom)
-                //    {
-                //        continue;
-                //    }
+                foreach (var transformCellFrom in NavigationMesh.LocalMeshesByRoom.SelectMany(p => p.Value.Cells.Select(c => new TransformCell(c, p.Key.transform))))
+                {
+                    foreach (var transformCellTo in NavigationMesh.ForeignConnectedCells[transformCellFrom])
+                    {
+                        if (!ConnectionVisuals.TryGetValue((transformCellFrom, transformCellTo), out var connectionVisual))
+                        {
+                            var newConnectionVisual = UnityEngine.Object.Instantiate(this.primPrefab);
+                            newConnectionVisual.NetworkPrimitiveFlags &= ~PrimitiveFlags.Collidable;
 
-                //    foreach (var (cellTo, i) in cellFrom.ForeignConnectedCells.Select((a, i) => (a, i)))
-                //    {
-                //        var roomTo = cellTo.Transform.GetComponent<RoomIdentifier>();
-                //        if (!roomTo)
-                //        {
-                //            continue;
-                //        }
+                            if (NavigationMesh.ForeignConnectedCellEdges[transformCellTo].TryGetValue(transformCellFrom, out var fromCellEdge)
+                                && NavigationMesh.ForeignConnectedCellEdges[transformCellFrom].TryGetValue(transformCellTo, out var toCellEdge))
+                            {
+                                // Adjacent rooms connection
+                                var fromCellEdgePos = Vector3.Lerp(fromCellEdge.From.Position, fromCellEdge.To.Position, .5f);
+                                var toCellEdgePos = Vector3.Lerp(toCellEdge.From.Position, toCellEdge.To.Position, .5f);
 
-                //        if (!ConnectionVisuals.TryGetValue((cellFrom, cellTo), out var connectionVisual))
-                //        {
-                //            var newConnectionVisual = UnityEngine.Object.Instantiate(this.primPrefab);
-                //            newConnectionVisual.NetworkPrimitiveFlags &= ~PrimitiveFlags.Collidable;
+                                newConnectionVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
+                                newConnectionVisual.transform.position = Vector3.Lerp(fromCellEdgePos, toCellEdgePos, 0.5f);
+                                newConnectionVisual.transform.LookAt(toCellEdgePos);
+                                newConnectionVisual.transform.RotateAround(newConnectionVisual.transform.position, newConnectionVisual.transform.right, 90f);
+                                newConnectionVisual.transform.localScale = Vector3.forward * 0.01f + Vector3.right * 0.01f;
+                                newConnectionVisual.transform.localScale += Vector3.up * Vector3.Distance(fromCellEdgePos, toCellEdgePos) * 0.5f;
+                            }
+                            else
+                            {
+                                // Elevator/warping connection
+                                var fromCellCenterPosition = transformCellFrom.CenterPosition;
 
-                //            if (cellTo.ConnectedCellEdges.TryGetValue(cellFrom, out var fromCellEdge)
-                //                && cellFrom.ConnectedCellEdges.TryGetValue(cellTo, out var toCellEdge))
-                //            {
-                //                // Adjacent rooms connection
-                //                var fromCellEdgePos = Vector3.Lerp(fromCellEdge.From.Position, fromCellEdge.To.Position, .5f);
-                //                var toCellEdgePos = Vector3.Lerp(toCellEdge.From.Position, toCellEdge.To.Position, .5f);
+                                newConnectionVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
+                                newConnectionVisual.transform.position = fromCellCenterPosition;
+                                newConnectionVisual.transform.localScale *= 0.01f;
+                            }
 
-                //                newConnectionVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
-                //                newConnectionVisual.transform.position = Vector3.Lerp(fromCellEdgePos, toCellEdgePos, 0.5f);
-                //                newConnectionVisual.transform.LookAt(toCellEdgePos);
-                //                newConnectionVisual.transform.RotateAround(newConnectionVisual.transform.position, newConnectionVisual.transform.right, 90f);
-                //                newConnectionVisual.transform.localScale = Vector3.forward * 0.01f + Vector3.right * 0.01f;
-                //                newConnectionVisual.transform.localScale += Vector3.up * Vector3.Distance(fromCellEdgePos, toCellEdgePos) * 0.5f;
-                //            }
-                //            else
-                //            {
-                //                // Elevator/warping connection
-                //                var fromCellCenterPosition = cellFrom.CenterPosition;
+                            NetworkServer.Spawn(newConnectionVisual.gameObject);
 
-                //                newConnectionVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
-                //                newConnectionVisual.transform.position = fromCellCenterPosition;
-                //                newConnectionVisual.transform.localScale *= 0.01f;
-                //            }
+                            connectionVisual = newConnectionVisual;
+                            ConnectionVisuals.Add((transformCellFrom, transformCellTo), connectionVisual);
+                        }
 
-                //            NetworkServer.Spawn(newConnectionVisual.gameObject);
+                        //connectionVisual.NetworkMaterialColor = (NearestCell?.Edges.Contains(edge) ?? false) ? Color.yellow : Color.white;
 
-                //            connectionVisual = newConnectionVisual;
-                //            ConnectionVisuals.Add((cellFrom, cellTo), connectionVisual);
-                //        }
-
-                //        //connectionVisual.NetworkMaterialColor = (NearestCell?.Edges.Contains(edge) ?? false) ? Color.yellow : Color.white;
-
-                //    }
-                //}
+                    }
+                }
             }
             else
             {

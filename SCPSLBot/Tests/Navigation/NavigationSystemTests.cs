@@ -256,6 +256,9 @@ namespace SCPSLBot.Tests.Navigation
                     Assert.IsTrue(NavigationMesh.ForeignConnectedCells.ContainsKey(transformCell));
                     Assert.IsNotNull(NavigationMesh.ForeignConnectedCells[transformCell]);
 
+                    Assert.IsTrue(NavigationMesh.ForeignConnectedCellEdges.ContainsKey(transformCell));
+                    Assert.IsNotNull(NavigationMesh.ForeignConnectedCellEdges[transformCell]);
+
                     foreach (var transformEdge in edges.Select(e => new TransformEdge(e, room.transform)))
                     {
                         var adjacentTransformEdge = new TransformEdge(transformEdge.To, transformEdge.From, room.transform);
@@ -322,6 +325,7 @@ namespace SCPSLBot.Tests.Navigation
                     }
 
                     Assert.IsFalse(NavigationMesh.ForeignConnectedCells.ContainsKey(transformCell));
+                    Assert.IsFalse(NavigationMesh.ForeignConnectedCellEdges.ContainsKey(transformCell));
                 }
             }
 

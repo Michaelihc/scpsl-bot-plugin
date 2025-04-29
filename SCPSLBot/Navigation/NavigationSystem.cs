@@ -64,6 +64,36 @@ namespace SCPSLBot.Navigation
             Log.Info($"Loading meshes.");
             LoadMeshes(MeshFileName);
 
+            Log.Info($"Connecting cells between rooms.");
+            foreach (var door in DoorVariant.AllDoors)
+            {
+                if (door.Rooms.Length == 2)
+                {
+                    var doorCenterPosition = door.transform.position + Vector3.up;  // assuming pivot point is located at the bottom of all doors
+
+                    var edgeInFront = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[0]);
+                    var edgeInBack = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[1]);
+
+                    if (edgeInFront != null && edgeInBack != null)
+                    {
+                        // Connect
+                        var cellInFront = NavigationMesh.LocalMeshesByRoom[door.Rooms[0].gameObject].Cells
+                            .Select(lc => new TransformCell(lc, door.Rooms[0].transform))
+                            .First(c => c.Local.Edges.Any(e => e == edgeInFront.Value.Local));
+
+                        var cellInBack = NavigationMesh.LocalMeshesByRoom[door.Rooms[1].gameObject].Cells
+                            .Select(lc => new TransformCell(lc, door.Rooms[1].transform))
+                            .First(c => c.Local.Edges.Any(e => e == edgeInBack.Value.Local));
+
+                        NavigationMesh.ForeignConnectedCells[cellInFront].Add(cellInBack);
+                        NavigationMesh.ForeignConnectedCellEdges[cellInFront].Add(cellInBack, edgeInBack.Value);
+
+                        NavigationMesh.ForeignConnectedCells[cellInBack].Add(cellInFront);
+                        NavigationMesh.ForeignConnectedCellEdges[cellInBack].Add(cellInFront, edgeInFront.Value);
+                    }
+                }
+            }
+
             Log.Info($"Connecting cells between elevator destinations.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
             foreach (ElevatorGroup group in elevatorGroups)
