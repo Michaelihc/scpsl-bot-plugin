@@ -42,7 +42,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
 
         private void OnAfterSensedForeignRooms()
         {
-            var roomWithin = this.roomSightSense.RoomWithin.ApiRoom;
+            var roomWithin = Facility.GetRoom(this.roomSightSense.RoomWithin);
 
             // Room change check
             if (roomWithin != prevRoomWithin && prevRoomWithin != null)
@@ -62,7 +62,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
                     .Where(fa => fa.Transform.GetComponent<RoomIdentifier>().Name == RoomName.Unnamed
                                     || fa.Transform.GetComponent<RoomIdentifier>().Name != roomWithin.Identifier.Name)
                     //.Where(fa => fa.Room.Identifier.Shape != RoomShape.Endroom || zoneTransitionRoomNames.Contains(fa.Room.Identifier.Name))
-                    .OrderBy(fa => roomsLastVisitTime.TryGetValue(fa.Transform.GetComponent<RoomIdentifier>().ApiRoom, out var time) ? time : -Random.Range(0f, 4f));
+                    .OrderBy(fa => roomsLastVisitTime.TryGetValue(Facility.GetRoom(fa.Transform.GetComponent<RoomIdentifier>()), out var time) ? time : -Random.Range(0f, 4f));
 
                 SetPositions(enteringCells.Select(a => a.CenterPosition));
 

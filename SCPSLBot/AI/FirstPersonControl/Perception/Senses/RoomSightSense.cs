@@ -46,8 +46,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
         {
             var playerPosition = _fpcBotPlayer.PlayerPosition;
 
-            var newRoomWithin = RoomIdUtils.RoomAtPositionRaycasts(playerPosition);
-            if (newRoomWithin is null)
+            if (!RoomUtils.TryGetRoom(playerPosition, out var newRoomWithin))
             {
                 Log.Warning($"Could not determine room bot currently in");
                 return;

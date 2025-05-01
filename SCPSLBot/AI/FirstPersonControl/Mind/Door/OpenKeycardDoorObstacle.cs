@@ -8,8 +8,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 {
     internal class OpenKeycardDoorObstacle : IAction
     {
-        public readonly KeycardPermissions Permissions;
-        public OpenKeycardDoorObstacle(KeycardPermissions permissions, FpcBotPlayer botPlayer)
+        public readonly DoorPermissionFlags Permissions;
+        public OpenKeycardDoorObstacle(DoorPermissionFlags permissions, FpcBotPlayer botPlayer)
         {
             this.Permissions = permissions;
             this.botPlayer = botPlayer;

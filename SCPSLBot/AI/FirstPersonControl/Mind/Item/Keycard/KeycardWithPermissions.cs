@@ -9,8 +9,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Keycard
 {
     internal struct KeycardWithPermissions : IItemBeliefCriteria, IEquatable<KeycardWithPermissions>
     {
-        public KeycardPermissions Permissions;
-        public KeycardWithPermissions(KeycardPermissions permissions)
+        public DoorPermissionFlags Permissions;
+        public KeycardWithPermissions(DoorPermissionFlags permissions)
         {
             this.Permissions = permissions;
         }
@@ -18,13 +18,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Keycard
         public bool EvaluateItem(ItemPickupBase item)
         {
             return InventoryItemLoader.TryGetItem<KeycardItem>(item.Info.ItemId, out var keycard)
-                && keycard.Permissions.HasFlag(Permissions);
+                && keycard.GetPermissions(null).HasFlag(Permissions);
         }
 
         public bool EvaluateItem(ItemBase item)
         {
             return item is KeycardItem keycard
-                && keycard.Permissions.HasFlag(Permissions);
+                && keycard.GetPermissions(null).HasFlag(Permissions);
         }
 
         public bool Equals(IItemBeliefCriteria other)

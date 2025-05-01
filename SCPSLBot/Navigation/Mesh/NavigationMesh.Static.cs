@@ -61,8 +61,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static TransformCell? GetCellWithin(Vector3 position)
         {
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room)
+            if (!RoomUtils.TryGetRoom(position, out var room))
             {
                 return null;
             }
@@ -77,7 +76,10 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static Cell GetRoomCellWithin(Vector3 position, RoomIdentifier room = null)
         {
-            room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
+            if (!room)
+            {
+                RoomUtils.TryGetRoom(position, out room);
+            }
             if (!room || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
             {
                 return null;
@@ -117,7 +119,10 @@ namespace SCPSLBot.Navigation.Mesh
         {
             closestPoint = Vector3.zero;
 
-            room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
+            if (!room)
+            {
+                RoomUtils.TryGetRoom(position, out room);
+            }
 
             if (!room || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
             {
@@ -221,8 +226,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static TransformVertex? GetVertexNearby(Vector3 position, float radius = 1f)
         {
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
+            if (!RoomUtils.TryGetRoom(position, out var room) || !LocalMeshesByRoom.TryGetValue(room.gameObject, out var roomMesh))
             {
                 return null;
             }
@@ -252,7 +256,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static Vector3Int GetDirectionToRoom(RoomIdentifier room, RoomIdentifier otherRoom)
         {
-            return Vector3Int.RoundToInt(room.transform.InverseTransformDirection(otherRoom.OccupiedCoords[0] - room.OccupiedCoords[0]));
+            return Vector3Int.RoundToInt(room.transform.InverseTransformDirection(otherRoom.MainCoords - room.MainCoords));
         }
 
         public static Vector3Int GetConnectorOrientation(RoomIdentifier room, Vector3 connectorTransformForward)

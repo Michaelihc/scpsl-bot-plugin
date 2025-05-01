@@ -50,7 +50,7 @@ namespace SCPSLBot.Misc
             }
 
             var targetPlayerPos = new Vector3(x, y, z);
-            var result = playerCommandSender.ReferenceHub.TryOverridePosition(targetPlayerPos, Vector3.zero);
+            var result = playerCommandSender.ReferenceHub.TryOverridePosition(targetPlayerPos);
 
             response = $"Player {playerCommandSender.Nickname} teleported to specified position if successful.";
             Log.Info(response);

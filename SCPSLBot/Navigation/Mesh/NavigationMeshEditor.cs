@@ -95,8 +95,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public Cell FindClosestRoomCellByCenter(Vector3 position, float radius = 1f)
         {
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room)
+            if (!RoomUtils.TryGetRoom(position, out var room))
             {
                 return null;
             }
@@ -139,8 +138,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public Vertex CreateVertex(Vector3 position)
         {
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room)
+            if (!RoomUtils.TryGetRoom(position, out var room))
             {
                 return null;
             }
@@ -290,8 +288,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return null;
             }
 
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room)
+            if (!RoomUtils.TryGetRoom(position, out var room))
             {
                 return null;
             }
@@ -314,14 +311,17 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, out Vector3Int orientation, out RoomIdentifier outRoom)
         {
-            outRoom = RoomIdUtils.RoomAtPositionRaycasts(position);
+            RoomUtils.TryGetRoom(position, out outRoom);
 
             return GetClosestConnector(position, out direction, out orientation, outRoom);
         }
 
         public static GameObject GetClosestConnector(Vector3 position, out Vector3Int direction, out Vector3Int orientation, RoomIdentifier room = null)
         {
-            room ??= RoomIdUtils.RoomAtPositionRaycasts(position);
+            if (!room)
+            {
+                RoomUtils.TryGetRoom(position, out room);
+            }
 
             var nearestRoom = room.ConnectedRooms.OrderBy(connectedRoom => Vector3.SqrMagnitude(connectedRoom.transform.position - position)).First();
             direction = NavigationMesh.GetDirectionToRoom(room, nearestRoom);
@@ -342,13 +342,6 @@ namespace SCPSLBot.Navigation.Mesh
             }
             var cell = Visuals.NearestCell.Value;
 
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
-            if (!room)
-            {
-                Log.Warning($"No room to dissolve cell on.");
-                return false;
-            }
-
             var form = NavigationMesh.GetForm(cell.Transform.gameObject);
             var mesh = NavigationMesh.GetMesh(form);
 
@@ -366,7 +359,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool CreateVertexOnClosestRoomEdge(Vector3 position)
         {
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
+            RoomUtils.TryGetRoom(position, out var room);
             var roomForm = NavigationMesh.GetForm(room.gameObject);
 
             var localPosition = room.transform.InverseTransformPoint(position);
@@ -406,7 +399,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool SliceClosestRoomCellEdge(Vector3 position, Vector3 direction)
         {
-            var room = RoomIdUtils.RoomAtPositionRaycasts(position);
+            RoomUtils.TryGetRoom(position, out var room);
             var roomForm = NavigationMesh.GetForm(room.gameObject);
 
             var localPosition = room.transform.InverseTransformPoint(position);
@@ -597,7 +590,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null && PlayerEditing.Camera)
             {
-                var room = RoomIdUtils.RoomAtPositionRaycasts(PlayerEditing.Position);
+                RoomUtils.TryGetRoom(PlayerEditing.Position, out var room);
                 var cameraPosition = PlayerEditing.Camera.position;
                 var cameraForward = PlayerEditing.Camera.forward;
 
@@ -630,7 +623,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (PlayerEditing != null)
             {
-                var room = RoomIdUtils.RoomAtPositionRaycasts(PlayerEditing.Position);
+                RoomUtils.TryGetRoom(PlayerEditing.Position, out var room);
                 var cameraPosition = PlayerEditing.Camera.position;
                 var cameraForward = PlayerEditing.Camera.forward;
 

@@ -82,7 +82,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             if (targetCell == null)
             {
-                var goalRoom = RoomIdUtils.RoomAtPositionRaycasts(goalPosition);
+                RoomUtils.TryGetRoom(goalPosition, out var goalRoom);
 
                 var nearestEdge = NavigationMesh.GetNearestEdge(goalPosition, out var closestPoint, goalRoom);
                 if (nearestEdge.HasValue)

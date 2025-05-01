@@ -20,11 +20,11 @@ namespace SCPSLBot.AI.FirstPersonControl
 {
     internal class FpcMindFactory
     {
-        private const KeycardPermissions KeycardO5Permissions = KeycardPermissions.Checkpoints | KeycardPermissions.ExitGates | 
-                                                                KeycardPermissions.Intercom | KeycardPermissions.AlphaWarhead | 
-                                                                KeycardPermissions.ContainmentLevelOne | KeycardPermissions.ContainmentLevelTwo | KeycardPermissions.ContainmentLevelThree | 
-                                                                KeycardPermissions.ArmoryLevelOne | KeycardPermissions.ArmoryLevelTwo | KeycardPermissions.ArmoryLevelThree;
-        private const KeycardPermissions PermissionsCheckpointContainmentLevelOneTwo = KeycardPermissions.Checkpoints | KeycardPermissions.ContainmentLevelOne | KeycardPermissions.ContainmentLevelTwo;
+        private const DoorPermissionFlags KeycardO5Permissions = DoorPermissionFlags.Checkpoints | DoorPermissionFlags.ExitGates | 
+                                                                DoorPermissionFlags.Intercom | DoorPermissionFlags.AlphaWarhead | 
+                                                                DoorPermissionFlags.ContainmentLevelOne | DoorPermissionFlags.ContainmentLevelTwo | DoorPermissionFlags.ContainmentLevelThree | 
+                                                                DoorPermissionFlags.ArmoryLevelOne | DoorPermissionFlags.ArmoryLevelTwo | DoorPermissionFlags.ArmoryLevelThree;
+        private const DoorPermissionFlags PermissionsCheckpointContainmentLevelOneTwo = DoorPermissionFlags.Checkpoints | DoorPermissionFlags.ContainmentLevelOne | DoorPermissionFlags.ContainmentLevelTwo;
 
         public static void BuildMind(FpcMind mind, FpcBotPlayer botPlayer, FpcBotPerception perception)
         {
@@ -118,9 +118,9 @@ namespace SCPSLBot.AI.FirstPersonControl
 
 
             #region ContainmentLevelOne keycard picking up and searching
-            mind.AddBelief(new ItemSightedLocation<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemInInventory<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), perception.GetSense<ItemsInInventorySense>()));
-            mind.AddAction(new GoToPickupItem<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), botPlayer));
+            mind.AddBelief(new ItemSightedLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemInInventory<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), perception.GetSense<ItemsInInventorySense>()));
+            mind.AddAction(new GoToPickupItem<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), botPlayer));
 
             var containmentLevelOneSpawnItemTypes = new ItemType[]
             {
@@ -128,19 +128,19 @@ namespace SCPSLBot.AI.FirstPersonControl
                 ItemType.KeycardGuard, ItemType.KeycardMTFPrivate, ItemType.KeycardMTFOperative, ItemType.KeycardMTFCaptain, ItemType.KeycardChaosInsurgency,
                 ItemType.KeycardContainmentEngineer, ItemType.KeycardFacilityManager, ItemType.KeycardO5
             };
-            mind.AddBelief(new ItemSpawnsLocation<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), containmentLevelOneSpawnItemTypes, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemSpawnsInSightedLocker<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), containmentLevelOneSpawnItemTypes, perception.GetSense<LockersWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), containmentLevelOneSpawnItemTypes, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsInSightedLocker<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), containmentLevelOneSpawnItemTypes, perception.GetSense<LockersWithinSightSense>()));
 
-            mind.AddAction(new GoToItemSpawnLocation<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), botPlayer));
-            mind.AddAction(new GoToLockerSpawnLocation<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), StructureType.StandardLocker, botPlayer));
-            mind.AddAction(new GoToItemSpawnInLocker<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), botPlayer));
-            mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelOne), idx, botPlayer));
+            mind.AddAction(new GoToItemSpawnLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), botPlayer));
+            mind.AddAction(new GoToLockerSpawnLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), StructureType.StandardLocker, botPlayer));
+            mind.AddAction(new GoToItemSpawnInLocker<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), botPlayer));
+            mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelOne), idx, botPlayer));
             #endregion
 
             #region ContainmentLevelTwo keycard picking up and searching
-            mind.AddBelief(new ItemSightedLocation<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemInInventory<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), perception.GetSense<ItemsInInventorySense>()));
-            mind.AddAction(new GoToPickupItem<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), botPlayer));
+            mind.AddBelief(new ItemSightedLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemInInventory<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), perception.GetSense<ItemsInInventorySense>()));
+            mind.AddAction(new GoToPickupItem<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), botPlayer));
 
             var containmentLevelTwoSpawnItemTypes = new ItemType[]
             {
@@ -148,19 +148,19 @@ namespace SCPSLBot.AI.FirstPersonControl
                 ItemType.KeycardMTFPrivate, ItemType.KeycardMTFOperative, ItemType.KeycardMTFCaptain, ItemType.KeycardChaosInsurgency,
                 ItemType.KeycardContainmentEngineer, ItemType.KeycardFacilityManager, ItemType.KeycardO5
             };
-            mind.AddBelief(new ItemSpawnsLocation<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), containmentLevelTwoSpawnItemTypes, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemSpawnsInSightedLocker<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), containmentLevelTwoSpawnItemTypes, perception.GetSense<LockersWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), containmentLevelTwoSpawnItemTypes, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsInSightedLocker<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), containmentLevelTwoSpawnItemTypes, perception.GetSense<LockersWithinSightSense>()));
 
-            mind.AddAction(new GoToItemSpawnLocation<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), botPlayer));
-            mind.AddAction(new GoToLockerSpawnLocation<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), StructureType.StandardLocker, botPlayer));
-            mind.AddAction(new GoToItemSpawnInLocker<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), botPlayer));
-            mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(KeycardPermissions.ContainmentLevelTwo), idx, botPlayer));
+            mind.AddAction(new GoToItemSpawnLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), botPlayer));
+            mind.AddAction(new GoToLockerSpawnLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), StructureType.StandardLocker, botPlayer));
+            mind.AddAction(new GoToItemSpawnInLocker<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), botPlayer));
+            mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(DoorPermissionFlags.ContainmentLevelTwo), idx, botPlayer));
             #endregion
 
             #region Checkpoints keycard picking up and searching
-            mind.AddBelief(new ItemSightedLocation<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemInInventory<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), perception.GetSense<ItemsInInventorySense>()));
-            mind.AddAction(new GoToPickupItem<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), botPlayer));
+            mind.AddBelief(new ItemSightedLocation<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemInInventory<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), perception.GetSense<ItemsInInventorySense>()));
+            mind.AddAction(new GoToPickupItem<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), botPlayer));
 
             var checkpointsSpawnItemTypes = new ItemType[]
             {
@@ -168,47 +168,47 @@ namespace SCPSLBot.AI.FirstPersonControl
                 ItemType.KeycardGuard, ItemType.KeycardMTFPrivate, ItemType.KeycardMTFOperative, ItemType.KeycardMTFCaptain, ItemType.KeycardChaosInsurgency,
                 ItemType.KeycardContainmentEngineer, ItemType.KeycardFacilityManager, ItemType.KeycardO5
             };
-            mind.AddBelief(new ItemSpawnsLocation<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), checkpointsSpawnItemTypes, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemSpawnsInSightedLocker<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), checkpointsSpawnItemTypes, perception.GetSense<LockersWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsLocation<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), checkpointsSpawnItemTypes, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsInSightedLocker<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), checkpointsSpawnItemTypes, perception.GetSense<LockersWithinSightSense>()));
 
-            mind.AddAction(new GoToItemSpawnLocation<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), botPlayer));
-            mind.AddAction(new GoToLockerSpawnLocation<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), StructureType.StandardLocker, botPlayer));
-            mind.AddAction(new GoToItemSpawnInLocker<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), botPlayer));
-            mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(KeycardPermissions.Checkpoints), idx, botPlayer));
+            mind.AddAction(new GoToItemSpawnLocation<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), botPlayer));
+            mind.AddAction(new GoToLockerSpawnLocation<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), StructureType.StandardLocker, botPlayer));
+            mind.AddAction(new GoToItemSpawnInLocker<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), botPlayer));
+            mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(DoorPermissionFlags.Checkpoints), idx, botPlayer));
             #endregion
 
             #region ExitGates keycard picking up and searching
-            mind.AddBelief(new ItemSightedLocation<KeycardWithPermissions>(new(KeycardPermissions.ExitGates), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemInInventory<KeycardWithPermissions>(new(KeycardPermissions.ExitGates), perception.GetSense<ItemsInInventorySense>()));
-            mind.AddAction(new GoToPickupItem<KeycardWithPermissions>(new(KeycardPermissions.ExitGates), botPlayer));
+            mind.AddBelief(new ItemSightedLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ExitGates), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemInInventory<KeycardWithPermissions>(new(DoorPermissionFlags.ExitGates), perception.GetSense<ItemsInInventorySense>()));
+            mind.AddAction(new GoToPickupItem<KeycardWithPermissions>(new(DoorPermissionFlags.ExitGates), botPlayer));
 
             var exitGatesSpawnItemTypes = new ItemType[]
             {
                 ItemType.KeycardMTFOperative, ItemType.KeycardMTFCaptain, ItemType.KeycardChaosInsurgency,
                 ItemType.KeycardFacilityManager, ItemType.KeycardO5
             };
-            mind.AddBelief(new ItemSpawnsLocation<KeycardWithPermissions>(new(KeycardPermissions.ExitGates), exitGatesSpawnItemTypes, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ExitGates), exitGatesSpawnItemTypes, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
 
-            mind.AddAction(new GoToItemSpawnLocation<KeycardWithPermissions>(new(KeycardPermissions.ExitGates), botPlayer));
-            mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(KeycardPermissions.ExitGates), FacilityZone.HeavyContainment, idx, botPlayer));
+            mind.AddAction(new GoToItemSpawnLocation<KeycardWithPermissions>(new(DoorPermissionFlags.ExitGates), botPlayer));
+            mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(DoorPermissionFlags.ExitGates), FacilityZone.HeavyContainment, idx, botPlayer));
             #endregion
 
 
-            var outputKeycardPermissions = new (KeycardWithPermissions, bool)[]
+            var outputDoorPermissionFlags = new (KeycardWithPermissions, bool)[]
             {
-                (new(KeycardPermissions.Checkpoints), true),
-                (new(KeycardPermissions.ExitGates), true),
-                (new(KeycardPermissions.Intercom), false),
-                (new(KeycardPermissions.AlphaWarhead), false),
-                (new(KeycardPermissions.ContainmentLevelOne), true),
-                (new(KeycardPermissions.ContainmentLevelTwo), true),
-                (new(KeycardPermissions.ContainmentLevelThree), false),
-                (new(KeycardPermissions.ArmoryLevelOne), false),
-                (new(KeycardPermissions.ArmoryLevelTwo), false),
-                (new(KeycardPermissions.ArmoryLevelThree), false),
+                (new(DoorPermissionFlags.Checkpoints), true),
+                (new(DoorPermissionFlags.ExitGates), true),
+                (new(DoorPermissionFlags.Intercom), false),
+                (new(DoorPermissionFlags.AlphaWarhead), false),
+                (new(DoorPermissionFlags.ContainmentLevelOne), true),
+                (new(DoorPermissionFlags.ContainmentLevelTwo), true),
+                (new(DoorPermissionFlags.ContainmentLevelThree), false),
+                (new(DoorPermissionFlags.ArmoryLevelOne), false),
+                (new(DoorPermissionFlags.ArmoryLevelTwo), false),
+                (new(DoorPermissionFlags.ArmoryLevelThree), false),
                 (new(PermissionsCheckpointContainmentLevelOneTwo), false),
             };
-            foreach (var (withPermissions, addAction) in outputKeycardPermissions)
+            foreach (var (withPermissions, addAction) in outputDoorPermissionFlags)
             {
                 mind.AddBelief(new ItemsInOutakeChamber(withPermissions, perception.GetSense<ItemsWithinSightSense>()));
 
@@ -222,52 +222,52 @@ namespace SCPSLBot.AI.FirstPersonControl
             var outputKeycardFacilityManagerCriterias = new IItemBeliefCriteria[]
             {
                 new ItemOfType(ItemType.KeycardFacilityManager),
-                new KeycardWithPermissions(KeycardPermissions.Checkpoints),
-                new KeycardWithPermissions(KeycardPermissions.ExitGates),
-                new KeycardWithPermissions(KeycardPermissions.Intercom),
-                new KeycardWithPermissions(KeycardPermissions.AlphaWarhead),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelOne),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelTwo),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelThree),
+                new KeycardWithPermissions(DoorPermissionFlags.Checkpoints),
+                new KeycardWithPermissions(DoorPermissionFlags.ExitGates),
+                new KeycardWithPermissions(DoorPermissionFlags.Intercom),
+                new KeycardWithPermissions(DoorPermissionFlags.AlphaWarhead),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelOne),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelTwo),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelThree),
                 new KeycardWithPermissions(PermissionsCheckpointContainmentLevelOneTwo),
             };
 
             var outputKeycardResearchSupervisorCriterias = new IItemBeliefCriteria[]
             {
                 new ItemOfType(ItemType.KeycardResearchCoordinator),
-                new KeycardWithPermissions(KeycardPermissions.Checkpoints),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelOne),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelTwo),
+                new KeycardWithPermissions(DoorPermissionFlags.Checkpoints),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelOne),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelTwo),
                 new KeycardWithPermissions(PermissionsCheckpointContainmentLevelOneTwo),
             };
 
             var outputKeycardScientistCriterias = new IItemBeliefCriteria[]
             {
                 new ItemOfType(ItemType.KeycardScientist),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelOne),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelTwo),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelOne),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelTwo),
             };
 
             var outputKeycardZoneManagerCriterias = new IItemBeliefCriteria[]
             {
                 new ItemOfType(ItemType.KeycardZoneManager),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelOne),
-                new KeycardWithPermissions(KeycardPermissions.Checkpoints),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelOne),
+                new KeycardWithPermissions(DoorPermissionFlags.Checkpoints),
             };
 
             var outputKeycardO5Criterias = new IItemBeliefCriteria[]
             {
                 new ItemOfType(ItemType.KeycardO5),
-                new KeycardWithPermissions(KeycardPermissions.Checkpoints),
-                new KeycardWithPermissions(KeycardPermissions.ExitGates),
-                new KeycardWithPermissions(KeycardPermissions.Intercom),
-                new KeycardWithPermissions(KeycardPermissions.AlphaWarhead),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelOne),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelTwo),
-                new KeycardWithPermissions(KeycardPermissions.ContainmentLevelThree),
-                new KeycardWithPermissions(KeycardPermissions.ArmoryLevelOne),
-                new KeycardWithPermissions(KeycardPermissions.ArmoryLevelTwo),
-                new KeycardWithPermissions(KeycardPermissions.ArmoryLevelThree),
+                new KeycardWithPermissions(DoorPermissionFlags.Checkpoints),
+                new KeycardWithPermissions(DoorPermissionFlags.ExitGates),
+                new KeycardWithPermissions(DoorPermissionFlags.Intercom),
+                new KeycardWithPermissions(DoorPermissionFlags.AlphaWarhead),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelOne),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelTwo),
+                new KeycardWithPermissions(DoorPermissionFlags.ContainmentLevelThree),
+                new KeycardWithPermissions(DoorPermissionFlags.ArmoryLevelOne),
+                new KeycardWithPermissions(DoorPermissionFlags.ArmoryLevelTwo),
+                new KeycardWithPermissions(DoorPermissionFlags.ArmoryLevelThree),
                 new KeycardWithPermissions(PermissionsCheckpointContainmentLevelOneTwo),
             };
 
@@ -372,10 +372,10 @@ namespace SCPSLBot.AI.FirstPersonControl
 
 
             mind.AddAction(new OpenNonKeycardDoorObstacle(botPlayer));
-            mind.AddAction(new OpenKeycardDoorObstacle(KeycardPermissions.ContainmentLevelOne, botPlayer));
-            mind.AddAction(new OpenKeycardDoorObstacle(KeycardPermissions.ContainmentLevelTwo, botPlayer));
-            mind.AddAction(new OpenKeycardDoorObstacle(KeycardPermissions.Checkpoints, botPlayer));
-            mind.AddAction(new OpenKeycardDoorObstacle(KeycardPermissions.ExitGates, botPlayer));
+            mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelOne, botPlayer));
+            mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelTwo, botPlayer));
+            mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.Checkpoints, botPlayer));
+            mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ExitGates, botPlayer));
 
 
             mind.AddBelief(new FacilityEscapeLocation(perception.GetSense<RoomSightSense>()));

@@ -21,14 +21,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            doorObstacleBelief = fpcMind.ActionImpacts<DoorObstacle, DoorEntry?>(this, s => s!.Value.IsInteractable(KeycardPermissions.None));
+            doorObstacleBelief = fpcMind.ActionImpacts<DoorObstacle, DoorEntry?>(this, s => s!.Value.IsInteractable(DoorPermissionFlags.None));
         }
 
         public float Cost => 0f;
 
         public void Tick()
         {
-            var doorToOpen = doorObstacleBelief.GetLastDoor(KeycardPermissions.None, out var goalPos);
+            var doorToOpen = doorObstacleBelief.GetLastDoor(DoorPermissionFlags.None, out var goalPos);
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
 
             if (!doorToOpen)

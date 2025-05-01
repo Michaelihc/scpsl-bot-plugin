@@ -26,7 +26,7 @@ namespace SCPSLBot.Navigation.Commands
             }
 
             var playerPosition = playerCommandSender.ReferenceHub.transform.position;
-            var room = RoomIdUtils.RoomAtPositionRaycasts(playerPosition);
+            RoomUtils.TryGetRoom(playerPosition, out var room);
             var roomForm = NavigationMesh.GetForm(room.gameObject);
             var mesh = NavigationMesh.GetMesh(roomForm);
 

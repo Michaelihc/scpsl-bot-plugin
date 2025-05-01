@@ -15,11 +15,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
         public readonly float Length = Vector3.Distance(Start, End);
     }
 
-    internal record struct DoorEntry(DoorVariant Door, KeycardPermissions DoorPermissions)
+    internal record struct DoorEntry(DoorVariant Door, DoorPermissionFlags DoorPermissions)
     {
-        public readonly bool IsInteractable(KeycardPermissions permissions)
+        public readonly bool IsInteractable(DoorPermissionFlags permissions)
         {
-            return !IsNonIteractable(Door) && permissions == (DoorPermissions & ~KeycardPermissions.ScpOverride);
+            return !IsNonIteractable(Door) && permissions == (DoorPermissions & ~DoorPermissionFlags.ScpOverride);
         }
 
         private static bool IsNonIteractable(DoorVariant d)
@@ -153,12 +153,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
             return doorEntry.Door && predicate(doorEntry) ? doorEntry.Door : null;
         }
 
-        public DoorVariant GetLastDoor(KeycardPermissions keycardPermissions)
+        public DoorVariant GetLastDoor(DoorPermissionFlags keycardPermissions)
         {
             return GetLastDoor(keycardPermissions, out _);
         }
 
-        public DoorVariant GetLastDoor(KeycardPermissions keycardPermissions, out Vector3 goalPos)
+        public DoorVariant GetLastDoor(DoorPermissionFlags keycardPermissions, out Vector3 goalPos)
         {
             return GetLastDoor(e => e.IsInteractable(keycardPermissions), out goalPos);
         }

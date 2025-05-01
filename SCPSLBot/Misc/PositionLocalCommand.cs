@@ -32,7 +32,12 @@ namespace SCPSLBot.Misc
             }
 
             var playerPos = playerCommandSender.ReferenceHub.transform.position;
-            var room = RoomIdUtils.RoomAtPositionRaycasts(playerPos);
+            
+            if (!RoomUtils.TryGetRoom(playerPos, out var room))
+            {
+                response = "Could not determine room player within.";
+                return false;
+            }
 
             var relPlayerPos = room.transform.InverseTransformPoint(playerPos);
             var roomForm = room.gameObject.name;

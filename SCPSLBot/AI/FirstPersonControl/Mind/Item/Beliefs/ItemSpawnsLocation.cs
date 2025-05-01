@@ -80,7 +80,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
 
         private readonly Dictionary<RoomIdentifier, Vector3[]> roomItemSpawnPositions = new();
 
-        private readonly List<ItemSpawnpoint> itemSpawnpoints = new();
+        private readonly List<RandomItemSpawnpoint> itemSpawnpoints = new();
         private IEnumerable<(Vector3 Position, float Prob)> spawnPositionsQuery;
 
         private Vector3[] GetItemSpawnPositions(RoomIdentifier room)
@@ -113,7 +113,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             return spawnPositions;
         }
 
-        private float GetSpawnProbability(ItemSpawnpoint spawnpoint)
+        private float GetSpawnProbability(RandomItemSpawnpoint spawnpoint)
         {
             var numMatchingItemTypes = this.spawnItemTypes.Count(spawnItemType => spawnpoint.InAutospawnOrAcceptedItems(spawnItemType));
             if (numMatchingItemTypes == 0)
@@ -131,35 +131,24 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
         }
     }
 
-    internal static class ItemSpawnpointExtensions
+    internal static class RandomItemSpawnpointExtensions
     {
-        private static readonly FieldInfo acceptedItemsField = AccessTools.DeclaredField(typeof(ItemSpawnpoint), "_acceptedItems");
-        public static bool InAutospawnOrAcceptedItems(this ItemSpawnpoint spawnpoint, ItemType itemType)
+        public static bool InAutospawnOrAcceptedItems(this RandomItemSpawnpoint spawnpoint, ItemType itemType)
         {
-            if (spawnpoint.AutospawnItem == itemType)
-            {
-                return true;
-            }
-
-            var spawnPointAcceptedItems = acceptedItemsField.GetValue(spawnpoint) as ItemType[];
+            var spawnPointAcceptedItems = spawnpoint.Presets.Select(p => p.TargetItem);
             return spawnPointAcceptedItems.Any(i => i == itemType);
         }
 
-        public static int AutospawnOrAcceptedItemsCount(this ItemSpawnpoint spawnpoint)
+        public static int AutospawnOrAcceptedItemsCount(this RandomItemSpawnpoint spawnpoint)
         {
-            if (spawnpoint.AutospawnItem != ItemType.None)
-            {
-                return 1;
-            }
-
-            var acceptedItems = acceptedItemsField.GetValue(spawnpoint) as ItemType[];
-            return acceptedItems!.Length;
+            var acceptedItems = spawnpoint.Presets;
+            return acceptedItems.Length;
         }
 
-        private static readonly FieldInfo positionVariantsField = AccessTools.DeclaredField(typeof(ItemSpawnpoint), "_positionVariants");
-        public static Transform[] GetPositionVariants(this ItemSpawnpoint spawnpoint)
+        private static readonly FieldInfo positionVariantsField = AccessTools.DeclaredField(typeof(RandomItemSpawnpoint), "_positionVariants");
+        public static IEnumerable<Transform> GetPositionVariants(this RandomItemSpawnpoint spawnpoint)
         {
-            var positionVariants = positionVariantsField.GetValue(spawnpoint) as Transform[];
+            var positionVariants = spawnpoint.Presets.SelectMany(p => p.PossibleSpawnpoints);
             return positionVariants;
         }
     }

@@ -26,7 +26,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
                 {
                     var relPosToItem = ColliderDatas[colliderIndex].Center - CameraPosition;
 
-                    RaycastCommands[numRaycasts] = new RaycastCommand(CameraPosition, relPosToItem, relPosToItem.magnitude, CollisionMask);
+                    RaycastCommands[numRaycasts] = new RaycastCommand(CameraPosition, relPosToItem, new(CollisionMask), relPosToItem.magnitude);
                     WithinFovColliderDatas[numRaycasts] = ColliderDatas[colliderIndex];
 
                     numRaycasts++;
