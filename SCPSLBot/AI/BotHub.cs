@@ -1,6 +1,5 @@
 ﻿using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl;
 using SCPSLBot.LocalNetworking;
 using System;
@@ -65,8 +64,8 @@ namespace SCPSLBot.AI
                 CurrentBotPlayer.OnRoleChanged();
             }
 
-            Log.Info($"Bot got new role assigned. Role Id: {newRole.RoleTypeId}");
-            Log.Debug($"Type of role: {newRole.GetType()}");
+            Debug.Log($"Bot got new role assigned. Role Id: {newRole.RoleTypeId}");
+            Debug.Log($"Type of role: {newRole.GetType()}");
         }
 
         public override string ToString()

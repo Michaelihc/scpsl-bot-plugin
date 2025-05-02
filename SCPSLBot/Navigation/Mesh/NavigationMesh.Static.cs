@@ -1,7 +1,6 @@
 ﻿using Interactables.Interobjects.DoorUtils;
 using Interactables.Interobjects;
 using MapGeneration;
-using PluginAPI.Core;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -292,7 +291,7 @@ namespace SCPSLBot.Navigation.Mesh
             var version = binaryReader.ReadByte();
             if (version < 3)
             {
-                Log.Error($"Version in navmesh file is older than supported.");
+                Debug.LogError($"Version in navmesh file is older than supported.");
                 return;
             }
 
@@ -336,7 +335,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static void InitMeshes()
         {
-            foreach (var room in Facility.Rooms.Select(apiRoom => apiRoom.Identifier.gameObject))
+            foreach (var room in LabApi.Features.Wrappers.Room.List.Select(apiRoom => apiRoom.Base.gameObject))
             {
                 var roomForm = GetForm(room);
                 if (!RoomsByForm.TryGetValue(roomForm, out var rooms))

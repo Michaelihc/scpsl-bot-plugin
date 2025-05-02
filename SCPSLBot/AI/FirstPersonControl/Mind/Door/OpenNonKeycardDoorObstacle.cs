@@ -1,5 +1,4 @@
 ﻿using Interactables.Interobjects.DoorUtils;
-using PluginAPI.Core;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
@@ -33,7 +32,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
             if (!doorToOpen)
             {
-                Log.Warning($"doorToOpen is null to open");
+                Debug.LogWarning($"doorToOpen is null to open");
                 return;
             }
 
@@ -43,7 +42,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
             if (!isTargetStateOpen && dist <= interactDistance)
             {
-                Log.Debug($"{doorToOpen} is within interactable distance");
+                Debug.Log($"{doorToOpen} is within interactable distance");
 
                 if (!botPlayer.OpenDoor(doorToOpen, interactDistance))
                 {

@@ -1,10 +1,9 @@
 ﻿using Interactables.Interobjects;
 using Interactables.Interobjects.DoorUtils;
+using LabApi.Events.Arguments.ServerEvents;
+using LabApi.Events.Handlers;
 using MapGeneration;
 using MEC;
-using PluginAPI.Core;
-using PluginAPI.Core.Attributes;
-using PluginAPI.Events;
 using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
@@ -25,7 +24,7 @@ namespace SCPSLBot.Navigation
 
         public void Init()
         {
-            EventManager.RegisterEvents(this);
+            ServerEvents.MapGenerated += OnMapGenerated;
 
             if (SeedSynchronizer.MapGenerated)
             {
@@ -37,14 +36,14 @@ namespace SCPSLBot.Navigation
 
         public void Terminate()
         {
-            EventManager.UnregisterEvents(this);
+            ServerEvents.MapGenerated -= OnMapGenerated;
+
             Initialized = false;
 
             NavigationMesh.ResetMeshes();
         }
 
-        [PluginEvent(PluginAPI.Enums.ServerEventType.MapGenerated)]
-        public void OnMapGenerated()
+        public void OnMapGenerated(MapGeneratedEventArgs args)
         {
             Timing.RunCoroutine(ConnectForeignCellsAsync());
         }
@@ -58,13 +57,13 @@ namespace SCPSLBot.Navigation
 
         private void ConnectForeignCells()
         {
-            Log.Info($"Initializing meshes.");
+            Debug.Log($"Initializing meshes.");
             NavigationMesh.InitMeshes();
 
-            Log.Info($"Loading meshes.");
+            Debug.Log($"Loading meshes.");
             LoadMeshes(MeshFileName);
 
-            Log.Info($"Connecting cells between rooms.");
+            Debug.Log($"Connecting cells between rooms.");
             foreach (var door in DoorVariant.AllDoors)
             {
                 if (door.Rooms.Length == 2)
@@ -94,14 +93,14 @@ namespace SCPSLBot.Navigation
                 }
             }
 
-            Log.Info($"Connecting cells between elevator destinations.");
+            Debug.Log($"Connecting cells between elevator destinations.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
             foreach (ElevatorGroup group in elevatorGroups)
             {
                 var elevatorDoors = ElevatorDoor.GetDoorsForGroup(group);
                 if (elevatorDoors.Count != 2)
                 {
-                    Log.Warning($"Irregular elevator level count ({elevatorDoors.Count}) of group {group}");
+                    Debug.LogWarning($"Irregular elevator level count ({elevatorDoors.Count}) of group {group}");
                     continue;
                 }
 
@@ -122,7 +121,7 @@ namespace SCPSLBot.Navigation
                     NavigationMesh.ForeignConnectedCells[cellAt1InShaft.Value].Add(cellAt0InShaft.Value);
                 }
             }
-            Log.Info($"Connecting cells finished.");
+            Debug.Log($"Connecting cells finished.");
         }
 
         public void LoadMeshes(string fileName)

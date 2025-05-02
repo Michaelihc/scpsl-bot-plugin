@@ -1,5 +1,4 @@
 ﻿using InventorySystem.Searching;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using System;
@@ -75,12 +74,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
             var item = _botPlayer.Perception.GetSense<ItemsWithinSightSense>().ItemsWithinSight.FirstOrDefault(i => Criteria.EvaluateItem(i) && i.Position == itemPosition);
             if (!item)
             {
-                Log.Warning($"No item found at known position within sight to pickup. Moving closer.");
+                Debug.LogWarning($"No item found at known position within sight to pickup. Moving closer.");
                 _botPlayer.MoveToPosition(itemPosition);
                 return;
             }
 
-            Log.Debug($"Attempting to pick up item {item} by {_botPlayer}");
+            Debug.Log($"Attempting to pick up item {item} by {_botPlayer}");
 
             var searchRequestMsg = new SearchRequest { Target = item };
             _botPlayer.BotHub.ConnectionToServer.Send(searchRequestMsg);

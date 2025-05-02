@@ -1,5 +1,4 @@
 ﻿using MapGeneration;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Navigation.Mesh;
 using System;
@@ -48,7 +47,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 
             if (!RoomUtils.TryGetRoom(playerPosition, out var newRoomWithin))
             {
-                Log.Warning($"Could not determine room bot currently in");
+                Debug.LogWarning($"Could not determine room bot currently in");
                 return;
             }
 

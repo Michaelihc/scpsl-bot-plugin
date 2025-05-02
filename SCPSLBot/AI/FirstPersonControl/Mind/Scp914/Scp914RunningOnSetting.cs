@@ -1,9 +1,7 @@
-﻿using MapGeneration;
+﻿using LabApi.Events.Arguments.Scp914Events;
+using LabApi.Events.Handlers;
+using MapGeneration;
 using MEC;
-using PluginAPI.Core;
-using PluginAPI.Core.Attributes;
-using PluginAPI.Enums;
-using PluginAPI.Events;
 using Scp914;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using System;
@@ -19,18 +17,18 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
         public Scp914RunningOnSetting(RoomSightSense roomSightSense)
         {
             this.roomSightSense = roomSightSense;
-            EventManager.RegisterEvents(this);
+
+            Scp914Events.Activated += OnActivateEvent;
         }
 
-        [PluginEvent(ServerEventType.Scp914Activate)]
-        public void OnActivateEvent(Player _, Scp914KnobSetting setting)
+        public void OnActivateEvent(Scp914ActivatedEventArgs args)
         {
             if (this.roomSightSense.RoomWithin.Name != RoomName.Lcz914)
             {
                 return;
             }
 
-            this.Update(setting);
+            this.Update(args.KnobSetting);
 
             Timing.RunCoroutine(Scp914RunningCoroutine());
         }

@@ -1,9 +1,9 @@
-﻿using PluginAPI.Core;
-using Scp914;
+﻿using Scp914;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
 {
@@ -54,7 +54,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
             {
                 if (!this.itemInIntakeChamber.PositionRelative.HasValue)
                 {
-                    Log.Debug($"{this.itemInIntakeChamber} has no position value.");
+                    Debug.Log($"{this.itemInIntakeChamber} has no position value.");
                     return;
                 }
 

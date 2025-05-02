@@ -1,5 +1,4 @@
 ﻿using InventorySystem.Items.Pickups;
-using PluginAPI.Core.Items;
 using Scp914;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs;

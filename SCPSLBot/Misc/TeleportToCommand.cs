@@ -3,7 +3,6 @@ using MapGeneration;
 using Mirror;
 using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
-using PluginAPI.Core;
 using RemoteAdmin;
 using System;
 using UnityEngine;
@@ -53,7 +52,7 @@ namespace SCPSLBot.Misc
             var result = playerCommandSender.ReferenceHub.TryOverridePosition(targetPlayerPos);
 
             response = $"Player {playerCommandSender.Nickname} teleported to specified position if successful.";
-            Log.Info(response);
+            Debug.Log(response);
 
             return true;
         }

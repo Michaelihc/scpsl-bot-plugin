@@ -28,7 +28,7 @@
 
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="echo Copying output file $(TargetName)&#xD;&#xA;copy $(TargetPath) &quot;$(SL_APPDATA)\PluginAPI\plugins\global\$(TargetFileName)&quot;" />
+    <Exec Command="echo Copying output file $(TargetName)&#xD;&#xA;copy $(TargetPath) &quot;$(SL_APPDATA)\LabAPI-Beta\plugins\global\$(TargetFileName)&quot;" />
   </Target>
 
   
@@ -41,10 +41,12 @@
   <ItemGroup>
     <PackageReference Include="IsExternalInit" Version="1.0.3" />
     <PackageReference Include="Lib.Harmony" Version="2.2.2" />
-    <PackageReference Include="Northwood.PluginAPI" Version="13.1.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="LabApi">
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <Private>false</Private>
     </Reference>

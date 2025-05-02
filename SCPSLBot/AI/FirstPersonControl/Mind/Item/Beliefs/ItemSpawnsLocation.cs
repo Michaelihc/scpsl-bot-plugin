@@ -2,7 +2,6 @@
 using UnityEngine;
 using MapGeneration;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
-using PluginAPI.Core;
 using MapGeneration.Distributors;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,7 +58,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             var roomWithin = this.roomSense.RoomWithin;
             if (roomWithin == null)
             {
-                Log.Debug($"RoomSightSense.RoomWithin is null");
+                Debug.Log($"RoomSightSense.RoomWithin is null");
                 return;
             }
 

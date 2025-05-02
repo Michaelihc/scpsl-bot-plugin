@@ -2,9 +2,9 @@
 using MapGeneration;
 using Mirror;
 using PlayerRoles;
-using PluginAPI.Core;
 using RemoteAdmin;
 using System;
+using UnityEngine;
 
 namespace SCPSLBot.Misc
 {
@@ -43,7 +43,7 @@ namespace SCPSLBot.Misc
             var roomForm = room.gameObject.name;
 
             response = $"Relative player {playerCommandSender.Nickname} position to room of kind {roomForm}: {relPlayerPos}";
-            Log.Info(response);
+            Debug.Log(response);
 
             return true;
         }

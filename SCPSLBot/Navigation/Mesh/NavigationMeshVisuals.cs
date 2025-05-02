@@ -1,9 +1,7 @@
 ﻿using AdminToys;
+using LabApi.Events.Handlers;
 using MapGeneration;
 using Mirror;
-using PluginAPI.Core;
-using PluginAPI.Core.Attributes;
-using PluginAPI.Events;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,7 +12,7 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class NavigationMeshVisuals
     {
-        public Player PlayerEnabledVisualsFor { get; set; }
+        public LabApi.Features.Wrappers.Player PlayerEnabledVisualsFor { get; set; }
 
         public TransformVertex? NearestVertex { get; set; }
         public TransformVertex? FacingVertex { get; set; }
@@ -41,7 +39,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void Init()
         {
-            EventManager.RegisterEvents(this);
+            ServerEvents.WaitingForPlayers += AssignPrimPrefab;
 
             if (SeedSynchronizer.MapGenerated)
             {
@@ -51,10 +49,9 @@ namespace SCPSLBot.Navigation.Mesh
 
         public void Terminate()
         {
-            EventManager.UnregisterEvents(this);
+            ServerEvents.WaitingForPlayers -= AssignPrimPrefab;
         }
 
-        [PluginEvent(PluginAPI.Enums.ServerEventType.WaitingForPlayers)]
         public void AssignPrimPrefab()
         {
             this.primPrefab = NetworkClient.prefabs.Values.Select(p => p.GetComponent<PrimitiveObjectToy>()).First(p => p);

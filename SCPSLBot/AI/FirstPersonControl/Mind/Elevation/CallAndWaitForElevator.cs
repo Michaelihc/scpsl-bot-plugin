@@ -1,6 +1,5 @@
 ﻿using Interactables.Interobjects;
 using Mirror;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Mind.Door;
 using System;
 using System.Linq;
@@ -64,7 +63,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
             var groupElevatorDoors = ElevatorDoor.GetDoorsForGroup(chamber.AssignedGroup);
             if (!groupElevatorDoors.Any())
             {
-                Log.Warning($"Elevator chamber group not added to all elevator doors");
+                Debug.LogWarning($"Elevator chamber group not added to all elevator doors");
                 return;
             }
 

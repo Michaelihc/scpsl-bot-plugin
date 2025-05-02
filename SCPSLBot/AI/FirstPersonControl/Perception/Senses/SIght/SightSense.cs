@@ -1,6 +1,4 @@
 ﻿using Interactables.Interobjects.DoorUtils;
-using PluginAPI.Core;
-using PluginAPI.Core.Items;
 using System;
 using System.Collections.Generic;
 using System.Linq;

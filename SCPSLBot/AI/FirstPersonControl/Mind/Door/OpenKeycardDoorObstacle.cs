@@ -1,5 +1,4 @@
 ﻿using Interactables.Interobjects.DoorUtils;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Keycard;
 using UnityEngine;
@@ -49,7 +48,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
                 if (Vector3.Distance(interactablePosition, playerPosition) <= interactDistance)
                 {
-                    Log.Debug($"{doorToOpen} is within interactable distance");
+                    Debug.Log($"{doorToOpen} is within interactable distance");
 
                     if (!botPlayer.OpenDoor(doorToOpen, interactDistance))
                     {

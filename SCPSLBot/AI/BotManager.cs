@@ -2,7 +2,6 @@
 using MEC;
 using Mirror;
 using PlayerRoles;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using System.Collections.Generic;
 using System.Linq;
@@ -63,7 +62,7 @@ namespace SCPSLBot.AI
             var connectionToServer = new LocalConnectionToServer() { connectionToClient = connectionToClient };
             connectionToClient.connectionToServer = connectionToServer;
 
-            Log.Info($"connectionToClient = {connectionToClient}");
+            Debug.Log($"connectionToClient = {connectionToClient}");
             //NetworkDiagnostics.InMessageEvent += LogInMessage;
 
             NetworkServer.AddConnection(connectionToClient);
@@ -74,7 +73,7 @@ namespace SCPSLBot.AI
 
             BotPlayers.Add(referenceHub, new BotHub(connectionToClient, connectionToServer, referenceHub));
 
-            Log.Info($"connectionToClient.identity = {connectionToClient.identity}");
+            Debug.Log($"connectionToClient.identity = {connectionToClient.identity}");
 
             // add perception
             var sensing = new GameObject("Bot Sensing");

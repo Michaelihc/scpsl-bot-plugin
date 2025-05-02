@@ -1,5 +1,4 @@
-﻿using PluginAPI.Core;
-using SCPSLBot.AI.FirstPersonControl.Mind;
+﻿using SCPSLBot.AI.FirstPersonControl.Mind;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -50,12 +49,12 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             if (!RelevantBeliefs.Contains(updatedBelief))
             {
-                Log.Debug($"[I] Belief updated: {updatedBelief}");
+                Debug.Log($"[I] Belief updated: {updatedBelief}");
                 return;
             }
 
             isBeliefsUpdated = true;
-            Log.Debug($"[R] Belief updated: {updatedBelief}");
+            Debug.Log($"[R] Belief updated: {updatedBelief}");
         }
 
         #region Action Finding
@@ -248,7 +247,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             RunningAction = selectedAction ?? null;
             RunningActionCost = selectedAction?.Cost ?? 0f;
 
-            Log.Debug($"New Action for bot: {RunningAction} (Cost: {RunningActionCost})");
+            Debug.Log($"New Action for bot: {RunningAction} (Cost: {RunningActionCost})");
 
             if (RunningAction != prevAction)
             {

@@ -2,7 +2,6 @@
 using Interactables.Interobjects.DoorUtils;
 using MapGeneration;
 using MEC;
-using PluginAPI.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,11 +13,11 @@ namespace SCPSLBot.Navigation.Mesh
     {
         public static NavigationMeshEditor Instance { get; } = new();
 
-        public Player PlayerEditing { get; set; }
+        public LabApi.Features.Wrappers.Player PlayerEditing { get; set; }
 
         private NavigationMeshVisuals Visuals { get; } = new();
 
-        private Player LastPlayerEditing { get; set; }
+        private LabApi.Features.Wrappers.Player LastPlayerEditing { get; set; }
 
         private List<TransformVertex> SelectedVertices { get; } = new();
         private bool AutoSelectModeEnabled = false;
@@ -169,7 +168,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (Visuals.NearestVertex == null)
             {
-                Log.Warning($"No vertex found nearby to remove.");
+                Debug.LogWarning($"No vertex found nearby to remove.");
 
                 return false;
             }
@@ -187,13 +186,13 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     mesh.RemoveCell(cell);
 
-                    Log.Warning($"Cell at local center position {cell.CenterPosition} dissolved under {form}.");
+                    Debug.LogWarning($"Cell at local center position {cell.CenterPosition} dissolved under {form}.");
                 }
             }
 
             if (!mesh.DeleteVertex(vertex.Local))
             {
-                Log.Warning($"No vertices at {form} to remove vertex from.");
+                Debug.LogWarning($"No vertices at {form} to remove vertex from.");
                 return false;
             }
 
@@ -224,7 +223,7 @@ namespace SCPSLBot.Navigation.Mesh
                 return false;
             }
 
-            Log.Info($"Vertex #{mesh.Vertices.IndexOf(vertex.Local)} of {form} moved to new local position {vertex.Position}.");
+            Debug.Log($"Vertex #{mesh.Vertices.IndexOf(vertex.Local)} of {form} moved to new local position {vertex.Position}.");
 
             return true;
         }
@@ -233,7 +232,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (Visuals.NearestVertex == null)
             {
-                Log.Warning($"No vertex found nearby for selection.");
+                Debug.LogWarning($"No vertex found nearby for selection.");
                 return false;
             }
             var vertex = Visuals.NearestVertex.Value;
@@ -241,13 +240,13 @@ namespace SCPSLBot.Navigation.Mesh
             var form = NavigationMesh.GetForm(vertex.Transform.gameObject);
             if (SelectedVertices.Any() && SelectedVertices.First().Transform != vertex.Transform)
             {
-                Log.Warning($"Form of the vertex for selection is different than of first selected vertex.");
+                Debug.LogWarning($"Form of the vertex for selection is different than of first selected vertex.");
                 return false;
             }
 
             SelectedVertices.Add(vertex);
 
-            Log.Info($"Vertex at local position {vertex.Local.Position} added to selection under {form}.");
+            Debug.Log($"Vertex at local position {vertex.Local.Position} added to selection under {form}.");
 
             return true;
         }
@@ -256,7 +255,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (Visuals.NearestVertex == null)
             {
-                Log.Warning($"No vertex found nearby to remove from selection.");
+                Debug.LogWarning($"No vertex found nearby to remove from selection.");
                 return false;
             }
             var vertex = Visuals.NearestVertex.Value;
@@ -265,7 +264,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var form = NavigationMesh.GetForm(vertex.Transform.gameObject);
 
-            Log.Info($"Vertex at local position {vertex.Local.Position} removed from selection under {form}.");
+            Debug.Log($"Vertex at local position {vertex.Local.Position} removed from selection under {form}.");
 
             return true;
         }
@@ -284,7 +283,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (SelectedVertices.Count < 3)
             {
-                Log.Warning($"Not enough vertices (min 3) selected.");
+                Debug.LogWarning($"Not enough vertices (min 3) selected.");
                 return null;
             }
 
@@ -300,11 +299,11 @@ namespace SCPSLBot.Navigation.Mesh
 
             var newCell = mesh.MakeCell(SelectedVertices.Select(sv => sv.Local));
 
-            Log.Info($"Cell #{mesh.Cells.IndexOf(newCell)} at local center position {newCell.CenterPosition} added under {form}.");
+            Debug.Log($"Cell #{mesh.Cells.IndexOf(newCell)} at local center position {newCell.CenterPosition} added under {form}.");
 
             SelectedVertices.Clear();
             AutoSelectModeEnabled = false;
-            PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on cell creation.", 3f);
+            PlayerEditing.SendHint($"<size=30>Vertex auto-selection is stopped on cell creation.", 3f);
 
             return newCell;
         }
@@ -337,7 +336,7 @@ namespace SCPSLBot.Navigation.Mesh
         {
             if (Visuals.NearestCell == null)
             {
-                Log.Warning($"No cell found within to remove.");
+                Debug.LogWarning($"No cell found within to remove.");
                 return false;
             }
             var cell = Visuals.NearestCell.Value;
@@ -347,11 +346,11 @@ namespace SCPSLBot.Navigation.Mesh
 
             if (!mesh.RemoveCell(cell.Local))
             {
-                Log.Warning($"Cell already does not exist in collection by {form}.");
+                Debug.LogWarning($"Cell already does not exist in collection by {form}.");
             }
             else
             {
-                Log.Info($"Cell at local center position {cell.Local.CenterPosition} removed under {form}.");
+                Debug.Log($"Cell at local center position {cell.Local.CenterPosition} removed under {form}.");
             }
 
             return true;
@@ -392,7 +391,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             mesh.AddVertexToCell(cell, vertex, edge.to);
 
-            Log.Info($"Vertex #{mesh.Vertices.IndexOf(vertex)} created on edge of cell #{mesh.Cells.IndexOf(cell)}");
+            Debug.Log($"Vertex #{mesh.Vertices.IndexOf(vertex)} created on edge of cell #{mesh.Cells.IndexOf(cell)}");
 
             return true;
         }
@@ -457,7 +456,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             mesh.AddVertexToCell(cell, vertex, edge.to);
 
-            Log.Info($"Vertex #{mesh.Vertices.IndexOf(vertex)} created on edge of cell #{mesh.Cells.IndexOf(cell)}");
+            Debug.Log($"Vertex #{mesh.Vertices.IndexOf(vertex)} created on edge of cell #{mesh.Cells.IndexOf(cell)}");
 
             return true;
         }
@@ -487,7 +486,7 @@ namespace SCPSLBot.Navigation.Mesh
             NavigationMesh.FindShortestPath(Visuals.CachedCell.Value, targetCell.Value, Visuals.Path);
             if (Visuals.Path.Count == 0)
             {
-                Log.Warning($"No path found.");
+                Debug.LogWarning($"No path found.");
             }
 
             return true;
@@ -518,7 +517,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 Visuals.PlayerEnabledVisualsFor = PlayerEditing;
 
-                Log.Debug($"Visuals.PlayerEnabledVisualsFor.DisplayNickname = {Visuals.PlayerEnabledVisualsFor?.DisplayNickname}");
+                Debug.Log($"Visuals.PlayerEnabledVisualsFor.DisplayNickname = {Visuals.PlayerEnabledVisualsFor?.DisplayName}");
             }
         }
 
@@ -570,12 +569,12 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void LogVertexCreated(Vertex formVertex, string form)
         {
-            Log.Info($"Vertex #{NavigationMesh.GetMesh(form).Vertices.IndexOf(formVertex)} at local position {formVertex.Position} added under {form}.");
+            Debug.Log($"Vertex #{NavigationMesh.GetMesh(form).Vertices.IndexOf(formVertex)} at local position {formVertex.Position} added under {form}.");
         }
 
         private void LogVertexDeleted(Vertex formVertex, string form)
         {
-            Log.Info($"Vertex at local position {formVertex.Position} deleted under {form}.");
+            Debug.Log($"Vertex at local position {formVertex.Position} deleted under {form}.");
         }
 
         private void UpdateNearestVertex()
@@ -655,9 +654,9 @@ namespace SCPSLBot.Navigation.Mesh
                 else if (SelectedVertices.Count > 1 && SelectedVertices.FirstOrDefault() == Visuals.NearestVertex.Value)
                 {
                     AutoSelectModeEnabled = false;
-                    PlayerEditing.ReceiveHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);
+                    PlayerEditing.SendHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);
 
-                    Log.Info($"Vertex auto-selection stopped on first vertex selected.");
+                    Debug.Log($"Vertex auto-selection stopped on first vertex selected.");
                 }
             }
         }

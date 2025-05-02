@@ -1,9 +1,9 @@
-﻿using Interactables;
+﻿using Hints;
+using Interactables;
 using Interactables.Interobjects.DoorUtils;
 using MapGeneration.Distributors;
 using PlayerRoles.FirstPersonControl;
 using PlayerRoles.Spectating;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Looking;
 using SCPSLBot.AI.FirstPersonControl.Mind;
 using SCPSLBot.AI.FirstPersonControl.Movement;
@@ -16,6 +16,7 @@ using System.Text;
 using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Profiling;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
@@ -79,7 +80,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public void OnRoleChanged()
         {
-            Log.Info($"Bot got FPC role assigned.");
+            Debug.Log($"Bot got FPC role assigned.");
 
             PerceptionComponent = BotHub.PlayerHub.GetComponentInChildren<PerceptionComponent>();
             PerceptionComponent.enabled = true;
@@ -371,10 +372,11 @@ namespace SCPSLBot.AI.FirstPersonControl
             {
                 broadcastMessage = message;
 
-                var spectatingPlayers = Player.GetPlayers().Where(p => p.RoleBase is OverwatchRole s && s.SyncedSpectatedNetId == this.BotHub.PlayerHub.netId);
+                var spectatingPlayers = ReferenceHub.AllHubs.Where(p => p.roleManager.CurrentRole is OverwatchRole s && s.SyncedSpectatedNetId == this.BotHub.PlayerHub.netId);
                 foreach (var spectatingPlayer in spectatingPlayers)
                 {
-                    spectatingPlayer.SendBroadcast(message, duration, shouldClearPrevious: true);
+                    Broadcast.Singleton.TargetClearElements(spectatingPlayer.connectionToClient);
+                    Broadcast.Singleton.TargetAddElement(spectatingPlayer.connectionToClient, message, duration, Broadcast.BroadcastFlags.Normal);
                 }
             }
         }
@@ -407,7 +409,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                     continue;
                 }
 
-                Player.Get(spectatingHub).ReceiveHint(message, duration);
+                spectatingHub.hints.Show(new TextHint(message, new [] { new StringHintParameter(string.Empty) }, null, duration));
 
                 playersHintTexts[spectatingHub] = message;
             }

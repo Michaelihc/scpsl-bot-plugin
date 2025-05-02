@@ -1,12 +1,10 @@
 ﻿using MapGeneration;
 using MapGeneration.Distributors;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Mind.Spacial;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 
@@ -32,7 +30,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
 
         private readonly HashSet<Vector3> visitedLockerSpawnPositions = new();
 
-        private readonly Stopwatch stopwatch = new();
+        private readonly System.Diagnostics.Stopwatch stopwatch = new();
         private readonly HashSet<Vector3> absentPositions = new();
 
         private void OnAfterSightSensing()
@@ -67,7 +65,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             var roomWithin = this.roomSense.RoomWithin;
             if (roomWithin == null)
             {
-                Log.Debug($"RoomSightSense.RoomWithin is null");
+                Debug.Log($"RoomSightSense.RoomWithin is null");
                 return;
             }
 

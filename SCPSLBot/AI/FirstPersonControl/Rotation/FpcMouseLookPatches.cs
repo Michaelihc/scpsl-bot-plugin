@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using PlayerRoles.FirstPersonControl;
-using PluginAPI.Core;
 using System;
 using System.Reflection;
 using UnityEngine;

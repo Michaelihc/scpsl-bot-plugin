@@ -1,6 +1,5 @@
 ﻿using Interactables.Interobjects.DoorUtils;
 using PlayerRoles.FirstPersonControl;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Perception;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using System;

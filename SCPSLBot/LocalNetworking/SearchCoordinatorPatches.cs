@@ -5,7 +5,6 @@ using Mirror;
 using Mirror.LiteNetLib4Mirror;
 using Mono.Cecil.Cil;
 using PlayerRoles.FirstPersonControl;
-using PluginAPI.Core;
 using SCPSLBot.AI;
 using SCPSLBot.AI.FirstPersonControl;
 using System.Collections.Generic;
@@ -69,7 +68,7 @@ namespace SCPSLBot.LocalNetworking
 
             if (found is false)
             {
-                Log.Error("Cannot find <Ldfld Peers> in SearchCoordinator.ReceiveRequestUnsafe");
+                Debug.LogError("Cannot find <Ldfld Peers> in SearchCoordinator.ReceiveRequestUnsafe");
             }
         }
 

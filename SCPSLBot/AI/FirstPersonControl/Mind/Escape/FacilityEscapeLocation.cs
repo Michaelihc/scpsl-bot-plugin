@@ -1,5 +1,4 @@
 ﻿using MapGeneration;
-using PluginAPI.Core;
 using SCPSLBot.AI.FirstPersonControl.Mind.Spacial;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using System.Linq;
@@ -28,7 +27,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Escape
 
             if (!Physics.Raycast(RoughEscapePosition, Vector3.down, out var hit, 10f, LayerMask.GetMask("Default")))
             {
-                Log.Warning($"Raycast down from rough escape position produced no hits.");
+                Debug.LogWarning($"Raycast down from rough escape position produced no hits.");
                 return;
             }
 

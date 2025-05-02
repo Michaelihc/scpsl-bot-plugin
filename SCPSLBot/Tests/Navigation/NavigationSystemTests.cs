@@ -1,12 +1,12 @@
 ﻿#define UNITY_ASSERTIONS
 
 using CommandSystem;
-using PluginAPI.Core;
+using LabApi.Features.Console;
+using LabApi.Features.Wrappers;
 using SCPSLBot.Navigation;
 using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using UnityEngine.Assertions;
@@ -72,10 +72,10 @@ namespace SCPSLBot.Tests.Navigation
         {
             NavigationMesh.InitMeshes();
 
-            Assert.AreEqual(Facility.Rooms.Count, NavigationMesh.RoomsByForm.Values.SelectMany(l => l).Count());
-            foreach (var apiRoom in Facility.Rooms)
+            Assert.AreEqual(Room.List.Count, NavigationMesh.RoomsByForm.Values.SelectMany(l => l).Count());
+            foreach (var apiRoom in Room.List)
             {
-                var room = apiRoom.Identifier.gameObject;
+                var room = apiRoom.Base.gameObject;
                 var roomForm = room.name.EndsWith("(Clone)") ?
                     room.name.Remove(room.name.LastIndexOf("(Clone)")) :
                     room.name;
@@ -84,7 +84,7 @@ namespace SCPSLBot.Tests.Navigation
                 Assert.IsTrue(rooms.Contains(room));
             }
 
-            Log.Info(nameof(TestInitMeshes));
+            Logger.Info(nameof(TestInitMeshes));
         }
 
         private void TestCreateMesh(string form)
@@ -105,7 +105,7 @@ namespace SCPSLBot.Tests.Navigation
                 }
             }
 
-            Log.Info($"{nameof(TestCreateMesh)}({form})");
+            Logger.Info($"{nameof(TestCreateMesh)}({form})");
         }
 
         private Vertex TestCreateVertex(string form)
@@ -129,7 +129,7 @@ namespace SCPSLBot.Tests.Navigation
 
             mesh.VertexCreated -= vertexCreatedHandler;
 
-            Log.Info($"{nameof(TestCreateVertex)}({form})");
+            Logger.Info($"{nameof(TestCreateVertex)}({form})");
             return vertex;
         }
 
@@ -196,7 +196,7 @@ namespace SCPSLBot.Tests.Navigation
 
             mesh.VertexDeleted -= vertexDeletedHandler;
 
-            Log.Info($"{nameof(TestDeleteVertex)}({form}, {vertexIdx})");
+            Logger.Info($"{nameof(TestDeleteVertex)}({form}, {vertexIdx})");
         }
 
         private void TestMakeCell(string form, params int[] vertexIdxs)
@@ -282,7 +282,7 @@ namespace SCPSLBot.Tests.Navigation
 
             mesh.CellCreated -= createdHandler;
 
-            Log.Info($"{nameof(TestMakeCell)}({form}, {string.Join(", ", vertexIdxs)})");
+            Logger.Info($"{nameof(TestMakeCell)}({form}, {string.Join(", ", vertexIdxs)})");
         }
 
         private void TestRemoveCell(string form, int cellIdx)
@@ -333,7 +333,7 @@ namespace SCPSLBot.Tests.Navigation
 
             mesh.CellDeleted -= deletedHandler;
 
-            Log.Info($"{nameof(TestRemoveCell)}({form}, {cellIdx})");
+            Logger.Info($"{nameof(TestRemoveCell)}({form}, {cellIdx})");
         }
 
         private void TestAddVertexToCell(string form, int cellIdx, int vertexIdx, int beforeVertexIdx)
@@ -415,12 +415,12 @@ namespace SCPSLBot.Tests.Navigation
                 }
             }
 
-            Log.Info($"{nameof(TestAddVertexToCell)}({form}, {cellIdx}, {vertexIdx}, {beforeVertexIdx})");
+            Logger.Info($"{nameof(TestAddVertexToCell)}({form}, {cellIdx}, {vertexIdx}, {beforeVertexIdx})");
         }
 
         private void TestPersistance()
         {
-            Log.Info($"{nameof(TestPersistance)}");
+            Logger.Info($"{nameof(TestPersistance)}");
 
             // Arrange
             var meshesByRoomForm = NavigationMesh.MeshesByRoomForm.ToArray();

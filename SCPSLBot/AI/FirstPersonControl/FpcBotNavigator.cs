@@ -1,5 +1,4 @@
 ﻿using MapGeneration;
-using PluginAPI.Core;
 using SCPSLBot.Navigation.Mesh;
 using System.Collections.Generic;
 using System.Linq;
@@ -96,7 +95,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
                 else
                 {
-                    Log.Warning($"Could not find path to goal position.");
+                    Debug.LogWarning($"Could not find path to goal position.");
                 }
 
                 isGoalOutside = true;

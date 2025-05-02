@@ -3,7 +3,6 @@ using CommandSystem.Commands.RemoteAdmin.Stripdown;
 using MapGeneration;
 using Mirror;
 using PlayerRoles;
-using PluginAPI.Core;
 using RemoteAdmin;
 using System;
 using UnityEngine;
@@ -44,7 +43,7 @@ namespace SCPSLBot.Misc
             var tag = collider.gameObject.tag;
 
             response = $"Got hit with collider of {collider.gameObject} and layer {layerName} and tag {tag}";
-            Log.Info(response);
+            Debug.Log(response);
 
             return true;
         }
