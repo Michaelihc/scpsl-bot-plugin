@@ -1,10 +1,9 @@
-﻿using Interactables.Interobjects.DoorUtils;
-using Interactables.Interobjects;
-using MapGeneration;
+﻿using MapGeneration;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using LabApi.Features.Wrappers;
 
 namespace SCPSLBot.Navigation.Mesh
 {
@@ -18,7 +17,7 @@ namespace SCPSLBot.Navigation.Mesh
         public static Dictionary<TransformCell, List<TransformCell>> ForeignConnectedCells = new();
         public static Dictionary<TransformCell, Dictionary<TransformCell, TransformEdge>> ForeignConnectedCellEdges = new();
 
-        public static NavigationMesh CreateRoom(string form)
+        public static NavigationMesh CreateMesh(string form)
         {
             var mesh = new NavigationMesh();
 
@@ -305,7 +304,10 @@ namespace SCPSLBot.Navigation.Mesh
             {
                 var roomForm = binaryReader.ReadString();
 
-                var formMesh = CreateRoom(roomForm);
+                if (!MeshesByRoomForm.TryGetValue(roomForm, out var formMesh))
+                {
+                    formMesh = CreateMesh(roomForm);
+                }
 
                 formMesh.ReadMesh(binaryReader, version);
             }
@@ -335,7 +337,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static void InitMeshes()
         {
-            foreach (var room in LabApi.Features.Wrappers.Room.List.Select(apiRoom => apiRoom.Base.gameObject))
+            foreach (var room in Room.List.Select(apiRoom => apiRoom.Base.gameObject))
             {
                 var roomForm = GetForm(room);
                 if (!RoomsByForm.TryGetValue(roomForm, out var rooms))
@@ -344,10 +346,16 @@ namespace SCPSLBot.Navigation.Mesh
                     RoomsByForm.Add(roomForm, rooms);
                 }
                 rooms.Add(room);
+
             }
 
-            var allConnectors = RoomConnector.AllConnectors.Select(c => (c.gameObject, c.Rooms));
-            var allDoors = DoorVariant.AllDoors.Where(d => d.Rooms.Length >= 2).Select(c => (c.gameObject, c.Rooms));
+            foreach (var roomForm in RoomsByForm.Keys)
+            {
+                if (!MeshesByRoomForm.ContainsKey(roomForm))
+                {
+                    CreateMesh(roomForm);
+                }
+            }
         }
 
         public static void ResetMeshes()

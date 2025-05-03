@@ -6,6 +6,7 @@ using SCPSLBot.AI;
 using SCPSLBot.Navigation;
 using SCPSLBot.Navigation.Mesh;
 using System;
+using System.IO;
 using System.Reflection;
 
 namespace SCPSLBot
@@ -26,7 +27,12 @@ namespace SCPSLBot
             harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
             Logger.Info("Patching successful.");
 
-            NavigationSystem.Instance.BaseDir = FilePath;
+            NavigationSystem.Instance.BaseDir = Path.Combine(Path.GetDirectoryName(FilePath), Path.GetFileNameWithoutExtension(FilePath));
+
+            if (!Directory.Exists(NavigationSystem.Instance.BaseDir))
+            {
+                Directory.CreateDirectory(NavigationSystem.Instance.BaseDir);
+            }
 
             NavigationSystem.Instance.Init();
             NavigationMeshEditor.Instance.Init();

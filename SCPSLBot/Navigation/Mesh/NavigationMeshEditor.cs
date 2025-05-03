@@ -147,7 +147,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             if (!NavigationMesh.MeshesByRoomForm.TryGetValue(roomForm, out NavigationMesh mesh))
             {
-                mesh = NavigationMesh.CreateRoom(roomForm);
+                mesh = NavigationMesh.CreateMesh(roomForm);
 
                 AddLoggingHandlers(mesh, roomForm);
             }

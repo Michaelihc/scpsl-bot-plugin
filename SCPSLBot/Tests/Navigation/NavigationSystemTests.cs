@@ -28,7 +28,6 @@ namespace SCPSLBot.Tests.Navigation
             TestInitMeshes();
 
             var existingForm = GetRandomExistingForm();
-            TestCreateMesh(existingForm);
             TestCreateMesh("Non_Existing");
 
             TestCreateVertex(existingForm);     // #0
@@ -82,6 +81,12 @@ namespace SCPSLBot.Tests.Navigation
 
                 Assert.IsTrue(NavigationMesh.RoomsByForm.TryGetValue(roomForm, out var rooms));
                 Assert.IsTrue(rooms.Contains(room));
+
+                Assert.IsTrue(NavigationMesh.MeshesByRoomForm.ContainsKey(roomForm));
+                Assert.IsNotNull(NavigationMesh.MeshesByRoomForm[roomForm]);
+
+                Assert.IsTrue(NavigationMesh.LocalMeshesByRoom.ContainsKey(room));
+                Assert.AreEqual(NavigationMesh.MeshesByRoomForm[roomForm], NavigationMesh.LocalMeshesByRoom[room]);
             }
 
             Logger.Info(nameof(TestInitMeshes));
@@ -89,7 +94,7 @@ namespace SCPSLBot.Tests.Navigation
 
         private void TestCreateMesh(string form)
         {
-            var mesh = NavigationMesh.CreateRoom(form);
+            var mesh = NavigationMesh.CreateMesh(form);
 
             Assert.IsNotNull(mesh);
 
