@@ -44,6 +44,7 @@ namespace SCPSLBot
             NavigationSystem.Instance.Terminate();
 
             harmonyInstance.UnpatchAll();
+            Logger.Info("Unpatching successful.");
 
             Logger.Info("Disabled plugin.");
         }
