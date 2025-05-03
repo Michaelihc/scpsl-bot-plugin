@@ -105,14 +105,28 @@ namespace SCPSLBot.Navigation
                 }
 
                 var doorTransform = elevatorDoors[0].transform;
-                var doorPosition = doorTransform.position;
+                var doorPosition = doorTransform.position + Vector3.up;
                 var doorForward = doorTransform.forward;
-                var cellAt0InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward + Vector3.up);
+
+                if (!RoomUtils.TryGetRoom(doorPosition - doorForward, out var room))
+                {
+                    RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
+                    RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForward), room);
+                }
+
+                var cellAt0InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward);
 
                 doorTransform = elevatorDoors[1].transform;
-                doorPosition = doorTransform.position;
+                doorPosition = doorTransform.position + Vector3.up;
                 doorForward = doorTransform.forward;
-                var cellAt1InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward + Vector3.up);
+
+                if (!RoomUtils.TryGetRoom(doorPosition - doorForward, out room))
+                {
+                    RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
+                    RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForward), room);
+                }
+
+                var cellAt1InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward);
 
                 if (cellAt0InShaft != null && cellAt1InShaft != null)
                 {

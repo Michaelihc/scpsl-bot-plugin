@@ -64,15 +64,10 @@ namespace SCPSLBot.Navigation.Mesh
                 return null;
             }
 
-            var roomCell = GetRoomCellWithin(position, room);
-            if (roomCell != null)
-            {
-                return new (roomCell, room.transform);
-            }
-            return null;
+            return GetRoomCellWithin(position, room);
         }
 
-        public static Cell GetRoomCellWithin(Vector3 position, RoomIdentifier room = null)
+        public static TransformCell? GetRoomCellWithin(Vector3 position, RoomIdentifier room = null)
         {
             if (!room)
             {
@@ -84,8 +79,13 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             var localPosition = room.transform.InverseTransformPoint(position);
+            var cellWithin = roomMesh.Cells
+                .Where(lc => IsLocalPointWithinCell(lc, localPosition))
+                .Select(lc => new TransformCell(lc, room.transform))
+                .Select(c => new TransformCell?(c))
+                .FirstOrDefault();
 
-            return roomMesh.Cells.FirstOrDefault(a => IsLocalPointWithinCell(a, localPosition));
+            return cellWithin;
         }
 
         public static bool IsAtPositiveEdgeSide(Vector3 position, TransformEdge transformEdge)
