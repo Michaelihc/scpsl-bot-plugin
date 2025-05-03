@@ -358,7 +358,10 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool CreateVertexOnClosestRoomEdge(Vector3 position)
         {
-            RoomUtils.TryGetRoom(position, out var room);
+            if (!RoomUtils.TryGetRoom(PlayerEditing.Position, out var room))
+            {
+                return false;
+            }
             var roomForm = NavigationMesh.GetForm(room.gameObject);
 
             var localPosition = room.transform.InverseTransformPoint(position);
@@ -398,7 +401,11 @@ namespace SCPSLBot.Navigation.Mesh
 
         public bool SliceClosestRoomCellEdge(Vector3 position, Vector3 direction)
         {
-            RoomUtils.TryGetRoom(position, out var room);
+            if (!RoomUtils.TryGetRoom(PlayerEditing.Position, out var room))
+            {
+                return false;
+            }
+
             var roomForm = NavigationMesh.GetForm(room.gameObject);
 
             var localPosition = room.transform.InverseTransformPoint(position);
@@ -587,22 +594,28 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void UpdateFacingVertex()
         {
-            if (PlayerEditing != null && PlayerEditing.Camera)
+            if (PlayerEditing == null || !PlayerEditing.Camera)
             {
-                RoomUtils.TryGetRoom(PlayerEditing.Position, out var room);
-                var cameraPosition = PlayerEditing.Camera.position;
-                var cameraForward = PlayerEditing.Camera.forward;
-
-                Visuals.FacingVertex = Enumerable.Empty<Transform>().Prepend(room.transform)
-                    .Select(transform => (
-                        room: transform.gameObject,
-                        localPosition: transform.InverseTransformPoint(cameraPosition),
-                        localForward: transform.InverseTransformDirection(cameraForward)))
-                    .Select(t => FindClosestVertexFacingAt(t.room, t.localPosition, t.localForward))
-                    .Where(v => v != null)
-                    .Select(v => new TransformVertex?(new(v, room.transform)))
-                    .FirstOrDefault();
+                return;
             }
+
+            if (!RoomUtils.TryGetRoom(PlayerEditing.Position, out var room))
+            {
+                return;
+            }
+
+            var cameraPosition = PlayerEditing.Camera.position;
+            var cameraForward = PlayerEditing.Camera.forward;
+
+            Visuals.FacingVertex = Enumerable.Empty<Transform>().Prepend(room.transform)
+                .Select(transform => (
+                    room: transform.gameObject,
+                    localPosition: transform.InverseTransformPoint(cameraPosition),
+                    localForward: transform.InverseTransformDirection(cameraForward)))
+                .Select(t => FindClosestVertexFacingAt(t.room, t.localPosition, t.localForward))
+                .Where(v => v != null)
+                .Select(v => new TransformVertex?(new(v, room.transform)))
+                .FirstOrDefault();
         }
 
         private void UpdateNearestCell()
@@ -620,22 +633,28 @@ namespace SCPSLBot.Navigation.Mesh
 
         private void UpdateFacingCell()
         {
-            if (PlayerEditing != null)
+            if (PlayerEditing == null)
             {
-                RoomUtils.TryGetRoom(PlayerEditing.Position, out var room);
-                var cameraPosition = PlayerEditing.Camera.position;
-                var cameraForward = PlayerEditing.Camera.forward;
-
-                Visuals.FacingCell = Enumerable.Empty<Transform>().Prepend(room.transform)
-                    .Select(transform => (
-                        room: transform.gameObject,
-                        localPosition: transform.InverseTransformPoint(cameraPosition),
-                        localForward: transform.InverseTransformDirection(cameraForward)))
-                    .Select(t => new TransformCell(FindClosestCellFacingAt(t.room, t.localPosition, t.localForward), t.room.transform))
-                    .Where(ta => ta.Local != null)
-                    .Select(ta => new TransformCell?(ta))
-                    .FirstOrDefault();
+                return;
             }
+
+            if (!RoomUtils.TryGetRoom(PlayerEditing.Position, out var room))
+            {
+                return;
+            }
+
+            var cameraPosition = PlayerEditing.Camera.position;
+            var cameraForward = PlayerEditing.Camera.forward;
+
+            Visuals.FacingCell = Enumerable.Empty<Transform>().Prepend(room.transform)
+                .Select(transform => (
+                    room: transform.gameObject,
+                    localPosition: transform.InverseTransformPoint(cameraPosition),
+                    localForward: transform.InverseTransformDirection(cameraForward)))
+                .Select(t => new TransformCell(FindClosestCellFacingAt(t.room, t.localPosition, t.localForward), t.room.transform))
+                .Where(ta => ta.Local != null)
+                .Select(ta => new TransformCell?(ta))
+                .FirstOrDefault();
         }
 
         private void UpdateVertexAutoSelect()
