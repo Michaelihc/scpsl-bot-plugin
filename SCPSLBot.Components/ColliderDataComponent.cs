@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
+namespace SCPSLBot.Components
 {
+    internal record struct ColliderData(int InstanceId, Vector3 Center);
+
     internal class ColliderDataComponent : MonoBehaviour
     {
         public Dictionary<Collider, ColliderData> ColliderDatas { get; } = new();

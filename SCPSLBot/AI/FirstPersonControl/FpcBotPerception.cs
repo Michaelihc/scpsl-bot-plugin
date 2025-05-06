@@ -2,6 +2,7 @@
 using PlayerRoles.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl.Perception;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
+using SCPSLBot.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,6 +48,28 @@ namespace SCPSLBot.AI.FirstPersonControl
             Senses.Add(new RoomSightSense(fpcBotPlayer));
 
             Senses.Add(new InteractablesWithinSightSense(fpcBotPlayer));
+        }
+
+        public void AddTriggerHandlers(PerceptionComponent perceptionComponent)
+        {
+            perceptionComponent.TriggerEnter += OnTriggerEnter;
+            perceptionComponent.TriggerExit += OnTriggerExit;
+        }
+
+        public void OnTriggerEnter(Collider other)
+        {
+            foreach (var sense in Senses)
+            {
+                sense.ProcessEnter(other);
+            }
+        }
+
+        public void OnTriggerExit(Collider other)
+        {
+            foreach (var sense in Senses)
+            {
+                sense.ProcessExit(other);
+            }
         }
 
         private readonly List<IEnumerator<JobHandle>> processSensesEnumerators = new();

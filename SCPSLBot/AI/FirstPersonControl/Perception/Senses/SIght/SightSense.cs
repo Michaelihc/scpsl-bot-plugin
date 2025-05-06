@@ -1,4 +1,5 @@
 ﻿using Interactables.Interobjects.DoorUtils;
+using SCPSLBot.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,6 @@ using UnityEngine.Profiling;
 
 namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
 {
-    internal record struct ColliderData(int InstanceId, Vector3 Center);
-
     internal abstract class SightSense<TComponent> : SightSense, ISense where TComponent : Component
     {
         public HashSet<TComponent> ComponentsWithinSight { get; } = new();

@@ -1,4 +1,5 @@
-﻿using Unity.Burst;
+﻿using SCPSLBot.Components;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;

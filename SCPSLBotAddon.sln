@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPSLPluginManager", "SCPSL
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPSLBot.Tests", "SCPSLBot.Tests\SCPSLBot.Tests.csproj", "{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPSLBot.Components", "SCPSLBot.Components\SCPSLBot.Components.csproj", "{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -34,6 +36,10 @@ Global
 		{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}.Debug|x64.Build.0 = Debug|x64
 		{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}.Release|x64.ActiveCfg = Release|x64
 		{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}.Release|x64.Build.0 = Release|x64
+		{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}.Debug|x64.ActiveCfg = Debug|x64
+		{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}.Debug|x64.Build.0 = Debug|x64
+		{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}.Release|x64.ActiveCfg = Release|x64
+		{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

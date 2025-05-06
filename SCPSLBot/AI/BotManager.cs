@@ -2,9 +2,12 @@
 using MEC;
 using Mirror;
 using PlayerRoles;
+using SCPSLBot.AI.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
+using SCPSLBot.Components;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
@@ -27,6 +30,7 @@ namespace SCPSLBot.AI
             handle = Timing.RunCoroutine(RunPlayerUpdates());
 
             PlayerRoleManager.OnRoleChanged += OnRoleChanged;
+            ReferenceHub.OnPlayerRemoved += OnPlayerRemoved;
 
             for (int i = 0; i < 32; i++)
             {
@@ -44,13 +48,15 @@ namespace SCPSLBot.AI
             Timing.KillCoroutines(handle);
 
             PlayerRoleManager.OnRoleChanged -= OnRoleChanged;
+            ReferenceHub.OnPlayerRemoved -= OnPlayerRemoved;
 
-            foreach (var (referenceHub, _) in BotPlayers)
+            foreach (var (referenceHub, botHub) in BotPlayers.ToArray())
             {
                 var player = referenceHub.gameObject;
                 ServerConsole.Disconnect(player, "BotManager terminating");
+
+                OnPlayerRemoved(referenceHub);
             }
-            BotPlayers.Clear();
         }
 
         public void AddBotPlayer()
@@ -70,6 +76,7 @@ namespace SCPSLBot.AI
             NetworkServer.OnConnectedEvent?.Invoke(connectionToClient);
 
             var referenceHub = player.GetComponent<ReferenceHub>();
+            Debug.Log($"referenceHub = {referenceHub}");
 
             BotPlayers.Add(referenceHub, new BotHub(connectionToClient, connectionToServer, referenceHub));
 
@@ -79,11 +86,14 @@ namespace SCPSLBot.AI
             var sensing = new GameObject("Bot Sensing");
             sensing.layer = 31;
             sensing.transform.parent = player.transform;
-            var perception = sensing.AddComponent<PerceptionComponent>();
-            perception.enabled = false;
+
+            var perceptionComponent = sensing.AddComponent<PerceptionComponent>();
+            BotPlayers[referenceHub].FpcPlayer.Perception.AddTriggerHandlers(perceptionComponent);
+
             var sensingTrigger = sensing.AddComponent<SphereCollider>();
             sensingTrigger.isTrigger = true;
             sensingTrigger.radius = 32f;
+
             var sensingRigid = sensing.AddComponent<Rigidbody>();
             sensingRigid.isKinematic = true;
 
@@ -148,6 +158,14 @@ namespace SCPSLBot.AI
             if (BotPlayers.TryGetValue(userHub, out var botPlayer))
             {
                 botPlayer.OnRoleChanged(prevRole, newRole);
+            }
+        }
+
+        public void OnPlayerRemoved(ReferenceHub userHub)
+        {
+            if (BotPlayers.Remove(userHub))
+            {
+                Debug.Log($"Bot player removed: {userHub}");
             }
         }
 

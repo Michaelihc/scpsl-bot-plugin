@@ -1,4 +1,5 @@
 ﻿using InventorySystem.Items.Pickups;
+using SCPSLBot.Components;
 using System.Collections.Generic;
 using UnityEngine;
 

@@ -21,8 +21,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         private void OnAfterSightSensing()
         {
-            var edgelessSegment = navigator.CellPathSegments.FirstOrDefault(s => !s.Cell.AdjacentCellEdges.ContainsKey(s.NextCell));
-            if (edgelessSegment.NextCell == null)
+            var edgelessSegmentResult = navigator.CellPathSegments
+                .Where(s => !s.Cell.AdjacentCellEdges.ContainsKey(s.NextCell))
+                .Select(s => new (TransformCell Cell, TransformCell NextCell)?(s))
+                .FirstOrDefault();
+            if (!edgelessSegmentResult.HasValue)
             {
                 if (DestinationCell != null && DestinationCell == navigator.GetCellWithin())
                 {
@@ -31,6 +34,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
                 return;
             }
+            var edgelessSegment = edgelessSegmentResult.Value;
 
             // path has edgeless segment
 
@@ -63,11 +67,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         public Vector3? GoalPosition { get; private set; }
         public TransformCell? DestinationCell { get; private set; }
 
-        private void Update(ElevatorChamber newChamberValue, Vector3? goalPos, TransformCell? destinationCell)
+        private void Update(ElevatorChamber newElevatorValue, Vector3? goalPos, TransformCell? destinationCell)
         {
-            if (newChamberValue != Elevator) 
+            if (newElevatorValue != Elevator) 
             { 
-                Elevator = newChamberValue;
+                Elevator = newElevatorValue;
                 GoalPosition = goalPos;
                 DestinationCell = destinationCell;
                 InvokeOnUpdate();

@@ -5,8 +5,6 @@ using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using MapGeneration.Distributors;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using HarmonyLib;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
 {
@@ -144,7 +142,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             return acceptedItems.Length;
         }
 
-        private static readonly FieldInfo positionVariantsField = AccessTools.DeclaredField(typeof(RandomItemSpawnpoint), "_positionVariants");
         public static IEnumerable<Transform> GetPositionVariants(this RandomItemSpawnpoint spawnpoint)
         {
             var positionVariants = spawnpoint.Presets.SelectMany(p => p.PossibleSpawnpoints);

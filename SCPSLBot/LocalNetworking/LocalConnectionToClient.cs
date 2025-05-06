@@ -26,7 +26,9 @@ namespace SCPSLBot.LocalNetworking
         internal void DisconnectInternal()
         {
             isReady = false;
-            this.RemoveFromObservingsObservers();
+
+            NetworkServer.DestroyPlayerForConnection(this);
+            NetworkServer.RemoveConnection(this.connectionId);
         }
 
         public override void Disconnect()

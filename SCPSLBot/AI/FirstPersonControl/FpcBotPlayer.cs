@@ -9,6 +9,7 @@ using SCPSLBot.AI.FirstPersonControl.Mind;
 using SCPSLBot.AI.FirstPersonControl.Movement;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
+using SCPSLBot.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
