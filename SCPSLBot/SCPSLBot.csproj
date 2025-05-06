@@ -6,7 +6,7 @@
     <AssemblyName>SCPSLBot</AssemblyName>
     <RootNamespace>SCPSLBot</RootNamespace>
 
-    <LangVersion>11.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <Nullable>warnings</Nullable>
 
     <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
@@ -40,7 +40,7 @@
   
   <ItemGroup>
     <PackageReference Include="IsExternalInit" Version="1.0.3" />
-    <PackageReference Include="Lib.Harmony" Version="2.2.2" />
+    <PackageReference Include="Lib.Harmony" Version="2.3.6" />
   </ItemGroup>
 
   <ItemGroup>
