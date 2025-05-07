@@ -12,7 +12,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         private TransformCell? cellWithin;
 
         private TransformCell currentCell;
-        private TransformCell goalCell;
+        private TransformCell? goalCell;
         public List<TransformCell> CellsPath { get; } = new();
         public IEnumerable<(TransformCell Cell, TransformCell NextCell)> CellPathSegments { get; }
         private int currentPathIdx = -1;
@@ -64,7 +64,10 @@ namespace SCPSLBot.AI.FirstPersonControl
                 do
                 {
                     var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
-                    var nextTargetCellEdge = this.currentCell.AdjacentCellEdges[nextTargetCell];
+                    if (!this.currentCell.AdjacentCellEdges.TryGetValue(nextTargetCell, out var nextTargetCellEdge))
+                    {
+                        nextTargetCellEdge = NavigationMesh.ForeignConnectedCellEdges[this.currentCell][nextTargetCell]; 
+                    }
 
                     isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetCellEdge);
                     if (isEdgeReached)
@@ -105,7 +108,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 isGoalOutside = false;
             }
 
-            if (withinCell != null && targetCell != null && (targetCell.Value != this.goalCell || withinCell.Value != this.currentCell))
+            if (withinCell != null && targetCell != null && (targetCell != this.goalCell || withinCell.Value != this.currentCell))
             {
                 this.currentCell = withinCell.Value;
                 this.goalCell = targetCell.Value;

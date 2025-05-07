@@ -20,6 +20,17 @@ namespace SCPSLBot.Navigation.Mesh
         {
         }
 
+        [Obsolete]
+        public static bool operator ==(TransformCell left, TransformCell? right)
+        {
+            throw new NotSupportedException();
+        }
+        [Obsolete]
+        public static bool operator !=(TransformCell left, TransformCell? right)
+        {
+            throw new NotSupportedException();
+        }
+
         private readonly TransformCell ToTransformCell(Cell localCell) => new(localCell, Transform);
         private readonly TransformEdge ToTransformEdge(Edge localEdge) => new(localEdge, Transform);
         private readonly Cell ToLocalCell(TransformCell transformCell) => transformCell.Local;

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace SCPSLBot.Navigation.Mesh
 {
@@ -13,5 +14,16 @@ namespace SCPSLBot.Navigation.Mesh
         public TransformEdge(Edge Edge, Transform Tranform)
             : this(new(Edge.From, Tranform), new(Edge.To, Tranform), Tranform)
         { }
+
+        [Obsolete]
+        public static bool operator ==(TransformEdge? left, TransformEdge right)
+        {
+            throw new NotSupportedException();
+        }
+        [Obsolete]
+        public static bool operator !=(TransformEdge? left, TransformEdge right)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

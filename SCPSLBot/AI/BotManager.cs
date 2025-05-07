@@ -1,4 +1,5 @@
 ﻿using CentralAuth;
+using LabApi.Events.Handlers;
 using MEC;
 using Mirror;
 using PlayerRoles;
@@ -30,7 +31,8 @@ namespace SCPSLBot.AI
             handle = Timing.RunCoroutine(RunPlayerUpdates());
 
             PlayerRoleManager.OnRoleChanged += OnRoleChanged;
-            ReferenceHub.OnPlayerRemoved += OnPlayerRemoved;
+            ReferenceHub.OnPlayerRemoved += RemovePlayerIfBot;
+            ServerEvents.RoundRestarted += OnRoundRestarted;
 
             for (int i = 0; i < 32; i++)
             {
@@ -48,14 +50,23 @@ namespace SCPSLBot.AI
             Timing.KillCoroutines(handle);
 
             PlayerRoleManager.OnRoleChanged -= OnRoleChanged;
-            ReferenceHub.OnPlayerRemoved -= OnPlayerRemoved;
+            ReferenceHub.OnPlayerRemoved -= RemovePlayerIfBot;
+            ServerEvents.RoundRestarted -= OnRoundRestarted;
 
-            foreach (var (referenceHub, botHub) in BotPlayers.ToArray())
+            foreach (var (referenceHub, _) in BotPlayers.ToArray())
             {
                 var player = referenceHub.gameObject;
                 ServerConsole.Disconnect(player, "BotManager terminating");
 
-                OnPlayerRemoved(referenceHub);
+                RemovePlayerIfBot(referenceHub);
+            }
+        }
+
+        private void OnRoundRestarted()
+        {
+            foreach (var (referenceHub, _) in BotPlayers.ToArray())
+            {
+                RemovePlayerIfBot(referenceHub);
             }
         }
 
@@ -161,7 +172,7 @@ namespace SCPSLBot.AI
             }
         }
 
-        public void OnPlayerRemoved(ReferenceHub userHub)
+        public void RemovePlayerIfBot(ReferenceHub userHub)
         {
             if (BotPlayers.Remove(userHub))
             {

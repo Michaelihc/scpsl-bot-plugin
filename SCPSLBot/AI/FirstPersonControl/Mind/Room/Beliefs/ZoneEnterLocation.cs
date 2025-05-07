@@ -1,6 +1,7 @@
 ﻿using MapGeneration;
 using SCPSLBot.AI.FirstPersonControl.Mind.Spacial;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
+using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Linq;
 using UnityEngine;
@@ -31,10 +32,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
                 return;
             }
 
-            var foreignRoomCellOfTargetZone = this.roomSightSense.ForeignRoomsCells.Find(r => r.Transform.GetComponent<RoomIdentifier>().Zone == Zone);
-            if (foreignRoomCellOfTargetZone != null && foreignRoomCellOfTargetZone.Transform.GetComponent<RoomIdentifier>().Zone != this.roomSightSense.RoomWithin.Zone)
+            var foreignRoomCellOfTargetZoneResult = this.roomSightSense.ForeignRoomsCells
+                .Where(r => r.Transform.GetComponent<RoomIdentifier>().Zone == Zone)
+                .Select(r => new TransformCell?(r))
+                .FirstOrDefault();
+            if (foreignRoomCellOfTargetZoneResult != null && foreignRoomCellOfTargetZoneResult.Value.Transform.GetComponent<RoomIdentifier>().Zone != this.roomSightSense.RoomWithin.Zone)
             {
-                var enterPosition = foreignRoomCellOfTargetZone.CenterPosition;
+                var enterPosition = foreignRoomCellOfTargetZoneResult.Value.CenterPosition;
                 AddPosition(enterPosition);
             }
         }

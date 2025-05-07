@@ -25,6 +25,7 @@ namespace SCPSLBot.Navigation
         public void Init()
         {
             ServerEvents.MapGenerated += OnMapGenerated;
+            ServerEvents.RoundRestarted += OnRoundRestarted;
 
             if (SeedSynchronizer.MapGenerated)
             {
@@ -37,15 +38,21 @@ namespace SCPSLBot.Navigation
         public void Terminate()
         {
             ServerEvents.MapGenerated -= OnMapGenerated;
+            ServerEvents.RoundRestarted -= OnRoundRestarted;
 
             Initialized = false;
 
             NavigationMesh.ResetMeshes();
         }
 
-        public void OnMapGenerated(MapGeneratedEventArgs args)
+        private void OnMapGenerated(MapGeneratedEventArgs args)
         {
             Timing.RunCoroutine(ConnectForeignCellsAsync());
+        }
+
+        private void OnRoundRestarted()
+        {
+            NavigationMesh.ResetMeshes();
         }
 
         private IEnumerator<float> ConnectForeignCellsAsync()
