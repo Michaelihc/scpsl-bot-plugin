@@ -420,7 +420,8 @@ namespace SCPSLBot.Navigation.Mesh
                         var cell = nextCell;
                         nextCell = pathEnumerator.Current;
 
-                        if (!cell.AdjacentCellEdges.TryGetValue(nextCell, out var connectedEdge))
+                        if (!cell.AdjacentCellEdges.TryGetValue(nextCell, out var connectedEdge) 
+                            && !NavigationMesh.ForeignConnectedCellEdges[cell].TryGetValue(nextCell, out connectedEdge))
                         {
                             continue;
                         }

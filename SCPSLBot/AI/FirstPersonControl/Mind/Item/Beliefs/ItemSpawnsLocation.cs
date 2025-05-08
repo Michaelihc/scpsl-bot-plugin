@@ -95,7 +95,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
                 spawnPositionsQuery ??= itemSpawnpoints
                     .Select(spawnPoint => (spawnPoint, prob: GetSpawnProbability(spawnPoint)))
                     .Where(t => t.prob > 0f)
-                    .SelectMany(t => t.spawnPoint.GetPositionVariants(), 
+                    .SelectMany(t => GetAcceptedPositions(t.spawnPoint), 
                         (t, spawnTransform) => (spawnTransform.position, t.prob));
 
                 spawnPositions = spawnPositionsQuery.Select(t => t.Position).ToArray();
@@ -112,14 +112,24 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
 
         private float GetSpawnProbability(RandomItemSpawnpoint spawnpoint)
         {
-            var numMatchingItemTypes = this.spawnItemTypes.Count(spawnItemType => spawnpoint.InAutospawnOrAcceptedItems(spawnItemType));
+            var numMatchingItemTypes = this.spawnItemTypes.Count(spawnpoint.InPresets);
             if (numMatchingItemTypes == 0)
             {
                 return 0f;
             }
 
-            var totalNumItemTypes = spawnpoint.AutospawnOrAcceptedItemsCount();
+            var totalNumItemTypes = spawnpoint.PresetsCount();
             return numMatchingItemTypes / totalNumItemTypes;
+        }
+
+        private IEnumerable<Transform> GetAcceptedPositions(RandomItemSpawnpoint spawnpoint)
+        {
+            var positionVariants = this.spawnItemTypes
+                .SelectMany(st => spawnpoint.Presets.Where(p => p.TargetItem == st))
+                .SelectMany(p => p.PossibleSpawnpoints)
+                .Distinct();
+
+            return positionVariants;
         }
 
         public override string ToString()
@@ -130,22 +140,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
 
     internal static class RandomItemSpawnpointExtensions
     {
-        public static bool InAutospawnOrAcceptedItems(this RandomItemSpawnpoint spawnpoint, ItemType itemType)
+        public static bool InPresets(this RandomItemSpawnpoint spawnpoint, ItemType itemType)
         {
             var spawnPointAcceptedItems = spawnpoint.Presets.Select(p => p.TargetItem);
             return spawnPointAcceptedItems.Any(i => i == itemType);
         }
 
-        public static int AutospawnOrAcceptedItemsCount(this RandomItemSpawnpoint spawnpoint)
+        public static int PresetsCount(this RandomItemSpawnpoint spawnpoint)
         {
             var acceptedItems = spawnpoint.Presets;
             return acceptedItems.Length;
-        }
-
-        public static IEnumerable<Transform> GetPositionVariants(this RandomItemSpawnpoint spawnpoint)
-        {
-            var positionVariants = spawnpoint.Presets.SelectMany(p => p.PossibleSpawnpoints);
-            return positionVariants;
         }
     }
 }
