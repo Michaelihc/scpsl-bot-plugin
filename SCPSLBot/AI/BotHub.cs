@@ -38,13 +38,19 @@ namespace SCPSLBot.AI
             var botPlayerUpdate = CurrentBotPlayer?.Update();
             if (botPlayerUpdate != null)
             {
-                while (botPlayerUpdate.MoveNext())
+                while (botPlayerUpdate.TryCatchMoveNext(HandleUpdateException))
                 {
                     yield return botPlayerUpdate.Current;
                 }
             }
 
             Profiler.EndSample();
+        }
+
+        private void HandleUpdateException(Exception ex)
+        {
+            Debug.LogException(ex);
+            CurrentBotPlayer = null;
         }
 
         public void OnRoleChanged(PlayerRoleBase prevRole, PlayerRoleBase newRole)
@@ -59,10 +65,7 @@ namespace SCPSLBot.AI
                 CurrentBotPlayer = null;
             }
 
-            if (CurrentBotPlayer != null)
-            {
-                CurrentBotPlayer.OnRoleChanged();
-            }
+            CurrentBotPlayer?.OnRoleChanged();
 
             Debug.Log($"Bot got new role assigned. Role Id: {newRole.RoleTypeId}");
             Debug.Log($"Type of role: {newRole.GetType()}");
@@ -71,6 +74,22 @@ namespace SCPSLBot.AI
         public override string ToString()
         {
             return $"{nameof(BotHub)}: {PlayerHub}";
+        }
+    }
+
+    internal static class IEnumeratorExtensions
+    { 
+        public static bool TryCatchMoveNext<T>(this IEnumerator<T> enumerator, Action<Exception> handleException)
+        {
+            try
+            {
+                return enumerator.MoveNext();
+            }
+            catch (Exception ex)
+            {
+                handleException(ex);
+                return false;
+            }
         }
     }
 }
