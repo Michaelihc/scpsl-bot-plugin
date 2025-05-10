@@ -1,4 +1,5 @@
-﻿using Interactables.Interobjects.DoorUtils;
+﻿using DrawableLine;
+using Interactables.Interobjects.DoorUtils;
 using SCPSLBot.Components;
 using System;
 using System.Collections.Generic;
@@ -195,6 +196,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
             var raycastCommands = raycastCommandsBuffer.GetSubArray(0, numRaycasts);
             var raycastsJobHandle = RaycastCommand.ScheduleBatch(raycastCommands, raycastResultsBuffer, 1);
 
+            //foreach (var raycast in raycastCommands)
+            //{
+            //    DrawableLines.GenerateLine(raycast.from, raycast.from + raycast.direction * raycast.distance);
+            //}
+             
             var raycastResultJob = new RaycastResultJob()
             {
                 RaycastsResult = raycastResultsBuffer,
