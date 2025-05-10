@@ -29,7 +29,7 @@ namespace SCPSLBot.Navigation
 
             if (SeedSynchronizer.MapGenerated)
             {
-                ConnectForeignCells();
+                LoadConnectMeshes();
             }
 
             Initialized = true;
@@ -47,7 +47,7 @@ namespace SCPSLBot.Navigation
 
         private void OnMapGenerated(MapGeneratedEventArgs args)
         {
-            Timing.RunCoroutine(ConnectForeignCellsAsync());
+            Timing.RunCoroutine(LoadConnectMeshesAsync());
         }
 
         private void OnRoundRestarted()
@@ -55,14 +55,14 @@ namespace SCPSLBot.Navigation
             NavigationMesh.ResetMeshes();
         }
 
-        private IEnumerator<float> ConnectForeignCellsAsync()
+        private IEnumerator<float> LoadConnectMeshesAsync()
         {
             yield return Timing.WaitUntilTrue(() => SeedSynchronizer.MapGenerated);
 
-            ConnectForeignCells();
+            LoadConnectMeshes();
         }
 
-        private void ConnectForeignCells()
+        public void LoadConnectMeshes()
         {
             Debug.Log($"Initializing meshes.");
             NavigationMesh.InitMeshes();

@@ -33,24 +33,23 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
             {
                 locker.GetComponentsInChildren(interactables);
 
-                var colliderId = Array.IndexOf(locker.Chambers, lockerChamber);
-                colliderId %= interactables.Count;
-
-                foreach (var interactable in interactables)
+                if (interactables.Count > 0)
                 {
-                    if (interactable.ColliderId == colliderId)
+                    var colliderId = Array.IndexOf(locker.Chambers, lockerChamber);
+                    colliderId %= interactables.Count;
+
+                    foreach (var interactable in interactables)
                     {
-                        colliderToBeChecked = interactable.GetComponentInChildren<Collider>();
-                        break;
+                        if (interactable.ColliderId == colliderId)
+                        {
+                            colliderToBeChecked = interactable.GetComponentInChildren<Collider>();
+                            break;
+                        }
                     }
                 }
             }
 
             return locker;
-        }
-
-        public override void ProcessSightSensedItems()
-        {
         }
     }
 }

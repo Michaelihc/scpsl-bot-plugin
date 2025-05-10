@@ -364,6 +364,7 @@ namespace SCPSLBot.Navigation.Mesh
             MeshesByRoomForm.Clear();
             LocalMeshesByRoom.Clear();
             ForeignConnectedCells.Clear();
+            ForeignConnectedCellEdges.Clear();
         }
 
         #endregion
