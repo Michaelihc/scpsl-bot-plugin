@@ -28,13 +28,11 @@
 
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="echo Copying output file $(TargetName)&#xD;&#xA;copy $(TargetPath) &quot;$(SL_APPDATA)\LabAPI-Beta\plugins\global\$(TargetFileName)&quot;" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SL_APPDATA)\LabAPI-Beta\plugins\global">
+      <Output TaskParameter="CopiedFiles" ItemName="FilesCopied" />
+    </Copy>
+    <Message Text="Files copied @(FilesCopied)" Importance="high" />
   </Target>
-
-
-  <ItemGroup>
-    <PackageReference Include="Lib.Harmony" Version="2.2.2" />
-  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="mscorlib" />
