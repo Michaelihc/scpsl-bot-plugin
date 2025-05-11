@@ -32,7 +32,8 @@ namespace SCPSLBot.Misc
                 return false;
             }
 
-            if (!Physics.Raycast(playerCommandSender.ReferenceHub.PlayerCameraReference.position, playerCommandSender.ReferenceHub.PlayerCameraReference.forward, out var hit, 20f))
+            var playerCameraReference = playerCommandSender.ReferenceHub.PlayerCameraReference;
+            if (!Physics.Raycast(playerCameraReference.position, playerCameraReference.forward, out var hit, 20f))
             {
                 response = "Raycast produced no any hit within max distance.";
                 return false;
@@ -42,7 +43,16 @@ namespace SCPSLBot.Misc
             var layerName = LayerMask.LayerToName(collider.gameObject.layer);
             var tag = collider.gameObject.tag;
 
-            response = $"Got hit with collider of {collider.gameObject} and layer {layerName} and tag {tag}";
+            response = $"Got hit with collider of {collider.gameObject} and layer {layerName} and tag {tag}: ";
+
+            var transform = collider.transform;
+            do
+            {
+                response += $"{transform.gameObject.name}, ";
+                transform = transform.parent;
+            }
+            while (transform);
+
             Debug.Log(response);
 
             return true;
