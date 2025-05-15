@@ -51,5 +51,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 
             return locker;
         }
+
+        public override void ProcessSightSensedItems()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
