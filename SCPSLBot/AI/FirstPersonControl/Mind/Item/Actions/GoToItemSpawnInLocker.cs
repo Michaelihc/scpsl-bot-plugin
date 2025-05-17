@@ -35,15 +35,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
             }
 
             var lockerDoor = location.LockerDoors[spawnPosition];
-            if (lockerDoor)
+            if (!botPlayer.Interact(lockerDoor))
             {
-                if (!botPlayer.Interact(lockerDoor))
-                {
-                    var posToChamber = lockerDoor.GetComponent<Collider>().bounds.center;
+                var posToChamber = lockerDoor.GetComponent<Collider>().bounds.center;
 
-                    botPlayer.LookToPosition(posToChamber);
-                    //Log.Debug($"Looking towards door interactable");
-                }
+                botPlayer.LookToPosition(posToChamber);
+                //Log.Debug($"Looking towards door interactable");
                 return;
             }
 

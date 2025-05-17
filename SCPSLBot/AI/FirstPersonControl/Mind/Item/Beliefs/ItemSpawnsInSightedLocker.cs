@@ -1,4 +1,5 @@
-﻿using Interactables;
+﻿using DrawableLine;
+using Interactables;
 using InventorySystem.Items.Pickups;
 using MapGeneration.Distributors;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
@@ -84,7 +85,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
                 if (this.lockersSightSense.IsPositionWithinFov(itemSpawnPosition))
                 {
                     if (!lockersSightSense.IsPositionObstructed(itemSpawnPosition, out var obstruction)
-                        || obstruction.collider.GetComponent<ItemPickupBase>())
+                        || (this.LockerDoors.TryGetValue(itemSpawnPosition, out var storedInteractableObstruction) 
+                            && storedInteractableObstruction != obstruction.collider.GetComponentInParent<InteractableCollider>()))
                     {
                         this.visitedItemSpawnPositions.Add(itemSpawnPosition);
                         absentPositions.Add(itemSpawnPosition);
@@ -92,7 +94,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
                         this.LockerDoors.Remove(itemSpawnPosition);
                         this.LockerDirections.Remove(itemSpawnPosition);
                     }
-                    else if (obstruction.collider.GetComponent<InteractableCollider>() is InteractableCollider interactableObstruction
+                    else if (obstruction.collider.GetComponentInParent<InteractableCollider>() is InteractableCollider interactableObstruction
                         && interactableObstruction.Target is Locker)
                     {
                         this.LockerDoors[itemSpawnPosition] = interactableObstruction;

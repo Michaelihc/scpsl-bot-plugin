@@ -13,27 +13,23 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
         private readonly HashSet<Collider> colliders = new();
         private readonly Dictionary<Collider, ColliderData> collidersDatas = new();
 
-        protected override ColliderData GetEnterColliderData(Collider collider)
+        protected override void AddColliderDatas(Collider triggeringCollider, TComponent component, Dictionary<ColliderData, TComponent> data)
         {
-            var colliderDataComponent = collider.GetComponent<ColliderDataComponent>();
+            var colliderDataComponent = triggeringCollider.GetComponent<ColliderDataComponent>();
             if (!colliderDataComponent)
             {
-                colliderDataComponent = collider.gameObject.AddComponent<ColliderDataComponent>();
+                colliderDataComponent = triggeringCollider.gameObject.AddComponent<ColliderDataComponent>();
             }
 
-            var colliderData = colliderDataComponent.ColliderDatas[collider];
-            colliders.Add(collider);
-            collidersDatas[collider] = colliderData;
-
-            return colliderData;
+            var colliderData = colliderDataComponent.ColliderDatas[triggeringCollider];
+            colliders.Add(triggeringCollider);
+            collidersDatas[triggeringCollider] = colliderData;
         }
 
-        protected override ColliderData GetExitColliderData(Collider collider)
+        protected override void RemoveColliderDatas(Collider triggeringCollider, TComponent component, Dictionary<ColliderData, TComponent> data)
         {
-            colliders.Remove(collider);
-            collidersDatas.Remove(collider, out var colliderData);
-
-            return colliderData;
+            colliders.Remove(triggeringCollider);
+            collidersDatas.Remove(triggeringCollider);
         }
 
         protected override void UpdateColliderData(Dictionary<ColliderData, TComponent> validCollidersComponents)

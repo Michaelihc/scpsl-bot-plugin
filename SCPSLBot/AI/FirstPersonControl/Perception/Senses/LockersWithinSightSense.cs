@@ -3,6 +3,7 @@ using Interactables.Interobjects;
 using Interactables.Interobjects.DoorUtils;
 using MapGeneration.Distributors;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
+using SCPSLBot.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,39 +23,58 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
         private LayerMask interactableLayerMask = LayerMask.GetMask("InteractableNoPlayerCollision");
         protected override LayerMask LayerMask => interactableLayerMask;
 
-        private readonly List<InteractableCollider> interactables = new();
-
-        protected override Locker GetComponent(ref Collider colliderToBeChecked)
+        protected override void AddColliderDatas(Collider triggeringCollider, Locker locker, Dictionary<ColliderData, Locker> data)
         {
-            var lockerChamber = colliderToBeChecked.GetComponentInParent<LockerChamber>();
-            var locker = lockerChamber?.GetComponentInParent<Locker>();
-
-            if (locker != null)
+            if (TryGetColliders(triggeringCollider, locker, out var colliders))
             {
-                locker.GetComponentsInChildren(interactables);
-
-                if (interactables.Count > 0)
+                foreach (var collider in colliders)
                 {
-                    var colliderId = Array.IndexOf(locker.Chambers, lockerChamber);
-                    colliderId %= interactables.Count;
+                    data[new ColliderData(collider.GetInstanceID(), collider.bounds.center)] = locker;
+                }
+            }
+        }
 
-                    foreach (var interactable in interactables)
+        protected override void RemoveColliderDatas(Collider triggeringCollider, Locker locker, Dictionary<ColliderData, Locker> data)
+        {
+            if (TryGetColliders(triggeringCollider, locker, out var colliders))
+            {
+                foreach (var collider in colliders)
+                {
+                    data.Remove(new ColliderData(collider.GetInstanceID(), collider.bounds.center));
+                }
+            }
+        }
+
+        private readonly List<InteractableCollider> interactables = new();
+        private readonly List<Collider> interactableColliders = new();
+
+        private bool TryGetColliders(Collider triggeringCollider, Locker locker, out IEnumerable<Collider> colliders)
+        {
+            locker.GetComponentsInChildren(interactables);
+
+            if (interactables.Count > 0)
+            {
+                var lockerChamber = triggeringCollider.GetComponentInParent<LockerChamber>();
+                var chamberColliderId = Array.IndexOf(locker.Chambers, lockerChamber);
+                chamberColliderId %= interactables.Count;
+
+                foreach (var interactable in interactables)
+                {
+                    if (interactable.ColliderId == chamberColliderId)
                     {
-                        if (interactable.ColliderId == colliderId)
-                        {
-                            colliderToBeChecked = interactable.GetComponentInChildren<Collider>();
-                            break;
-                        }
+                        interactable.GetComponentsInChildren(interactableColliders);
+                        colliders = interactableColliders;
+                        return true;
                     }
                 }
             }
 
-            return locker;
+            colliders = default;
+            return false;
         }
 
         public override void ProcessSightSensedItems()
         {
-            throw new NotImplementedException();
         }
     }
 }

@@ -21,41 +21,41 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
 
         private readonly Dictionary<ColliderData, TComponent> validCollidersToComponent = new();
 
-        protected virtual TComponent GetComponent(ref Collider collider)
+        protected virtual TComponent GetComponent(Collider collider)
         {
             return collider.GetComponentInParent<TComponent>();
         }
 
-        protected virtual ColliderData GetEnterColliderData(Collider collider)
-        { 
-            return new(collider.GetInstanceID(), collider.bounds.center);
+        protected virtual void AddColliderDatas(Collider triggeringCollider, TComponent component, Dictionary<ColliderData, TComponent> data)
+        {
+            data[new(triggeringCollider.GetInstanceID(), triggeringCollider.bounds.center)] = component;
         }
 
-        protected virtual ColliderData GetExitColliderData(Collider collider)
+        protected virtual void RemoveColliderDatas(Collider triggeringCollider, TComponent component, Dictionary<ColliderData, TComponent> data)
         {
-            return new(collider.GetInstanceID(), collider.bounds.center);
+            data.Remove(new(triggeringCollider.GetInstanceID(), triggeringCollider.bounds.center));
         }
 
-        public void ProcessEnter(Collider collider)
+        public void ProcessEnter(Collider triggeringCollider)
         {
-            if ((LayerMask & (1 << collider.gameObject.layer)) != 0)
+            if ((LayerMask & (1 << triggeringCollider.gameObject.layer)) != 0)
             {
-                var component = GetComponent(ref collider);
+                var component = GetComponent(triggeringCollider);
                 if (component != null)
                 {
-                    validCollidersToComponent[GetEnterColliderData(collider)] = component;
+                    AddColliderDatas(triggeringCollider, component, validCollidersToComponent);
                 }
             }
         }
 
-        public void ProcessExit(Collider collider)
+        public void ProcessExit(Collider triggeringCollider)
         {
-            if ((LayerMask & (1 << collider.gameObject.layer)) != 0)
+            if ((LayerMask & (1 << triggeringCollider.gameObject.layer)) != 0)
             {
-                var component = GetComponent(ref collider);
+                var component = GetComponent(triggeringCollider);
                 if (component != null)
                 {
-                    validCollidersToComponent.Remove(GetExitColliderData(collider));
+                    RemoveColliderDatas(triggeringCollider, component, validCollidersToComponent);
                 }
             }
         }
