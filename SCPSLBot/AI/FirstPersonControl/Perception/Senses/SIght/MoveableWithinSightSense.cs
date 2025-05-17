@@ -24,12 +24,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
             var colliderData = colliderDataComponent.ColliderDatas[triggeringCollider];
             colliders.Add(triggeringCollider);
             collidersDatas[triggeringCollider] = colliderData;
+
+            data[colliderData] = component;
         }
 
         protected override void RemoveColliderDatas(Collider triggeringCollider, TComponent component, Dictionary<ColliderData, TComponent> data)
         {
             colliders.Remove(triggeringCollider);
-            collidersDatas.Remove(triggeringCollider);
+            collidersDatas.Remove(triggeringCollider, out var colliderData);
+
+            data.Remove(colliderData);
         }
 
         protected override void UpdateColliderData(Dictionary<ColliderData, TComponent> validCollidersComponents)
