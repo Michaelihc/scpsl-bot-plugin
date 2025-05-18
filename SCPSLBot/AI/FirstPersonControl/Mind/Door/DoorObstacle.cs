@@ -17,9 +17,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
     internal record struct DoorEntry(DoorVariant Door, DoorPermissionFlags DoorPermissions)
     {
+        const DoorPermissionFlags AllPermissionFlags =
+            DoorPermissionFlags.Checkpoints | DoorPermissionFlags.ExitGates | DoorPermissionFlags.Intercom | DoorPermissionFlags.AlphaWarhead |
+            DoorPermissionFlags.ContainmentLevelOne | DoorPermissionFlags.ContainmentLevelTwo | DoorPermissionFlags.ContainmentLevelThree |
+            DoorPermissionFlags.ArmoryLevelOne | DoorPermissionFlags.ContainmentLevelTwo | DoorPermissionFlags.ContainmentLevelThree;
+
         public readonly bool IsInteractable(DoorPermissionFlags permissions)
         {
-            return !IsNonIteractable(Door) && permissions == (DoorPermissions & ~DoorPermissionFlags.ScpOverride);
+            return !IsNonIteractable(Door) && permissions == (DoorPermissions & AllPermissionFlags);
         }
 
         private static bool IsNonIteractable(DoorVariant d)
