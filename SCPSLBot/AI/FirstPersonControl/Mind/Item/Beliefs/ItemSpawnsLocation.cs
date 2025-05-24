@@ -77,7 +77,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
 
         private readonly Dictionary<RoomIdentifier, Vector3[]> roomItemSpawnPositions = new();
 
-        private readonly List<RandomItemSpawnpoint> itemSpawnpoints = new();
+        private readonly List<ItemSpawnpointBase> itemSpawnpoints = new();
         private IEnumerable<(Vector3 Position, float Prob)> spawnPositionsQuery;
 
         private Vector3[] GetItemSpawnPositions(RoomIdentifier room)
@@ -110,7 +110,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             return spawnPositions;
         }
 
-        private float GetSpawnProbability(RandomItemSpawnpoint spawnpoint)
+        private float GetSpawnProbability(ItemSpawnpointBase spawnpoint)
         {
             var numMatchingItemTypes = this.spawnItemTypes.Count(spawnpoint.InPresets);
             if (numMatchingItemTypes == 0)
@@ -119,15 +119,32 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             }
 
             var totalNumItemTypes = spawnpoint.PresetsCount();
-            return numMatchingItemTypes / totalNumItemTypes;
+            return (float)numMatchingItemTypes / totalNumItemTypes;
         }
 
-        private IEnumerable<Transform> GetAcceptedPositions(RandomItemSpawnpoint spawnpoint)
+        private IEnumerable<Transform> GetAcceptedPositions(ItemSpawnpointBase spawnpoint)
         {
-            var positionVariants = this.spawnItemTypes
-                .SelectMany(st => spawnpoint.Presets.Where(p => p.TargetItem == st))
-                .SelectMany(p => p.PossibleSpawnpoints)
-                .Distinct();
+            var positionVariants = spawnpoint switch
+            {
+                PredefinedItemSpawnpoint predefinedSpawnpoint => this.spawnItemTypes
+                    .Where(st => predefinedSpawnpoint.TargetItem == st)
+                    .SelectMany(_ => predefinedSpawnpoint.PossibleSpawnpoints),
+
+                RandomItemSpawnpoint randomSpawnpoint => this.spawnItemTypes
+                    .SelectMany(st => randomSpawnpoint.Presets
+                        .Where(p => p.TargetItem == st))
+                    .SelectMany(p => p.PossibleSpawnpoints)
+                    .Distinct(),
+
+                RandomItemGroupSpawnpoint randomGroupSpawnpoint => this.spawnItemTypes
+                    .SelectMany(st => randomGroupSpawnpoint.Presets
+                        .SelectMany(g => g.Items)
+                        .Where(p => p.TargetItem == st))
+                    .Select(p => p.Position)
+                    .Distinct(),
+
+                _ => throw new NotImplementedException($"{spawnpoint}")
+            };
 
             return positionVariants;
         }
@@ -138,18 +155,36 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
         }
     }
 
-    internal static class RandomItemSpawnpointExtensions
+    internal static class ItemSpawnpointBaseExtensions
     {
-        public static bool InPresets(this RandomItemSpawnpoint spawnpoint, ItemType itemType)
+        public static bool InPresets(this ItemSpawnpointBase spawnpoint, ItemType itemType)
         {
-            var spawnPointAcceptedItems = spawnpoint.Presets.Select(p => p.TargetItem);
+            var spawnPointAcceptedItems = spawnpoint switch
+            {
+                PredefinedItemSpawnpoint predefinedSpawnpoint => [ predefinedSpawnpoint.TargetItem ],
+                RandomItemSpawnpoint randomSpawnpoint => randomSpawnpoint.Presets.Select(p => p.TargetItem),
+                RandomItemGroupSpawnpoint randomGroupSpawnpoint => randomGroupSpawnpoint.Presets.SelectMany(g => g.Items).Select(p => p.TargetItem),
+                _ => throw new NotImplementedException($"{spawnpoint}")
+            };
+            
             return spawnPointAcceptedItems.Any(i => i == itemType);
         }
 
-        public static int PresetsCount(this RandomItemSpawnpoint spawnpoint)
+        public static int PresetsCount(this ItemSpawnpointBase spawnpoint)
         {
-            var acceptedItems = spawnpoint.Presets;
-            return acceptedItems.Length;
+            var acceptedItemsCount = spawnpoint switch
+            {
+                PredefinedItemSpawnpoint predefinedSpawnpoint => 1,
+                RandomItemSpawnpoint randomSpawnpoint => randomSpawnpoint.Presets.Length,
+                RandomItemGroupSpawnpoint randomGroupSpawnpoint => randomGroupSpawnpoint.Presets
+                    .SelectMany(g => g.Items)
+                    .Select(p => p.TargetItem)
+                    .Distinct()
+                    .Count(),
+                _ => throw new NotImplementedException($"{spawnpoint}")
+            };
+
+            return acceptedItemsCount;
         }
     }
 }
