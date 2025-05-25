@@ -6,8 +6,17 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 {
-    internal class ElevationObstacle : Belief<bool>
+    internal enum ElevationObstacleMode
+    { 
+        NoElevator,
+        IsElevatorNotAtOrigin,
+        IsElevatorAtOrigin
+    }
+
+    internal class ElevationObstacle : Belief<ElevationObstacleMode>
     {
+        private readonly int doorLayer = LayerMask.NameToLayer("Door");
+
         private readonly FpcBotNavigator navigator;
         private readonly SightSense sightSense;
 
@@ -30,7 +39,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
             {
                 if (DestinationCell != null && DestinationCell == navigator.GetCellWithin())
                 {
-                    Update(null, null, null);
+                    Update(null, null, null, null);
                 }
 
                 return;
@@ -39,49 +48,80 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
             // path has edgeless segment
 
-            var lastPoint = edgelessSegment.Cell.CenterPosition;
-
-            if (!sightSense.IsPositionWithinFov(lastPoint))
-            {
-                return;
-            }
-
-            if (sightSense.IsPositionObstructed(lastPoint))
-            {
-                return;
-            }
-
+            var originPoint = edgelessSegment.Cell.CenterPosition;
             var goalPosition = navigator.GoalPosition;
 
-            if (Physics.Raycast(lastPoint, Vector3.down, out var hit, 2f))
+            if (!sightSense.IsPositionWithinFov(originPoint))
+            {
+                return;
+            }
+
+            if (sightSense.IsPositionObstructed(originPoint, out var hit))
+            {
+                var elevatorDoor = hit.collider.GetComponentInParent<ElevatorDoor>();
+                if (!elevatorDoor || hit.collider.gameObject.layer != doorLayer)
+                {
+                    return;
+                }
+
+                var elevator = elevatorDoor.Chamber;
+                if (!elevator)
+                {
+                    Debug.LogWarning($"No elevator chamber assigned to obstructing elevator door {elevatorDoor}.");
+                    return;
+                }
+
+                Update(elevator, goalPosition, edgelessSegment.NextCell, elevatorDoor.IsConsideredOpen() ? elevator : null);
+                return;
+            }
+
+            if (Physics.Raycast(originPoint, Vector3.down, out hit, 2f))
             {
                 var elevator = hit.collider.GetComponentInParent<ElevatorChamber>();
                 if (elevator)
                 {
-                    Update(elevator, goalPosition, edgelessSegment.NextCell);
+                    Update(elevator, goalPosition, edgelessSegment.NextCell, elevator);
+                    return;
                 }
             }
+
+            var destPoint = edgelessSegment.NextCell.CenterPosition;
+            if (Physics.Raycast(destPoint, Vector3.down, out hit, 2f))
+            {
+                var elevator = hit.collider.GetComponentInParent<ElevatorChamber>();
+                if (elevator)
+                {
+                    Update(elevator, goalPosition, edgelessSegment.NextCell, null);
+                    return;
+                }
+            }
+
+            Update(null, goalPosition, edgelessSegment.NextCell, null);
         }
 
-        public bool Has(Vector3 goalPos) => GoalPosition == goalPos;
+        public ElevationObstacleMode Has(Vector3 goalPos) => GoalPosition == goalPos ? HasAtOrigin : ElevationObstacleMode.NoElevator;
+        public ElevationObstacleMode HasAtOrigin => ElevatorAtOrigin ? ElevationObstacleMode.IsElevatorAtOrigin : ElevationObstacleMode.IsElevatorNotAtOrigin;
+
         public ElevatorChamber Elevator { get; private set; }
         public Vector3? GoalPosition { get; private set; }
         public TransformCell? DestinationCell { get; private set; }
+        public ElevatorChamber ElevatorAtOrigin { get; private set; }
 
-        private void Update(ElevatorChamber newElevatorValue, Vector3? goalPos, TransformCell? destinationCell)
+        private void Update(ElevatorChamber newElevatorValue, Vector3? goalPos, TransformCell? destinationCell, ElevatorChamber elevatorAtOrigin)
         {
-            if (newElevatorValue != Elevator) 
+            if (newElevatorValue != Elevator || elevatorAtOrigin != ElevatorAtOrigin) 
             { 
                 Elevator = newElevatorValue;
                 GoalPosition = goalPos;
                 DestinationCell = destinationCell;
+                ElevatorAtOrigin = elevatorAtOrigin;
                 InvokeOnUpdate();
             }
         }
 
         public override string ToString()
         {
-            return $"{nameof(ElevationObstacle)}: {Elevator?.GetType().Name}";
+            return $"{nameof(ElevationObstacle)}: {Elevator?.GetType().Name ?? "ElevatorInTransit"}";
         }
     }
 }

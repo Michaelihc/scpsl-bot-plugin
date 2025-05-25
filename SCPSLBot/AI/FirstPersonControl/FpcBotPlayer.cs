@@ -120,7 +120,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
         }
 
-        private readonly List<SpawnableStructure> spawnableStructures = new();
+        private readonly List<StructureSpawnpoint> structureSpawnpoints = new();
         private readonly List<Collider> spawnableStructureColliders = new();
         private void SteerAwayFromObstacles()
         {
@@ -131,7 +131,11 @@ namespace SCPSLBot.AI.FirstPersonControl
                 return;
             }
 
-            roomWithin.GetComponentsInChildren(spawnableStructures);
+            roomWithin.GetComponentsInChildren(structureSpawnpoints);
+            if (structureSpawnpoints.Count < 1)
+            {
+                return;
+            }
 
             var playerPosition = this.PlayerPosition;
             var moveDirection = this.FpcRole.FpcModule.transform.TransformDirection(this.Move.DesiredLocalDirection);
@@ -142,8 +146,14 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             var obstructingStructure = (SpawnableStructure)null;
             var structureExtent = 0f;
-            foreach (var structure in spawnableStructures)
+            foreach (var spawnpoint in structureSpawnpoints)
             {
+                var structure = spawnpoint.GetComponentInChildren<SpawnableStructure>();
+                if (!structure)
+                {
+                    continue;
+                }
+
                 switch (structure.StructureType)
                 {
                     case StructureType.Workstation:

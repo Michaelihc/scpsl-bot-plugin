@@ -115,10 +115,16 @@ namespace SCPSLBot.Navigation
                 var doorPosition = doorTransform.position + Vector3.up;
                 var doorForward = doorTransform.forward;
 
-                if (!RoomUtils.TryGetRoom(doorPosition - doorForward, out var room))
+                for (int i = 1; i <= 3; i++)
                 {
-                    RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
-                    RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForward), room);
+                    var doorForwardX = doorForward * i;
+
+                    if (!RoomUtils.TryGetRoom(doorPosition - doorForwardX, out var room))
+                    {
+                        RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
+                        RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForwardX), room);
+                        break;
+                    }
                 }
 
                 var cellAt0InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward);
@@ -127,10 +133,16 @@ namespace SCPSLBot.Navigation
                 doorPosition = doorTransform.position + Vector3.up;
                 doorForward = doorTransform.forward;
 
-                if (!RoomUtils.TryGetRoom(doorPosition - doorForward, out room))
+                for (int i = 1; i <= 3; i++)
                 {
-                    RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
-                    RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForward), room);
+                    var doorForwardX = doorForward * i;
+
+                    if (!RoomUtils.TryGetRoom(doorPosition - doorForwardX, out var room))
+                    {
+                        RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
+                        RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForwardX), room);
+                        break;
+                    }
                 }
 
                 var cellAt1InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward);

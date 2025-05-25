@@ -34,7 +34,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
 
             fpcMind.ActionEnabledBy<DoorObstacle, DoorEntry?>(this, b => b.GetEntry(targetPositionGetter()), c => !c.HasValue);
             fpcMind.ActionEnabledBy<GlassObstacle>(this, b => !b.Is(targetPositionGetter()));
-            fpcMind.ActionEnabledBy<ElevationObstacle>(this, b => !b.Has(targetPositionGetter()));
+            fpcMind.ActionEnabledBy<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.NoElevator, b => b.Has(targetPositionGetter()));
         }
 
         private readonly FpcBotPlayer botPlayer;

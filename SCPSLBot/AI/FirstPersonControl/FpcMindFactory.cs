@@ -32,8 +32,8 @@ namespace SCPSLBot.AI.FirstPersonControl
             mind.AddBelief(new GlassObstacle(perception.GetSense<GlassSightSense>(), botPlayer.Navigator));
 
 
-            mind.AddAction(new CallAndWaitForElevator(botPlayer));
             mind.AddBelief(new ElevationObstacle(perception.GetSense<DoorsWithinSightSense>(), botPlayer.Navigator));
+            mind.AddAction(new CallAndWaitForElevator(botPlayer));
             mind.AddAction(new TravelOnElevator(botPlayer));
 
 

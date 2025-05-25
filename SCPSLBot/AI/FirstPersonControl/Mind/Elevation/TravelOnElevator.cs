@@ -16,19 +16,20 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
+            elevatorObstacle = fpcMind.ActionEnabledBy<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.IsElevatorAtOrigin, b => b.HasAtOrigin);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            elevatorObstacle = fpcMind.ActionImpacts<ElevationObstacle, bool>(this, b => b.Elevator);
+            elevatorObstacle = fpcMind.ActionImpacts<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.NoElevator);
         }
 
-        public float Cost { get; } = 10f;
+        public float Cost => 0f;
 
         public void Tick()
         {
             var playerPosition = botPlayer.PlayerPosition;
-            var elevatorMiddle = elevatorObstacle.Elevator.WorldspaceBounds.center with { y = playerPosition.y };
+            var elevatorMiddle = elevatorObstacle.ElevatorAtOrigin.WorldspaceBounds.center with { y = playerPosition.y };
 
             if (Vector3.Distance(playerPosition, elevatorMiddle) > 0.1f)
             {
@@ -36,7 +37,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 return;
             }
 
-            var elevatorChamber = elevatorObstacle.Elevator;
+            var elevatorChamber = elevatorObstacle.ElevatorAtOrigin;
             var panelPosition = elevatorChamber.GetComponentInChildren<ElevatorPanel>().GetComponent<Collider>().bounds.center;
 
             var directionToPanel = Vector3.Normalize(panelPosition - playerPosition);

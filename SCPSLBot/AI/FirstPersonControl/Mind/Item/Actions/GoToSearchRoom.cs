@@ -50,13 +50,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
         public override void Tick()
         {
             var enterPosition = location.Positions[Idx];
-            var cameraPosition = botPlayer.BotHub.PlayerHub.PlayerCameraReference.position;
 
-            if (Vector3.Distance(enterPosition, cameraPosition) > 1.25f)
-            {
-                botPlayer.MoveToPosition(enterPosition);
-                return;
-            }
+            botPlayer.MoveToPosition(enterPosition);
         }
 
         public override void Reset()

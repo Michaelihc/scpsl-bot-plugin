@@ -25,7 +25,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Escape
                 return;
             }
 
-            if (!Physics.Raycast(RoughEscapePosition, Vector3.down, out var hit, 10f, LayerMask.GetMask("Default")))
+            if (!Physics.Raycast(roughEscapePosition, Vector3.down, out var hit, 10f, LayerMask.GetMask("Default")))
             {
                 Debug.LogWarning($"Raycast down from rough escape position produced no hits.");
                 return;
@@ -36,7 +36,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Escape
             AddPosition(escapePosition);
         }
 
-        private static readonly Vector3 RoughEscapePosition = new(124f, 989f, 20f);
+        private static readonly Vector3 roughEscapePosition = global::Escape.WorldPos + new Vector3(0f, 0f, -10f);
 
         public override string ToString()
         {

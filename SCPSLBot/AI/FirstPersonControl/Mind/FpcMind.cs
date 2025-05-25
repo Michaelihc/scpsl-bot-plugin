@@ -34,6 +34,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             return ActionEnabledBy(action, belief as B, targetGetter, currentGetter);
         }
 
+        public B ActionEnabledBy<B, S>(IAction action, S targetState, Func<B, S> currentGetter) where B : Belief<S>
+        {
+            return ActionEnabledBy(action, _ => targetState, currentGetter);
+        }
+
         public B ActionEnabledBy<B, S>(IAction action, Func<B, S> targetGetter, Func<B, S> currentGetter) where B : Belief<S>
         {
             var beliefsOfType = Beliefs[typeof(B)];
@@ -81,6 +86,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             var belief = beliefsOfType.Find(b => predicate(b as B));
 
             return ActionImpacts(action, belief as B, impactGetter);
+        }
+
+        public B ActionImpacts<B, S>(IAction action, S impactState) where B : Belief<S>
+        {
+            return ActionImpacts<B, S>(action, _ => impactState);
         }
 
         public B ActionImpacts<B, S>(IAction action, Func<B, S> impactGetter) where B : Belief<S>

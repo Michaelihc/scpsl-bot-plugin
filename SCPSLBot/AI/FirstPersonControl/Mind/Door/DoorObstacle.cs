@@ -68,7 +68,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 }
 
                 var hitDoor = hit.collider.GetComponentInParent<DoorVariant>();
-                if (hitDoor && !hitDoor.IsConsideredOpen())
+                if (hitDoor && hitDoor is not ElevatorDoor && !hitDoor.IsConsideredOpen())
                 {
                     var interactable = hit.collider.GetComponent<InteractableCollider>();
                     var target = interactable?.Target;
@@ -144,7 +144,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
             return GetLastDoor(e => predicate(e.Door), out _);
         }
 
-        public DoorVariant GetLastDoor(Func<DoorEntry, bool> predicate, out Vector3 goalPos)
+        public DoorVariant GetLastDoor(Predicate<DoorEntry> predicate, out Vector3 goalPos)
         {
             if (GoalPositions.Count == 0)
             {
@@ -152,10 +152,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 return null;
             }
 
-            goalPos = GoalPositions.Last();
+            var (lastGoalPos, doorEntry) = Doors.Last(p => predicate(p.Value));
+            goalPos = lastGoalPos;
 
-            var doorEntry = Doors[GoalPositions.Last()];
-            return doorEntry.Door && predicate(doorEntry) ? doorEntry.Door : null;
+            return doorEntry.Door ? doorEntry.Door : null;
         }
 
         public DoorVariant GetLastDoor(DoorPermissionFlags keycardPermissions)
