@@ -44,7 +44,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
             var relPosNextDestDoor = playerPosition - elevator.NextDestinationDoor.transform.position;
 
             var elevatorDoor = relPosDestDoor.sqrMagnitude < relPosNextDestDoor.sqrMagnitude ? elevator.DestinationDoor : elevator.NextDestinationDoor;
-            if (elevatorDoor.IsConsideredOpen())
+            if (elevator.DestinationDoor == elevatorDoor && elevator.IsReady)
             {
                 botPlayer.MoveToPosition(elevationObstacle.GoalPosition!.Value);
                 return;
