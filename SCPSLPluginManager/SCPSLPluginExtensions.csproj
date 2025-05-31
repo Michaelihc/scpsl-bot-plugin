@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <Platforms>x64</Platforms>
+    <AssemblyName>SCPSLPluginExtensions</AssemblyName>
+    <RootNamespace>SCPSLPluginExtensions</RootNamespace>
+
+    <LangVersion>12.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
+
+    <AssemblySearchPaths>$(SL_REFERENCES);$(AssemblySearchPaths)</AssemblySearchPaths>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebugType>embedded</DebugType>
+    <IsPublishable>False</IsPublishable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <DebugType>portable</DebugType>
+    <IsPublishable>False</IsPublishable>
+  </PropertyGroup>
+
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SL_APPDATA)\LabAPI\plugins\global">
+      <Output TaskParameter="CopiedFiles" ItemName="FilesCopied" />
+    </Copy>
+    <Message Text="Files copied @(FilesCopied)" Importance="high" />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="mscorlib" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Assembly-CSharp">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="CommandSystem.Core">
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="LabApi">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

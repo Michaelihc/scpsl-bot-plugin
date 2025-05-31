@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35013.160
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution items", "Solution items", "{38851196-ACD6-4388-A854-A17F1561775C}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPSLBot", "SCPSLBot\SCPSLBot.csproj", "{614437CF-34F3-4C2D-A3C1-18C46588CC1A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPSLPluginExtensions", "SCPSLPluginManager\SCPSLPluginExtensions.csproj", "{D15ED53B-F787-4B70-BDFA-1E0739AE302C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPSLBot.Tests", "SCPSLBot.Tests\SCPSLBot.Tests.csproj", "{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPSLBot.Components", "SCPSLBot.Components\SCPSLBot.Components.csproj", "{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{614437CF-34F3-4C2D-A3C1-18C46588CC1A}.Debug|x64.ActiveCfg = Debug|x64
+		{614437CF-34F3-4C2D-A3C1-18C46588CC1A}.Debug|x64.Build.0 = Debug|x64
+		{614437CF-34F3-4C2D-A3C1-18C46588CC1A}.Release|x64.ActiveCfg = Release|x64
+		{614437CF-34F3-4C2D-A3C1-18C46588CC1A}.Release|x64.Build.0 = Release|x64
+		{D15ED53B-F787-4B70-BDFA-1E0739AE302C}.Debug|x64.ActiveCfg = Debug|x64
+		{D15ED53B-F787-4B70-BDFA-1E0739AE302C}.Debug|x64.Build.0 = Debug|x64
+		{D15ED53B-F787-4B70-BDFA-1E0739AE302C}.Release|x64.ActiveCfg = Release|x64
+		{D15ED53B-F787-4B70-BDFA-1E0739AE302C}.Release|x64.Build.0 = Release|x64
+		{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}.Debug|x64.ActiveCfg = Debug|x64
+		{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}.Debug|x64.Build.0 = Debug|x64
+		{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}.Release|x64.ActiveCfg = Release|x64
+		{B28A39F8-2C6E-4F20-8031-2ADEF1E552FA}.Release|x64.Build.0 = Release|x64
+		{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}.Debug|x64.ActiveCfg = Debug|x64
+		{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}.Debug|x64.Build.0 = Debug|x64
+		{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}.Release|x64.ActiveCfg = Release|x64
+		{28505FBF-390F-6D4D-1E66-15D74ED4B1AC}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CD12ADDC-FF70-4CBD-8F17-9C8A3742A2FD}
+	EndGlobalSection
+EndGlobal
