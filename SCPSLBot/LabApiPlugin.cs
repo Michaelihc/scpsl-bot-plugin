@@ -14,16 +14,16 @@ namespace SCPSLBot
     public class LabApiPlugin : Plugin
     {
         public override string Name { get; } = "SCPSLBot";
-        public override string Description { get; } = "AI players addon.";
+        public override string Description { get; } = "Bot players addon.";
         public override string Author { get; } = "repkins(19)";
-        public override Version Version { get; } = new ("1.0.0");
+        public override Version Version { get; } = new ("0.0.1");
         public override Version RequiredApiVersion { get; } = new(LabApiProperties.CompiledVersion);
 
         private Harmony harmonyInstance;
 
         public override void Enable()
         {
-            harmonyInstance = new Harmony($"SCPSLBot.100.{DateTime.Now.Ticks}");
+            harmonyInstance = new Harmony($"SCPSLBot.{DateTime.Now.Ticks}");
             harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
             Logger.Info("Patching successful.");
 

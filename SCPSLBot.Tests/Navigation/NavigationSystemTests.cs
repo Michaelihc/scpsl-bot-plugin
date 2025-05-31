@@ -117,7 +117,7 @@ namespace SCPSLBot.Tests.Navigation
         {
             var mesh = NavigationMesh.MeshesByRoomForm[form];
 
-            Vertex emittedVertex = null;
+            Vertex? emittedVertex = null;
             void vertexCreatedHandler(Vertex v)
             {
                 emittedVertex = v;
@@ -143,7 +143,7 @@ namespace SCPSLBot.Tests.Navigation
             var mesh = NavigationMesh.MeshesByRoomForm[form];
             var vertex = mesh.Vertices[vertexIdx];
 
-            Vertex emittedVertex = null;
+            Vertex? emittedVertex = null;
             void vertexDeletedHandler(Vertex v)
             {
                 emittedVertex = v;
@@ -210,7 +210,7 @@ namespace SCPSLBot.Tests.Navigation
             var vertices = vertexIdxs.Select(idx => mesh.Vertices[idx]);
             var edges = vertices.Zip(vertices.Skip(1), (v1, v2) => new Edge(v1, v2)).Append(new(vertices.Last(), vertices.First()));
 
-            Cell emittedCell = null;
+            Cell? emittedCell = null;
             void createdHandler(Cell a)
             {
                 emittedCell = a;
@@ -295,7 +295,7 @@ namespace SCPSLBot.Tests.Navigation
             var mesh = NavigationMesh.MeshesByRoomForm[form];
             var cell = mesh.Cells[cellIdx];
 
-            Cell emittedCell = null;
+            Cell? emittedCell = null;
             void deletedHandler(Cell a)
             {
                 emittedCell = a;

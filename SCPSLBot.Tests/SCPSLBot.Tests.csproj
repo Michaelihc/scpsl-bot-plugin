@@ -31,12 +31,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove=".editorconfig" />
-    <None Remove=".gitattributes" />
-    <None Remove=".gitignore" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\SCPSLBot\SCPSLBot.csproj" />
   </ItemGroup>
 
@@ -54,7 +48,7 @@
     <Reference Include="CommandSystem.Core">
       <Private>false</Private>
     </Reference>
-    <Reference Include="PluginAPI">
+    <Reference Include="LabApi">
       <Private>false</Private>
     </Reference>
     <Reference Include="Mirror">
@@ -72,6 +66,9 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="echo Copying output file $(TargetName)&#xD;&#xA;copy $(TargetPath) &quot;$(SL_APPDATA)\PluginAPI\plugins\global\$(TargetFileName)&quot;" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SL_APPDATA)\LabAPI\plugins\global">
+      <Output TaskParameter="CopiedFiles" ItemName="FilesCopied" />
+    </Copy>
+    <Message Text="Files copied @(FilesCopied)" Importance="high" />
   </Target>
 </Project>
