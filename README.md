@@ -20,12 +20,14 @@ Adds goal-oriented AI controlled players to game server running on Unity Engine.
    - `SL_REFERENCES`: directory where shipped server managed assemblies located of a game.
    - `SL_APPDATA`: directory where application data is located of server.
  - References the following packages:
-   - **Lib.Harmony** v2.2.2;
-   - **Northwood.PluginAPI** v13.1.1.
+   - **IsExternalInit** v1.0.3;
+   - **Lib.Harmony** v2.3.6.
  - SDK style project file targeting **.NET Framework 4.8**.
- - **C# 11 language support** enabled.
+ - **C# 12 language support** enabled.
 
 ## Quick start
 1. In LocalAdmin use command `bot_add` to add bot player to server while waiting for players.
 2. Then connect yourself, assign yourself Overwatch and force start the round.
 3. Then spectate the bot player. It should start moving with debug graph visible (debug graph visible is only for Overwatch spectators)
+
+**Heads up**: This addon currently forces to generate door-way connectors of HCZ rooms as navigation system was initially designed to not have varying room connector types.
