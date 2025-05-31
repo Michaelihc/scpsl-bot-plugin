@@ -1,17 +1,17 @@
 ﻿using CommandSystem;
 using LabApi.Loader;
-using SCPSLPluginManager.Extensions;
+using SCPSLPluginExtensions.Extensions;
 
-namespace SCPSLPluginManager.Commands
+namespace SCPSLPluginExtensions.Commands
 {
     [CommandHandler(typeof(GameConsoleCommandHandler))]
-    internal class PluginsExCommand : ICommand
+    internal class PluginDireloadCommand : ICommand
     {
-        public string Command => "plugin_reload";
+        public string Command => "plugin_direload";
 
         public string[] Aliases => new string[] { };
 
-        public string Description => "Reload specified plugin";
+        public string Description => "Disables (di) specified running plugins assembly, removes (re) from plugin manager then loads (load) new plugins assembly.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {

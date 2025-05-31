@@ -5,7 +5,7 @@ using LabApi.Loader.Features.Paths;
 using LabApi.Loader.Features.Plugins;
 using static LabApi.Loader.PluginLoader;
 
-namespace SCPSLPluginManager.Extensions
+namespace SCPSLPluginExtensions.Extensions
 {
     internal static class PluginLoaderExtensions
     {
@@ -40,7 +40,7 @@ namespace SCPSLPluginManager.Extensions
             }
 
             Logger.Info($"[LOADER EXTENSIONS] Enabling {assemblyName} plugins");
-            EnablePlugins(Plugins.Where(p => p.Value.GetName().Name == assemblyName).Select(p => p.Key).OrderBy((Plugin plugin) => plugin.Priority));
+            EnablePlugins(Plugins.Where(p => p.Value.GetName().Name == assemblyName).Select(p => p.Key).OrderBy((plugin) => plugin.Priority));
         }
     }
 }
