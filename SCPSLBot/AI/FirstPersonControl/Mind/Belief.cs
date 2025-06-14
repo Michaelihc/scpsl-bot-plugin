@@ -8,7 +8,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
         private readonly Dictionary<IAction, (Func<IBelief, S>, Predicate<S>)> actionsEnabledByMatchers = new();
         public void AddEnablingAction<B>(IAction action, Func<B, S> matchGetter, Predicate<S> matchPredicate) where B : class, IBelief
         {
-            actionsEnabledByMatchers.Add(action, (b => matchGetter(b as B), s => matchPredicate(s)));
+            actionsEnabledByMatchers.Add(action, (b => matchGetter(b as B), matchPredicate));
         }
 
         private readonly Dictionary<IAction, Predicate<S>> actionsImpactingMatchers = new();
@@ -17,10 +17,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             actionsImpactingMatchers.Add(action, s => matchPredicate(s));
         }
 
-        private readonly Dictionary<IGoal, (Func<IBelief, S>, Func<IBelief, S>)> goalsEnabledByGetters = new();
-        public void AddEnablingGoal<B>(IGoal goal, Func<B, S> targetGetter, Func<B, S> currentGetter) where B : class, IBelief
+        private readonly Dictionary<IGoal, (Func<Belief<S>, S>, Predicate<S>)> goalsEnabledByMatchers = new();
+        public void AddEnablingGoal<B>(IGoal goal, Func<B, S> matchGetter, Predicate<S> matchPredicate) where B: Belief<S>
         {
-            goalsEnabledByGetters.Add(goal, (b => targetGetter(b as B), b => currentGetter(b as B)));
+            goalsEnabledByMatchers.Add(goal, (b => matchGetter(b as B), matchPredicate));
         }
 
         public bool IsEnabledAction(IAction action)
@@ -40,16 +40,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
 
         public bool EvaluateEnabling(IGoal goal)
         {
-            var (targetGetter, currentGetter) = goalsEnabledByGetters[goal];
-            var targetState = targetGetter(this);
-            var currentState = currentGetter(this);
+            var (matchGetter, matchPredicate) = goalsEnabledByMatchers[goal];
 
-            return EqualityComparer<S>.Default.Equals(targetState, currentState);
+            return matchPredicate(matchGetter(this));
         }
 
         public bool CanImpactedByAction(IAction actionImpacting, IGoal goalToEnable)
         {
-            var (targetGetter, _) = goalsEnabledByGetters[goalToEnable];
+            var (targetGetter, _) = goalsEnabledByMatchers[goalToEnable];
             var impactMatchPredicate = actionsImpactingMatchers[actionImpacting];
 
             return impactMatchPredicate(targetGetter(this));

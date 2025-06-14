@@ -10,7 +10,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Goals
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            fpcMind.GoalEnabledBy<PlayerEscaped, bool>(this, b => true, b => false);
+            fpcMind.GoalEnabledBy<PlayerEscaped, bool>(this, matchGetter: static b => true, static b => false);
         }
     }
 }

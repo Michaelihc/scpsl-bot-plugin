@@ -142,7 +142,20 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
 
         public B GoalEnabledBy<B, S>(IGoal goal, B belief, Func<B, S> targetGetter, Func<B, S> currentGetter) where B : Belief<S>
         {
-            belief.AddEnablingGoal(goal, targetGetter, currentGetter);
+            return GoalEnabledBy(goal, belief, targetGetter, s => EqualityComparer<S>.Default.Equals(s, currentGetter(belief)));
+        }
+
+        public B GoalEnabledBy<B, S>(IGoal goal, Func<B, S> matchGetter, Predicate<S> matchPredicate) where B : Belief<S>
+        {
+            var beliefsOfType = Beliefs[typeof(B)];
+            var belief = beliefsOfType.Single();
+
+            return GoalEnabledBy(goal, belief as B, matchGetter, matchPredicate);
+        }
+
+        public B GoalEnabledBy<B, S>(IGoal goal, B belief, Func<B, S> matchGetter, Predicate<S> matchPredicate) where B : Belief<S>
+        {
+            belief.AddEnablingGoal(goal, matchGetter, matchPredicate);
 
             GoalsEnabledByBeliefs[belief].Add(goal);
             BeliefsEnablingGoals[goal].Add(belief);
