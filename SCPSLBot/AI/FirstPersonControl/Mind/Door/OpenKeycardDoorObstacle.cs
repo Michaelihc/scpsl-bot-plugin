@@ -31,7 +31,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public float Cost => 0f;
 
-        public void Tick()
+        public void Tick(FpcMatchProvider matchProvider)
         {
             var keycard = keycardInInventory.Item;
             if (!keycard.IsEquipped)
@@ -39,7 +39,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 keycard.Owner.inventory.ServerSelectItem(keycard.ItemSerial);
             }
 
-            var doorToOpen = doorObstacleBelief.GetLastDoor(Permissions, out var goalPos);
+            var doorEntry = matchProvider.Get<DoorObstacle, DoorEntry?>(doorObstacleBelief);
+            var doorToOpen = doorEntry!.Value.Door;
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
 
             if (doorToOpen && !doorToOpen.TargetState)
@@ -58,6 +59,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 }
             }
 
+            var goalPos = doorEntry!.Value.GoalPosition;
             botPlayer.MoveToPosition(goalPos);
         }
 

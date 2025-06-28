@@ -51,7 +51,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         public virtual float Cost => Distance * Weight;
 
         public abstract void Reset();
-
         public abstract void Tick();
+
+        public void Tick(FpcMatchProvider matchProvider)
+        {
+            Tick();
+        }
     }
 }

@@ -25,9 +25,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public float Cost => 0f;
 
-        public void Tick()
+        public void Tick(FpcMatchProvider matchProvider)
         {
-            var doorToOpen = doorObstacleBelief.GetLastDoor(DoorPermissionFlags.None, out var goalPos);
+            var doorEntry = matchProvider.Get<DoorObstacle, DoorEntry?>(doorObstacleBelief);
+            var doorToOpen = doorEntry!.Value.Door;
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
 
             if (!doorToOpen)
@@ -53,6 +54,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
             if (!isTargetStateOpen || dist > interactDistance)
             {
+                var goalPos = doorEntry!.Value.GoalPosition;
                 botPlayer.MoveToPosition(goalPos);
             }
         }

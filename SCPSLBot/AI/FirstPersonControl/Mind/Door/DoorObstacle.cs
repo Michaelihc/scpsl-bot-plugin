@@ -15,7 +15,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
         public readonly float Length = Vector3.Distance(Start, End);
     }
 
-    internal record struct DoorEntry(DoorVariant Door, DoorPermissionFlags DoorPermissions)
+    internal record struct DoorEntry(DoorVariant Door, DoorPermissionFlags DoorPermissions, Vector3 GoalPosition)
     {
         const DoorPermissionFlags AllPermissionFlags =
             DoorPermissionFlags.Checkpoints | DoorPermissionFlags.ExitGates | DoorPermissionFlags.Intercom | DoorPermissionFlags.AlphaWarhead |
@@ -50,6 +50,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
         {
             DoorEntry? obstuctingEntry = null;
 
+            var goalPos = navigator.GoalPosition;
+
             foreach (var (point, nextPoint) in navigator.PathSegments)
             {
                 if (!sightSense.IsPositionWithinFov(nextPoint))
@@ -73,13 +75,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                     var interactable = hit.collider.GetComponent<InteractableCollider>();
                     var target = interactable?.Target;
                     obstuctingEntry = target is DoorVariant interactableDoorTarget
-                        ? new(hitDoor, interactableDoorTarget.RequiredPermissions.RequiredPermissions)
-                        : new(hitDoor, hitDoor.RequiredPermissions.RequiredPermissions);
+                        ? new(hitDoor, interactableDoorTarget.RequiredPermissions.RequiredPermissions, goalPos)
+                        : new(hitDoor, hitDoor.RequiredPermissions.RequiredPermissions, goalPos);
                     break;
                 }
             }
-
-            var goalPos = navigator.GoalPosition;
 
             if (obstuctingEntry.HasValue)
             {

@@ -26,7 +26,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public float Cost => 0f;
 
-        public void Tick()
+        public void Tick(FpcMatchProvider matchProvider)
         {
             var playerPosition = botPlayer.PlayerPosition;
             var elevatorMiddle = elevatorObstacle.ElevatorAtOrigin.WorldspaceBounds.center with { y = playerPosition.y };

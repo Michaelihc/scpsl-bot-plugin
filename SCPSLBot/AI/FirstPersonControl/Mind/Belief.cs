@@ -55,6 +55,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             return impactMatchPredicate(targetGetter(this));
         }
 
+        public S GetMatchState(IAction actionToEnable)
+        {
+            var (enablingMatchGetter, _) = actionsEnabledByMatchers[actionToEnable];
+            return enablingMatchGetter(this);
+        }
+
         public event Action OnUpdate;
         protected void InvokeOnUpdate()
         {

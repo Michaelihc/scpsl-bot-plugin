@@ -27,7 +27,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
 
         public float Cost => 5f;
 
-        public void Tick()
+        public void Tick(FpcMatchProvider matchProvider)
         {
             // TODO: door waiting idle logic
         }
