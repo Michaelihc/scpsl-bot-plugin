@@ -129,45 +129,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
             return Doors.TryGetValue(goalPos, out var entry) ? entry : null;
         }
 
-        public TDoor GetLastDoor<TDoor>() where TDoor : DoorVariant
-        {
-            return GetLastDoor(e => e.Door is TDoor, out _) as TDoor;
-        }
-
-        public TDoor GetLastDoor<TDoor>(out Vector3 goalPos) where TDoor : DoorVariant
-        {
-            return GetLastDoor(e => e.Door is TDoor, out goalPos) as TDoor;
-        }
-
-        public DoorVariant GetLastDoor(Predicate<DoorVariant> predicate)
-        {
-            return GetLastDoor(e => predicate(e.Door), out _);
-        }
-
-        public DoorVariant GetLastDoor(Predicate<DoorEntry> predicate, out Vector3 goalPos)
-        {
-            if (GoalPositions.Count == 0)
-            {
-                goalPos = default;
-                return null;
-            }
-
-            var (lastGoalPos, doorEntry) = Doors.Last(p => predicate(p.Value));
-            goalPos = lastGoalPos;
-
-            return doorEntry.Door ? doorEntry.Door : null;
-        }
-
-        public DoorVariant GetLastDoor(DoorPermissionFlags keycardPermissions)
-        {
-            return GetLastDoor(keycardPermissions, out _);
-        }
-
-        public DoorVariant GetLastDoor(DoorPermissionFlags keycardPermissions, out Vector3 goalPos)
-        {
-            return GetLastDoor(e => e.IsInteractable(keycardPermissions), out goalPos);
-        }
-
         public override string ToString()
         {
             return $"{nameof(DoorObstacle)}: {string.Join(", ", GoalPositions.Select(p => $"{this.Doors[p].Door.GetType().Name}: Permissions = {this.Doors[p].DoorPermissions}"))}";
