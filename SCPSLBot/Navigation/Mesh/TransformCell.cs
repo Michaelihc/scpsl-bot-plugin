@@ -20,6 +20,11 @@ namespace SCPSLBot.Navigation.Mesh
         {
         }
 
+        public bool IsPositionWithin(Vector3 position)
+        {
+            throw new NotImplementedException();
+        }
+
         [Obsolete]
         public static bool operator ==(TransformCell left, TransformCell? right)
         {

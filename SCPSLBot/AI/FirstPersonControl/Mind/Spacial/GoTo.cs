@@ -1,6 +1,8 @@
 ﻿using SCPSLBot.AI.FirstPersonControl.Mind.Door;
 using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
 using SCPSLBot.AI.FirstPersonControl.Mind.Misc;
+using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+using SCPSLBot.Navigation.Mesh;
 using System;
 using UnityEngine;
 
@@ -31,6 +33,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         protected virtual void SetEnabledByBeliefs(FpcMind fpcMind, Func<Vector3> targetPositionGetter)
         {
             this.location = SetEnabledByLocation(fpcMind, b => b.Positions.Count > Idx);
+
+            fpcMind.ActionEnabledBy<NavigationCell, TransformCell?>(this, b => b.GetCellWithin(targetPositionGetter()), c => c?.IsPositionWithin(botPlayer.PlayerPosition) ?? false);
 
             fpcMind.ActionEnabledBy<DoorObstacle, DoorEntry?>(this, b => b.GetEntry(targetPositionGetter()), c => !c.HasValue);
             fpcMind.ActionEnabledBy<GlassObstacle>(this, b => !b.Is(targetPositionGetter()));

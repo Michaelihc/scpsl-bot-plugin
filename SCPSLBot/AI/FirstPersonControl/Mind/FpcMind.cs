@@ -60,6 +60,22 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             return ActionEnabledBy(action, belief as B, matchGetter, matchPredicate);
         }
 
+        public B ActionEnabledBy<B, S>(IAction action, Func<B, FpcMatchProvider, S> matchGetter, Predicate<S> matchPredicate) where B : Belief<S>
+        {
+            var beliefsOfType = Beliefs[typeof(B)];
+            var belief = beliefsOfType.Single();
+
+            return ActionEnabledBy(action, belief as B, matchGetter, matchPredicate);
+        }
+
+        public B ActionEnabledBy<B, S>(IAction action, Func<B, FpcMatchProvider, S[]> matchGetter, Predicate<S> matchPredicate) where B : Belief<S>
+        {
+            var beliefsOfType = Beliefs[typeof(B)];
+            var belief = beliefsOfType.Single();
+
+            return ActionEnabledBy(action, belief as B, matchGetter, matchPredicate);
+        }
+
         public B ActionEnabledBy<B, S>(IAction action, B belief, Func<B, S> matchGetter, Predicate<S> matchPredicate) where B : Belief<S>
         {
             belief.AddEnablingAction(action, matchGetter, matchPredicate);
