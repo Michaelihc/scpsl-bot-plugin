@@ -8,8 +8,10 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
-    internal class CellWithin : Belief<bool>
+    internal class CellWithin : IBelief
     {
+        public event Action OnUpdate;
+
         public readonly Dictionary<TransformCell, NavigationCell> NavigationCells;
 
         public NavigationCell GetNavigationCellWithin(Vector3 position)
@@ -17,5 +19,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             var cellResult = NavigationMesh.GetCellWithin(position);
             return cellResult.HasValue ? NavigationCells[cellResult.Value] : null;
         }
+
     }
 }

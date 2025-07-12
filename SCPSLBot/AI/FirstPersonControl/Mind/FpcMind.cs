@@ -64,6 +64,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             return ActionImpacts(action, belief, impactPredicate);
         }
 
+        public B ActionImpacts<B>(IAction action, B belief) where B : class, IBelief
+        {
+            return ActionImpacts(action, belief, static b => true);
+        }
+
         public B ActionImpacts<B>(IAction action, B belief, Predicate<B> impactPredicate) where B : class, IBelief
         {
             ActionsImpactingBeliefs[belief].Add((action, b => impactPredicate(b as B)));
