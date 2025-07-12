@@ -8,39 +8,33 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
-    internal class GoToCell(FpcBotPlayer botPlayer) : IAction
+    internal class GoToCell(TransformCell fromCell, TransformCell toCell, FpcBotPlayer botPlayer) : IAction
     {
-        private NavigationCell enablingNavigationCell;
-        private NavigationCell impactingNavigationCell;
+        private NavigationCell targetCell;
+        private CellWithin cellWithin = botPlayer.MindRunner.GetBelief<CellWithin>();
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            this.enablingNavigationCell = fpcMind.ActionEnabledBy<NavigationCell, TransformCell?>(this,
-                matchGetter: (b, m) => m.Get<NavigationCell, TransformCell?>(impactingNavigationCell)!.Value.AdjacentCells.Select(c => new TransformCell?(c)).ToArray(),
-                matchPredicate: c => c?.IsPositionWithin(botPlayer.PlayerPosition) ?? false);
+            fpcMind.ActionEnabledBy(this, this.cellWithin.NavigationCells[fromCell], c => c.IsPositionWithin(botPlayer.PlayerPosition));
+            
+            // TODO: stationary obstacle overcoming rewrite
+            //fpcMind.ActionEnabledBy<DoorObstacle, DoorEntry?>(this, b => b.GetEntry(toCell.CenterPosition), c => !c.HasValue);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            this.impactingNavigationCell = fpcMind.ActionImpacts<NavigationCell, TransformCell?>(this, c => c.HasValue);
+            this.targetCell = fpcMind.ActionImpacts(this, this.cellWithin.NavigationCells[toCell]);
         }
 
-        public float Cost(FpcMatchProvider targetMatchProvider, FpcMatchProvider enablingMatchProvider)
-        {
-            var targetCell = targetMatchProvider.Get<NavigationCell, TransformCell?>(this.impactingNavigationCell);
-            var enablingCell = enablingMatchProvider.Get<NavigationCell, TransformCell?>(this.enablingNavigationCell);
-
-            return Vector3.Distance(targetCell!.Value.CenterPosition, enablingCell!.Value.CenterPosition);
-        }
+        public float Cost => Vector3.Distance(toCell.CenterPosition, fromCell.CenterPosition);
 
         public void Tick(FpcMatchProvider matchProvider)
         {
-            throw new NotImplementedException();
+            botPlayer.MoveToPosition(this.targetCell.TransformCell.CenterPosition);
         }
 
         public void Reset()
         {
-            throw new NotImplementedException();
         }
     }
 }

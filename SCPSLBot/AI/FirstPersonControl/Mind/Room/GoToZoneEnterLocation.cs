@@ -18,14 +18,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room
             this.botPlayer = botPlayer;
         }
 
-        protected override ZoneEnterLocation SetEnabledByLocation(FpcMind fpcMind, Func<ZoneEnterLocation, bool> currentGetter)
+        protected override ZoneEnterLocation SetEnabledByLocation(FpcMind fpcMind, Predicate<ZoneEnterLocation> currentGetter)
         {
-            return fpcMind.ActionEnabledBy<ZoneEnterLocation>(this, b => b.Zone == Zone && b.FromZone == FromZone, currentGetter);
+            return fpcMind.ActionEnabledBy(this, b => b.Zone == Zone && b.FromZone == FromZone, currentGetter);
         }
 
         public override void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionImpacts<ZoneWithin, FacilityZone?>(this, b => Zone);
+            fpcMind.ActionImpacts<ZoneWithin>(this, static b => true, b => b.Zone == Zone);
         }
 
         public override float Weight { get; } = 1f;

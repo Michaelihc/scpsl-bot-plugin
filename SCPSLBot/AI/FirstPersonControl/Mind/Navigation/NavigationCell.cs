@@ -8,9 +8,16 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
-    internal class NavigationCell : Belief<TransformCell?>
+    internal class NavigationCell(TransformCell transformCell) : Belief<bool>
     {
-        internal TransformCell? GetCellWithin(Vector3 position)
+        public TransformCell TransformCell { get; init; } = transformCell;
+
+        internal bool IsPositionWithin(Vector3 position)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Vector3 GetNextCorner()
         {
             throw new NotImplementedException();
         }

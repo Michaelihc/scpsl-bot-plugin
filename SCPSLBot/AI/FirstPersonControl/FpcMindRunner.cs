@@ -96,28 +96,16 @@ namespace SCPSLBot.AI.FirstPersonControl
 
                     while (VisitedActionsImpactedBy.TryGetValue(actionImpacting, out var actionImpactedBy))
                     {
-                        RelevantActionsImpactingActions[actionImpactedBy] = actionImpacting;
-                        foreach (var visitedBelief in BeliefsEnablingActions[actionImpacting].Where(VisitedActionsEnabledBy.ContainsKey))
-                        {
-                            RelevantBeliefs.Add(visitedBelief);
-                        }
+                        RelevantActionsImpactingActions[actionImpactedBy] = actionImpacting;                        
 
                         actionImpacting = actionImpactedBy;
                     }
 
                     RelevantActionsImpactingGoals[goal] = actionImpacting;
-                    foreach (var visitedBelief in BeliefsEnablingActions[actionImpacting].Where(VisitedActionsEnabledBy.ContainsKey))
+
+                    foreach (var visitedBelief in VisitedActionsEnabledBy.Keys)
                     {
                         RelevantBeliefs.Add(visitedBelief);
-                    }
-
-                    if (VisitedActionsImpactedBy.TryGetValue(enabledAction, out var actionToEnable))
-                    {
-                        matchProvider.SetActionToEnable(actionToEnable);
-                    }
-                    else
-                    {
-                        matchProvider.SetActionToEnable(null);
                     }
 
                     yield return (enabledAction, matchProvider);
@@ -135,11 +123,11 @@ namespace SCPSLBot.AI.FirstPersonControl
             VisitedActionsTotalCosts.Clear();
             remainingActionsToExplore.Clear();
 
-            foreach (var b in BeliefsEnablingGoals[goal])
+            foreach (var (b, isSatisfied) in BeliefsEnablingGoals[goal])
             {
                 VisitedGoalsEnabledBy[b] = goal;
 
-                if (b.EvaluateEnabling(goal))
+                if (isSatisfied(b))
                 {
                     //Debug.Log($"    Belief {b} already satisfies goal.");
                     continue;
@@ -165,11 +153,11 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void ProcessActionsImpacting(IBelief belief, IGoal goalToEnable)
         {
-            foreach (var actionImpacting in ActionsImpactingBeliefs[belief])
+            foreach (var (actionImpacting, canImpact) in ActionsImpactingBeliefs[belief])
             {
                 VisitedGoalsImpactedBy[actionImpacting] = goalToEnable;
 
-                if (!belief.CanImpactedByAction(actionImpacting, goalToEnable))
+                if (!canImpact(belief))
                 {
                     //Debug.Log($"      Action {actionImpacting} cannot impact belief.");
                     continue;
@@ -190,11 +178,18 @@ namespace SCPSLBot.AI.FirstPersonControl
             var beliefsEnabling = BeliefsEnablingActions[actionToEnable];
 
             var actionEnabled = true;
-            foreach (var b in beliefsEnabling)
+            foreach (var (getBelief, isSatisfied) in beliefsEnabling)
             {
+                var b = getBelief();
+                if (b == null)
+                {
+                    //Debug.Log($"{prefix}  Belief getter {getBelief} returned null.");
+                    continue;
+                }
+
                 VisitedActionsEnabledBy[b] = actionToEnable;
 
-                if (b.IsEnabledAction(actionToEnable))
+                if (isSatisfied(b))
                 {
                     //Debug.Log($"{prefix}  Belief {b} already satisfies action.");
                     continue;
@@ -222,9 +217,9 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             var actionToEnableCostToGoal = VisitedActionsTotalCosts[actionToEnable];
 
-            foreach (var actionImpacting in ActionsImpactingBeliefs[belief])
+            foreach (var (actionImpacting, canImpact) in ActionsImpactingBeliefs[belief])
             {
-                if (!belief.CanImpactedByAction(actionImpacting, actionToEnable))
+                if (!canImpact(belief))
                 {
                     //Debug.Log($"{prefix}  Action {actionImpacting} cannot impact belief.");
                     continue;

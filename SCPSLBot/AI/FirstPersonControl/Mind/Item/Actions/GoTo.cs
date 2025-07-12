@@ -15,9 +15,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
             this.Criteria = criteria;
         }
 
-        protected override TItemLocation SetEnabledByLocation(FpcMind fpcMind, Func<TItemLocation, bool> currentGetter)
+        protected override TItemLocation SetEnabledByLocation(FpcMind fpcMind, Predicate<TItemLocation> currentGetter)
         {
-            return fpcMind.ActionEnabledBy<TItemLocation>(this, b => b.Criteria.Equals(Criteria), currentGetter);
+            return fpcMind.ActionEnabledBy(this, b => b.Criteria.Equals(Criteria), currentGetter);
         }
     }
 }
