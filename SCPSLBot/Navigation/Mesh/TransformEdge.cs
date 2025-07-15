@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+using System;
 using UnityEngine;
 
 namespace SCPSLBot.Navigation.Mesh
@@ -14,6 +15,8 @@ namespace SCPSLBot.Navigation.Mesh
         public TransformEdge(Edge Edge, Transform Tranform)
             : this(new(Edge.From, Tranform), new(Edge.To, Tranform), Tranform)
         { }
+
+        public readonly Vector3 MiddlePosition => Vector3.Lerp(From.Position, To.Position, 0.5f);
 
         [Obsolete]
         public static bool operator ==(TransformEdge? left, TransformEdge right)

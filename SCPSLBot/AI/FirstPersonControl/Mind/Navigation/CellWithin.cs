@@ -12,13 +12,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
     {
         public event Action OnUpdate;
 
-        public readonly Dictionary<TransformCell, NavigationCell> NavigationCells;
-
-        public NavigationCell GetNavigationCellWithin(Vector3 position)
-        {
-            var cellResult = NavigationMesh.GetCellWithin(position);
-            return cellResult.HasValue ? NavigationCells[cellResult.Value] : null;
-        }
-
+        public TransformCell TransformCell;
     }
 }

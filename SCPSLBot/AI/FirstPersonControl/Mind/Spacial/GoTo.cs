@@ -14,13 +14,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         public int Idx;
 
         private readonly FpcBotPlayer botPlayer;
-        private readonly CellWithin cellWithin;
+        private readonly NavigationBeliefs navBeliefs;
 
         protected GoTo(int idx, FpcBotPlayer botPlayer)
         {
             this.Idx = idx;
             this.botPlayer = botPlayer;
-            this.cellWithin = botPlayer.MindRunner.GetBelief<CellWithin>();
+            this.navBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
         }
 
         protected virtual TLocation SetEnabledByLocation(FpcMind fpcMind, Predicate<TLocation> enablingPredicate)
@@ -29,7 +29,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         }
 
         protected TLocation location;
-        private Func<NavigationCell> getNavCell;
+        private Func<NavigationCell> getLocationNavCell;
 
         public virtual void SetEnabledByBeliefs(FpcMind fpcMind)
         {
@@ -40,7 +40,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         {
             this.location = SetEnabledByLocation(fpcMind, b => b.Positions.Count > Idx);
 
-            this.getNavCell = fpcMind.ActionEnabledBy(this, () => this.cellWithin.GetNavigationCellWithin(targetPositionGetter()), b => b.IsPositionWithin(botPlayer.PlayerPosition));
+            fpcMind.ActionEnabledBy(this, () => this.navBeliefs.Obstacles[this.getLocationNavCell().TransformCell], b => b.HasHit(targetPositionGetter(), botPlayer.PlayerPosition));
+            this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(targetPositionGetter()), b => b.IsWithin);
 
             // TODO: stationary obstacle overcoming rewrite
 
@@ -54,8 +55,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         private const float DefaultDistance = 10f;
 
         private float Distance => location.Positions.Count > Idx
-            ? this.getNavCell().TransformCell.IsPositionWithin(botPlayer.PlayerPosition)
-                ? Vector3.Distance(location.Positions[Idx], botPlayer.CameraPosition)
+            ? this.getLocationNavCell().IsWithin
+                ? Vector3.Distance(location.Positions[Idx], botPlayer.PlayerPosition)
                 : 0f
             : DefaultDistance;
 

@@ -1,36 +1,33 @@
 ﻿using SCPSLBot.Navigation.Mesh;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
-    internal class GoToCell(TransformCell fromCell, TransformCell toCell, FpcBotPlayer botPlayer) : IAction
+    internal class GoToCell(TransformCell toCell, TransformCell fromCell, TransformEdge fromEdge, FpcBotPlayer botPlayer) : IAction
     {
+        private readonly Vector3 toEdgePos = fromCell.AdjacentCellEdges[toCell].MiddlePosition;
+        private readonly Vector3 fromEdgePos = fromEdge.MiddlePosition; 
+        private readonly NavigationBeliefs cellBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
         private NavigationCell targetCell;
-        private CellWithin cellWithin = botPlayer.MindRunner.GetBelief<CellWithin>();
+        private NavigationCell navCellFrom;
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionEnabledBy(this, this.cellWithin.NavigationCells[fromCell], c => c.IsPositionWithin(botPlayer.PlayerPosition));
-            
-            // TODO: stationary obstacle overcoming rewrite
-            //fpcMind.ActionEnabledBy<DoorObstacle, DoorEntry?>(this, b => b.GetEntry(toCell.CenterPosition), c => !c.HasValue);
+            fpcMind.ActionEnabledBy(this, cellBeliefs.Obstacles[fromCell], b => b.HasHit(toEdgePos, fromEdgePos));
+
+            this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.IsWithin);            
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            this.targetCell = fpcMind.ActionImpacts(this, this.cellWithin.NavigationCells[toCell]);
+            this.targetCell = fpcMind.ActionImpacts(this, cellBeliefs.NavigationCells[toCell]);
         }
 
-        public float Cost => Vector3.Distance(toCell.CenterPosition, fromCell.CenterPosition);
+        public float Cost => Vector3.Distance(toEdgePos, navCellFrom.IsWithin ? botPlayer.PlayerPosition : fromEdgePos);
 
         public void Tick(FpcMatchProvider matchProvider)
         {
-            botPlayer.MoveToPosition(this.targetCell.TransformCell.CenterPosition);
+            botPlayer.MoveToPosition(toEdgePos);
         }
 
         public void Reset()

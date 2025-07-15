@@ -1,25 +1,24 @@
 ﻿using SCPSLBot.Navigation.Mesh;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
-    internal class NavigationCell(TransformCell transformCell) : Belief<bool>
+    internal class NavigationCell(TransformCell transformCell, CellWithin cellWithin) : IBelief
     {
-        public TransformCell TransformCell { get; init; } = transformCell;
+        public readonly TransformCell TransformCell = transformCell;
 
-        internal bool IsPositionWithin(Vector3 position)
-        {
-            throw new NotImplementedException();
-        }
+        public event Action OnUpdate;
 
-        public Vector3 GetNextCorner()
+        public bool IsWithin = false;
+
+        public void Update()
         {
-            throw new NotImplementedException();
+            var newIsWithin = cellWithin.TransformCell == TransformCell;
+            if (newIsWithin != IsWithin)
+            {
+                IsWithin = newIsWithin;
+                OnUpdate?.Invoke();
+            }
         }
     }
 }
