@@ -9,7 +9,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
     {
         private Vector3 toPos;
         private Vector3 fromPos;
-        private RaycastHit? hit;
+        public RaycastHit? hit;
+
+        public Vector3 ToPos => this.toPos;
 
         public event Action OnUpdate;
 

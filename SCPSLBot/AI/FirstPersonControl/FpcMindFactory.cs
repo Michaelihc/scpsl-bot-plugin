@@ -371,7 +371,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             #endregion
 
 
-            mind.AddAction(new OpenNonKeycardDoorObstacle(botPlayer));
+            mind.AddAction(new OpenNonKeycardInteractableObstacle(botPlayer));
             mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelOne, botPlayer));
             mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelTwo, botPlayer));
             mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.Checkpoints, botPlayer));

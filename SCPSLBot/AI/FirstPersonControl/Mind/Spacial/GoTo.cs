@@ -42,12 +42,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
 
             fpcMind.ActionEnabledBy(this, () => this.navBeliefs.Obstacles[this.getLocationNavCell().TransformCell], b => b.HasHit(targetPositionGetter(), botPlayer.PlayerPosition));
             this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(targetPositionGetter()), b => b.IsWithin);
-
-            // TODO: stationary obstacle overcoming rewrite
-
-            //fpcMind.ActionEnabledBy<DoorObstacle, DoorEntry?>(this, b => b.GetEntry(targetPositionGetter()), c => !c.HasValue);
-            //fpcMind.ActionEnabledBy<GlassObstacle>(this, b => !b.Is(targetPositionGetter()));
-            //fpcMind.ActionEnabledBy<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.NoElevator, b => b.Has(targetPositionGetter()));
         }
 
         public abstract void SetImpactsBeliefs(FpcMind fpcMind);

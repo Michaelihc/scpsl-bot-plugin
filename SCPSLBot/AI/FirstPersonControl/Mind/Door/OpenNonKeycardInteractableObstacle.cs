@@ -1,18 +1,14 @@
 ﻿using Interactables.Interobjects.DoorUtils;
+using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 {
-    internal class OpenNonKeycardDoorObstacle : IAction
+    internal class OpenNonKeycardInteractableObstacle(FpcBotPlayer botPlayer) : IAction
     {
-        private DoorObstacle doorObstacleBelief;
-        private FpcBotPlayer botPlayer;
+        private readonly FpcBotPlayer botPlayer = botPlayer;
+        private Obstacle doorObstacleBelief;
         private const float interactDistance = 2f;
-
-        public OpenNonKeycardDoorObstacle(FpcBotPlayer botPlayer)
-        {
-            this.botPlayer = botPlayer;
-        }
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
@@ -20,15 +16,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            doorObstacleBelief = fpcMind.ActionImpacts<DoorObstacle, DoorEntry?>(this, s => s!.Value.IsInteractable(DoorPermissionFlags.None));
+            doorObstacleBelief = fpcMind.ActionImpacts<Obstacle>(this, b => b.IsInteractable(DoorPermissionFlags.None));
         }
 
         public float Cost => 0f;
 
         public void Tick(FpcMatchProvider matchProvider)
         {
-            var doorEntry = matchProvider.Get<DoorObstacle, DoorEntry?>(doorObstacleBelief);
-            var doorToOpen = doorEntry!.Value.Door;
+            var doorToOpen = doorObstacleBelief.GetDoor();
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
 
             if (!doorToOpen)
@@ -54,8 +49,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
             if (!isTargetStateOpen || dist > interactDistance)
             {
-                var goalPos = doorEntry!.Value.GoalPosition;
-                botPlayer.MoveToPosition(goalPos);
+                var toPos = doorObstacleBelief.ToPos;
+                botPlayer.MoveToPosition(toPos);
             }
         }
 
@@ -66,7 +61,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public override string ToString()
         {
-            return $"{nameof(OpenNonKeycardDoorObstacle)}";
+            return $"{nameof(OpenNonKeycardInteractableObstacle)}";
         }
     }
 }
