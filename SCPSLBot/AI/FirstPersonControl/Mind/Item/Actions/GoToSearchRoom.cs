@@ -27,7 +27,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
         {
             if (Zone.HasValue)
             {
-                fpcMind.ActionEnabledBy<ZoneWithin, FacilityZone?>(this, b => Zone.Value, b => b.Zone);
+                fpcMind.ActionEnabledBy<ZoneWithin>(this, b => b.Zone == Zone.Value, b => b.IsWithin);
             }
 
             base.SetEnabledByBeliefs(fpcMind);

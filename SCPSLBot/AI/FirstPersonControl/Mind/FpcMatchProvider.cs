@@ -11,12 +11,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
     {
         private IAction actionToEnable;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public S Get<B, S>(B belief) where B : Belief<S>
-        {
-            return belief.GetMatchState(actionToEnable);
-        }
-
         public void SetActionToEnable(IAction actionToEnable)
         {
             this.actionToEnable = actionToEnable;

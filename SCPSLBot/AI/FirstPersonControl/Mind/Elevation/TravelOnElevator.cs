@@ -16,12 +16,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            elevatorObstacle = fpcMind.ActionEnabledBy<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.IsElevatorAtOrigin, b => b.HasAtOrigin);
+            //elevatorObstacle = fpcMind.ActionEnabledBy<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.IsElevatorAtOrigin, b => b.HasAtOrigin);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            elevatorObstacle = fpcMind.ActionImpacts<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.NoElevator);
+            //elevatorObstacle = fpcMind.ActionImpacts<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.NoElevator);
         }
 
         public float Cost => 0f;

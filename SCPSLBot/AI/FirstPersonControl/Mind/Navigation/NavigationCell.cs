@@ -6,7 +6,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
     internal class NavigationCell(TransformCell transformCell, CellWithin cellWithin) : IBelief
     {
         public readonly TransformCell TransformCell = transformCell;
-
         public event Action OnUpdate;
 
         public bool IsWithin = false;

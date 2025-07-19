@@ -1,6 +1,7 @@
 ﻿using Interactables.Interobjects;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Navigation.Mesh;
+using System;
 using System.Linq;
 using UnityEngine;
 
@@ -13,8 +14,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         IsElevatorAtOrigin
     }
 
-    internal class ElevationObstacle : Belief<ElevationObstacleMode>
+    internal class ElevationObstacle : IBelief
     {
+        public event Action OnUpdate;
+
         private readonly int doorLayer = LayerMask.NameToLayer("Door");
 
         private readonly FpcBotNavigator navigator;
@@ -115,7 +118,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 GoalPosition = goalPos;
                 DestinationCell = destinationCell;
                 ElevatorAtOrigin = elevatorAtOrigin;
-                InvokeOnUpdate();
+                OnUpdate?.Invoke();
             }
         }
 

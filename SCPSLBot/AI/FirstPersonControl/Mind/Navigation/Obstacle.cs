@@ -1,6 +1,7 @@
 ﻿using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Navigation.Mesh;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation

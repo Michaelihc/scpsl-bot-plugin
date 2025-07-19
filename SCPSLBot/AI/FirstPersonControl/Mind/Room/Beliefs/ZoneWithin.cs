@@ -1,40 +1,41 @@
 ﻿using MapGeneration;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
+using System;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
 {
-    internal class ZoneWithin : Belief<FacilityZone?>
+    internal class ZoneWithin : IBelief
     {
+        public readonly FacilityZone Zone;
+        public event Action OnUpdate;
+
         private readonly FpcBotNavigator navigator;
+        private readonly RoomSightSense roomSightSense;
 
-        public ZoneWithin(RoomSightSense roomSightSense, FpcBotNavigator navigator)
+        public ZoneWithin(FacilityZone zone, RoomSightSense roomSightSense, FpcBotNavigator navigator)
         {
+            this.Zone = zone;
+            this.roomSightSense = roomSightSense;
             this.navigator = navigator;
-            roomSightSense.OnSensedRoomWithin += OnSensedRoomWithin;
         }
 
-        private void OnSensedRoomWithin(RoomIdentifier room)
-        {
-            if (navigator.GetCellWithin() != null)
-            {
-                Update(room.Zone);
-            }
-        }
+        public bool IsWithin = false;
 
-        public FacilityZone? Zone { get; private set; }
-
-        private void Update(FacilityZone? newZoneValue)
+        public void Update()
         {
-            if (newZoneValue != Zone)
+            var newZoneValue = roomSightSense.RoomWithin?.Zone;
+
+            var newIsWithin = newZoneValue == Zone;
+            if (newIsWithin != IsWithin)
             {
-                Zone = newZoneValue;
-                InvokeOnUpdate();
+                IsWithin = newIsWithin;
+                OnUpdate?.Invoke();
             }
         }
 
         public override string ToString()
         {
-            return $"{nameof(ZoneWithin)}: {Zone}";
+            return $"{nameof(ZoneWithin)}({Zone}): {IsWithin}";
         }
     }
 }

@@ -23,7 +23,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room
 
         public override void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionEnabledBy<ZoneWithin, FacilityZone?>(this, b => ZoneFrom, b => b.Zone);
+            fpcMind.ActionEnabledBy<ZoneWithin>(this, b => b.Zone == ZoneFrom, b => b.IsWithin);
 
             base.SetEnabledByBeliefs(fpcMind);
         }

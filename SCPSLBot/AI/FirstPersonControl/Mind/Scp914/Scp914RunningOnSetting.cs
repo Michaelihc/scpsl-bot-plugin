@@ -10,12 +10,16 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
 {
-    internal class Scp914RunningOnSetting : Belief<Scp914KnobSetting?>
+    internal class Scp914RunningOnSetting : IBelief
     {
+        public readonly Scp914KnobSetting Setting;
+        public event Action OnUpdate;
+
         private readonly RoomSightSense roomSightSense;
 
-        public Scp914RunningOnSetting(RoomSightSense roomSightSense)
+        public Scp914RunningOnSetting(Scp914KnobSetting setting, RoomSightSense roomSightSense)
         {
+            this.Setting = setting;
             this.roomSightSense = roomSightSense;
 
             Scp914Events.Activated += OnActivateEvent;
@@ -52,13 +56,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
             if (newSetting != this.RunningKnobSetting)
             {
                 this.RunningKnobSetting = newSetting;
-                this.InvokeOnUpdate();
+                this.OnUpdate?.Invoke();
             }
         }
 
         public override string ToString()
         {
-            return $"{nameof(Scp914RunningOnSetting)}: {this.RunningKnobSetting}";
+            return $"{nameof(Scp914RunningOnSetting)}({Setting}): {this.RunningKnobSetting}";
         }
     }
 }

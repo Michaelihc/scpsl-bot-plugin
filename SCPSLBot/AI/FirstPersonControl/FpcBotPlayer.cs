@@ -303,7 +303,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 debugStringBuilder.AppendLine($"Goal: {goal.GetType().Name}");
                 numLines++;
 
-                foreach (var goalBelief in goalEnablingBeliefs)
+                foreach (var (goalBelief, _) in goalEnablingBeliefs)
                 {
                     if (!MindRunner.VisitedGoalsEnabledBy.ContainsKey(goalBelief))
                     {
@@ -325,7 +325,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             level++;
 
-            foreach (var actionImpacting in MindRunner.ActionsImpactingBeliefs[goalBelief])
+            foreach (var (actionImpacting, _) in MindRunner.ActionsImpactingBeliefs[goalBelief])
             {
                 if (!MindRunner.VisitedGoalsImpactedBy.TryGetValue(actionImpacting, out var goalImpactedBy)
                     || goalImpactedBy != goal)
@@ -353,9 +353,9 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
             numLines++;
 
-            foreach (var beliefEnabling in MindRunner.BeliefsEnablingActions[actionImpacting])
+            foreach (var (beliefEnabling, _) in MindRunner.BeliefsEnablingActions[actionImpacting])
             {
-                ShowVisitedActionsOfBelief(beliefEnabling, actionImpacting);
+                ShowVisitedActionsOfBelief(beliefEnabling.Invoke(), actionImpacting);
             }
 
             level--;
@@ -363,7 +363,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void ShowVisitedActionsOfBelief(IBelief belief, IAction actionToEnable)
         {
-            foreach (var actionImpacting in MindRunner.ActionsImpactingBeliefs[belief])
+            foreach (var (actionImpacting, _) in MindRunner.ActionsImpactingBeliefs[belief])
             {
                 if (!MindRunner.VisitedActionsImpactedBy.TryGetValue(actionImpacting, out var actionImpactedBy)
                     || actionImpactedBy != actionToEnable)

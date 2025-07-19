@@ -25,7 +25,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            elevationObstacle = fpcMind.ActionImpacts<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.IsElevatorAtOrigin);
+            //elevationObstacle = fpcMind.ActionImpacts<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.IsElevatorAtOrigin);
         }
 
         public float Cost => 0f;

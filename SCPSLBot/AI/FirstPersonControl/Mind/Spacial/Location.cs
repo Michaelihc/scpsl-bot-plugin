@@ -4,8 +4,9 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
 {
-    internal class Location : Belief<bool>
+    internal class Location : IBelief
     {
+        public event Action OnUpdate;
         public readonly List<Vector3> Positions = new();
 
         protected void AddPosition(Vector3 position)
@@ -13,7 +14,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             if (!Positions.Contains(position))
             {
                 Positions.Add(position);
-                InvokeOnUpdate();
+                OnUpdate?.Invoke();
             }
         }
 
@@ -21,7 +22,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         {
             if (Positions.Remove(position))
             {
-                InvokeOnUpdate();
+                OnUpdate?.Invoke();
             }
         }
 
@@ -58,7 +59,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
 
             if (changed)
             {
-                InvokeOnUpdate();
+                OnUpdate?.Invoke();
             }
         }
 
@@ -66,7 +67,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         {
             if (Positions.RemoveAll(predicate) > 0)
             {
-                InvokeOnUpdate(); 
+                OnUpdate?.Invoke(); 
             }
         }
     }

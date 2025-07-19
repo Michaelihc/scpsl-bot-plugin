@@ -27,7 +27,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
             this.itemInIntakeChamber = fpcMind.ActionEnabledBy<ItemInIntakeChamber<ItemOfType>>(this, b => b.Criteria.Equals(this.InputItemType), b => b.PositionRelative.HasValue);
-            this.runningOnSetting = fpcMind.ActionEnabledBy<Scp914RunningOnSetting, Scp914KnobSetting?>(this, b => Setting, b => b.RunningKnobSetting);
+            this.runningOnSetting = fpcMind.ActionEnabledBy<Scp914RunningOnSetting>(this, b => b.Setting == Setting, b => b.RunningKnobSetting == Setting);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)

@@ -1,6 +1,7 @@
 ﻿using Interactables.Interobjects.DoorUtils;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Keycard;
+using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
@@ -14,7 +15,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
             this.botPlayer = botPlayer;
         }
 
-        private DoorObstacle doorObstacleBelief;
+        private Obstacle doorObstacleBelief;
         private ItemInInventory<KeycardWithPermissions> keycardInInventory;
         private readonly FpcBotPlayer botPlayer;
         private const float interactDistance = 2f;
@@ -26,7 +27,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            doorObstacleBelief = fpcMind.ActionImpacts<DoorObstacle, DoorEntry?>(this, c => c!.Value.IsInteractable(Permissions));
+            doorObstacleBelief = fpcMind.ActionImpacts<Obstacle>(this, b => b.IsInteractable(Permissions));
         }
 
         public float Cost => 0f;
@@ -39,8 +40,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 keycard.Owner.inventory.ServerSelectItem(keycard.ItemSerial);
             }
 
-            var doorEntry = matchProvider.Get<DoorObstacle, DoorEntry?>(doorObstacleBelief);
-            var doorToOpen = doorEntry!.Value.Door;
+            var doorToOpen = doorObstacleBelief.GetDoor();
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
 
             if (doorToOpen && !doorToOpen.TargetState)
@@ -59,8 +59,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 }
             }
 
-            var goalPos = doorEntry!.Value.GoalPosition;
-            botPlayer.MoveToPosition(goalPos);
+            var toPos = doorObstacleBelief.ToPos;
+            botPlayer.MoveToPosition(toPos);
         }
 
         public void Reset()

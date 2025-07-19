@@ -25,7 +25,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
 
         public override void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionImpacts<Scp914RunningOnSetting, Scp914KnobSetting?>(this, b => KnobSetting);
+            fpcMind.ActionImpacts<Scp914RunningOnSetting>(this, b => b.Setting == KnobSetting);
         }
 
         public override float Weight { get; } = 1.5f;   // "average" effort to target knob setting

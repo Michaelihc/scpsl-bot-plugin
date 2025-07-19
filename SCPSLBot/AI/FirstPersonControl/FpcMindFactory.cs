@@ -6,7 +6,6 @@ using SCPSLBot.AI.FirstPersonControl.Mind.Item;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Keycard;
-using SCPSLBot.AI.FirstPersonControl.Mind.Misc;
 using SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Mind.Scp914;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
@@ -15,6 +14,10 @@ using MapGeneration;
 using SCPSLBot.AI.FirstPersonControl.Mind.Room;
 using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
 using SCPSLBot.AI.FirstPersonControl.Mind.Escape;
+using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+using SCPSLBot.Navigation.Mesh;
+using UnityEngine;
+using System.Linq;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
@@ -28,17 +31,42 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public static void BuildMind(FpcMind mind, FpcBotPlayer botPlayer, FpcBotPerception perception)
         {
-            mind.AddBelief(new DoorObstacle(perception.GetSense<DoorsWithinSightSense>(), botPlayer.Navigator));
-            mind.AddBelief(new GlassObstacle(perception.GetSense<GlassSightSense>(), botPlayer.Navigator));
+            var cellWithinBelief = new CellWithin(botPlayer);
+            mind.AddBelief(cellWithinBelief);
+
+            var obstacleLayerMask = LayerMask.NameToLayer("Door");
+            foreach (var (room, mesh) in NavigationMesh.LocalMeshesByRoom)
+            {
+                foreach (var cell in mesh.Cells.Select(c => new TransformCell(c, room.transform)))
+                {
+                    mind.AddBelief(new NavigationCell(cell, cellWithinBelief));
+                    mind.AddBelief(new Obstacle(cell, perception.GetSense<DoorsWithinSightSense>(), obstacleLayerMask));
+
+                    foreach (var (adjacentCell, adjacentEdge) in cell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[cell]))
+                    {
+                        foreach (var (adjacent2Cell, adjacent2Edge) in adjacentCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[adjacentCell]))
+                        {
+                            if (adjacent2Edge == new TransformEdge(adjacentEdge.To, adjacentEdge.From, adjacentEdge.Transform))
+                            {
+                                continue;
+                            }
+                            mind.AddAction(new GoToCell(adjacent2Cell, adjacentCell, adjacentEdge, botPlayer));
+                        }
+                    }
+                }
+            }
 
 
-            mind.AddBelief(new ElevationObstacle(perception.GetSense<DoorsWithinSightSense>(), botPlayer.Navigator));
-            mind.AddAction(new CallAndWaitForElevator(botPlayer));
-            mind.AddAction(new TravelOnElevator(botPlayer));
+            //mind.AddBelief(new ElevationObstacle(perception.GetSense<DoorsWithinSightSense>(), botPlayer.Navigator));
+            //mind.AddAction(new CallAndWaitForElevator(botPlayer));
+            //mind.AddAction(new TravelOnElevator(botPlayer));
 
 
             mind.AddBelief(new RoomEnterLocation(perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new ZoneWithin(perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.Surface, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.Entrance, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.LightContainment, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
             mind.AddBelief(new ZoneEnterLocation(FacilityZone.LightContainment, FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>()));
             mind.AddBelief(new ZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.LightContainment, perception.GetSense<RoomSightSense>()));
             mind.AddBelief(new ZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, perception.GetSense<RoomSightSense>()));
@@ -61,7 +89,11 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             mind.AddBelief(new Scp914Location(perception.GetSense<RoomSightSense>()));
             mind.AddBelief(new Scp914Controls(perception.GetSense<InteractablesWithinSightSense>()));
-            mind.AddBelief(new Scp914RunningOnSetting(perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Rough, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Coarse, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.OneToOne, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Fine, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.VeryFine, perception.GetSense<RoomSightSense>()));
 
             mind.AddAction(new GoToSearchRoomForScp914(botPlayer));
             mind.AddAction(new GoToStartScp914OnSetting(Scp914.Scp914KnobSetting.Fine, botPlayer));

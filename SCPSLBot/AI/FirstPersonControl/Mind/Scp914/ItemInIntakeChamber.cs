@@ -5,9 +5,11 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
 {
-    internal class ItemInIntakeChamber<C> : Belief<bool> where C : IItemBeliefCriteria
+    internal class ItemInIntakeChamber<C> : IBelief where C : IItemBeliefCriteria
     {
         public C Criteria { get; }
+        public event Action OnUpdate;
+
         public ItemInIntakeChamber(C criteria)
         {
             this.Criteria = criteria;
@@ -20,7 +22,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
             if (newRelativePosition != this.PositionRelative)
             {
                 this.PositionRelative = newRelativePosition;
-                this.InvokeOnUpdate();
+                this.OnUpdate?.Invoke();
             }
         }
 

@@ -1,7 +1,4 @@
-﻿using SCPSLBot.AI.FirstPersonControl.Mind.Door;
-using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
-using SCPSLBot.AI.FirstPersonControl.Mind.Misc;
-using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+﻿using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
 using SCPSLBot.Navigation.Mesh;
 using System;
 using UnityEngine;

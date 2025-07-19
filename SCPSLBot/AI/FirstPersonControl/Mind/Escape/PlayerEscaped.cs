@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Escape
 {
-    internal class PlayerEscaped : Belief<bool>
+    internal class PlayerEscaped : IBelief
     {
+        public event Action OnUpdate;
+
         public override string ToString()
         {
             return $"{nameof(PlayerEscaped)}";

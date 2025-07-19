@@ -4,9 +4,11 @@ using System;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
 {
-    internal class ItemInInventory<C> : Belief<bool> where C : IItemBeliefCriteria
+    internal class ItemInInventory<C> : IBelief where C : IItemBeliefCriteria
     {
         public C Criteria { get; }
+        public event Action OnUpdate;
+
         public ItemInInventory(C criteria, ItemsInInventorySense inventorySense)
         {
             Criteria = criteria;
@@ -49,7 +51,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
         public void Update(ItemBase item)
         {
             Item = item;
-            InvokeOnUpdate();
+            OnUpdate?.Invoke();
         }
 
         public override string ToString()

@@ -8,10 +8,11 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
-    internal class CellWithin : IBelief
+    internal class CellWithin(FpcBotPlayer botPlayer) : IBelief
     {
         public event Action OnUpdate;
-
         public TransformCell TransformCell;
+
+        private readonly FpcBotPlayer botPlayer = botPlayer;
     }
 }

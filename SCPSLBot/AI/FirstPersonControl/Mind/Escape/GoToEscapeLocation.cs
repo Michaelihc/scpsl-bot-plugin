@@ -16,7 +16,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Escape
 
         public override void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionEnabledBy<ZoneWithin, FacilityZone?>(this, b => FacilityZone.Surface, b => b.Zone);
+            fpcMind.ActionEnabledBy<ZoneWithin>(this, b => b.Zone == FacilityZone.Surface, b => b.IsWithin);
 
             base.SetEnabledByBeliefs(fpcMind);
         }

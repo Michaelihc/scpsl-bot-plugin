@@ -5,8 +5,10 @@ using System;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
 {
-    internal class Scp914Controls : Belief<Scp914KnobSetting?>
+    internal class Scp914Controls : IBelief
     {
+        public event Action OnUpdate;
+
         public Scp914Controls(InteractablesWithinSightSense interactablesSightSense)
         {
             interactablesSightSense.OnSensedInteractableColliderWithinSight += OnSensedInteractableColliderWithinSight;
@@ -42,7 +44,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
             if (newSetting != this.KnobSetting)
             {
                 this.KnobSetting = newSetting;
-                this.InvokeOnUpdate();
+                this.OnUpdate?.Invoke();
             }
         }
 
