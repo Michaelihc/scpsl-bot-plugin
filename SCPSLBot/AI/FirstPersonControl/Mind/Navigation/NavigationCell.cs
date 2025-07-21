@@ -12,7 +12,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public void Update()
         {
-            var newIsWithin = cellWithin.TransformCell == TransformCell;
+            var newIsWithin = cellWithin.TransformCell.HasValue ? cellWithin.TransformCell.Value == TransformCell : IsWithin;
             if (newIsWithin != IsWithin)
             {
                 IsWithin = newIsWithin;

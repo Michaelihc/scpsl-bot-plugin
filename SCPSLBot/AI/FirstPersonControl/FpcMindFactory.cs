@@ -31,16 +31,24 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public static void BuildMind(FpcMind mind, FpcBotPlayer botPlayer, FpcBotPerception perception)
         {
-            var cellWithinBelief = new CellWithin(botPlayer);
-            mind.AddBelief(cellWithinBelief);
+            var navigationBeliefs = new NavigationBeliefs();
+            mind.AddBelief(navigationBeliefs);
+
+            var cellWithin = new CellWithin(botPlayer);
+            mind.AddBelief(cellWithin);
 
             var obstacleLayerMask = LayerMask.NameToLayer("Door");
             foreach (var (room, mesh) in NavigationMesh.LocalMeshesByRoom)
             {
                 foreach (var cell in mesh.Cells.Select(c => new TransformCell(c, room.transform)))
                 {
-                    mind.AddBelief(new NavigationCell(cell, cellWithinBelief));
-                    mind.AddBelief(new Obstacle(cell, perception.GetSense<DoorsWithinSightSense>(), obstacleLayerMask));
+                    var navCell = new NavigationCell(cell, cellWithin);
+                    navigationBeliefs.NavigationCells.Add(cell, navCell);
+                    mind.AddBelief(navCell);
+
+                    var obstacle = new Obstacle(cell, perception.GetSense<DoorsWithinSightSense>(), obstacleLayerMask);
+                    navigationBeliefs.Obstacles.Add(cell, obstacle);
+                    mind.AddBelief(obstacle);
 
                     foreach (var (adjacentCell, adjacentEdge) in cell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[cell]))
                     {
