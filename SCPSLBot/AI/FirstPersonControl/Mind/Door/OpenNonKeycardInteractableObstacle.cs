@@ -1,10 +1,11 @@
 ﻿using Interactables.Interobjects.DoorUtils;
 using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+using SCPSLBot.Navigation.Mesh;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 {
-    internal class OpenNonKeycardInteractableObstacle(FpcBotPlayer botPlayer) : IAction
+    internal class OpenNonKeycardInteractableObstacle(TransformCell transformCell, NavigationBeliefs navigationBeliefs, FpcBotPlayer botPlayer) : IAction
     {
         private readonly FpcBotPlayer botPlayer = botPlayer;
         private Obstacle doorObstacleBelief;
@@ -16,7 +17,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            doorObstacleBelief = fpcMind.ActionImpacts<Obstacle>(this, b => b.IsInteractable(DoorPermissionFlags.None));
+            doorObstacleBelief = fpcMind.ActionImpacts<Obstacle>(this, navigationBeliefs.Obstacles[transformCell], b => b.IsInteractable(DoorPermissionFlags.None));
         }
 
         public float Cost => 0f;

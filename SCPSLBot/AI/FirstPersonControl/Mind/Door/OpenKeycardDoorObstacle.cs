@@ -2,6 +2,7 @@
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Keycard;
 using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+using SCPSLBot.Navigation.Mesh;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
@@ -9,15 +10,20 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
     internal class OpenKeycardDoorObstacle : IAction
     {
         public readonly DoorPermissionFlags Permissions;
-        public OpenKeycardDoorObstacle(DoorPermissionFlags permissions, FpcBotPlayer botPlayer)
+        private readonly TransformCell transformCell;
+        private readonly NavigationBeliefs navigationBeliefs;
+        private readonly FpcBotPlayer botPlayer;
+
+        public OpenKeycardDoorObstacle(DoorPermissionFlags permissions, TransformCell transformCell, NavigationBeliefs navigationBeliefs, FpcBotPlayer botPlayer)
         {
             this.Permissions = permissions;
+            this.transformCell = transformCell;
+            this.navigationBeliefs = navigationBeliefs;
             this.botPlayer = botPlayer;
         }
 
         private Obstacle doorObstacleBelief;
         private ItemInInventory<KeycardWithPermissions> keycardInInventory;
-        private readonly FpcBotPlayer botPlayer;
         private const float interactDistance = 2f;
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
@@ -27,7 +33,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            doorObstacleBelief = fpcMind.ActionImpacts<Obstacle>(this, b => b.IsInteractable(Permissions));
+            doorObstacleBelief = fpcMind.ActionImpacts<Obstacle>(this, this.navigationBeliefs.Obstacles[this.transformCell], b => b.IsInteractable(Permissions));
         }
 
         public float Cost => 0f;

@@ -32,6 +32,12 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(Tick)}");
 
+            // Run update on all relevant beliefs in undefined order (uses HashSet)
+            foreach (var belief in RelevantBeliefs)
+            {
+                belief.Update();
+            }
+
             if (isBeliefsUpdated)
             {
                 isBeliefsUpdated = false;

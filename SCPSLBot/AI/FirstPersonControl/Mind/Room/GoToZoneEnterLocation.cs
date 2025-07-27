@@ -25,7 +25,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room
 
         public override void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionImpacts<ZoneWithin>(this, static b => true, b => b.Zone == Zone);
+            fpcMind.ActionImpacts<ZoneWithin>(this, b => b.Zone == Zone);
         }
 
         public override float Weight { get; } = 1f;

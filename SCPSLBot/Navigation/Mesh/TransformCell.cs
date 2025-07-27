@@ -39,5 +39,10 @@ namespace SCPSLBot.Navigation.Mesh
         private readonly TransformCell ToTransformCell(Cell localCell) => new(localCell, Transform);
         private readonly TransformEdge ToTransformEdge(Edge localEdge) => new(localEdge, Transform);
         private readonly Cell ToLocalCell(TransformCell transformCell) => transformCell.Local;
+
+        public override readonly string ToString()
+        {
+            return $"{nameof(TransformCell)} {{ Local = {Local}, Transform = {Transform} }}";
+        }
     }
 }

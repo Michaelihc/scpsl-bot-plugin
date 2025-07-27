@@ -3,9 +3,9 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
-    internal class GoToCell(TransformCell toCell, TransformCell fromCell, TransformEdge fromEdge, FpcBotPlayer botPlayer) : IAction
+    internal class GoToCell(TransformCell toCell, TransformCell fromCell, TransformEdge toEdge, TransformEdge fromEdge, FpcBotPlayer botPlayer) : IAction
     {
-        private readonly Vector3 toEdgePos = fromCell.AdjacentCellEdges[toCell].MiddlePosition;
+        private readonly Vector3 toEdgePos = toEdge.MiddlePosition;
         private readonly Vector3 fromEdgePos = fromEdge.MiddlePosition;
         private readonly NavigationBeliefs cellBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
         private NavigationCell navCellTo;
@@ -13,7 +13,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionEnabledBy(this, cellBeliefs.Obstacles[fromCell], b => b.HasHit(toEdgePos, fromEdgePos));
+            if (cellBeliefs.Obstacles.TryGetValue(fromCell, out var obstacleBelief))
+            {
+                fpcMind.ActionEnabledBy(this, obstacleBelief, b => b.HasHit(toEdgePos, fromEdgePos));
+            }
 
             this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.IsWithin);            
         }

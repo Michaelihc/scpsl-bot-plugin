@@ -1,18 +1,29 @@
 ﻿using SCPSLBot.Navigation.Mesh;
 using System;
+using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
     internal class CellWithin(FpcBotPlayer botPlayer) : IBelief
     {
         public event Action OnUpdate;
-        public TransformCell? TransformCell;
 
-        private readonly FpcBotPlayer botPlayer = botPlayer;
+        private Vector3 cachedPosition;
+        private TransformCell? cachedTransformCell;
 
-        public void Update()
+        public TransformCell? TransformCell
         {
-            this.TransformCell = NavigationMesh.GetCellWithin(botPlayer.PlayerPosition);
+            get
+            {
+                var playerPos = botPlayer.PlayerPosition;
+                if (cachedPosition != playerPos)
+                {
+                    this.cachedPosition = playerPos;
+                    this.cachedTransformCell = NavigationMesh.GetCellWithin(playerPos);
+                }
+
+                return this.cachedTransformCell;
+            }
         }
     }
 }

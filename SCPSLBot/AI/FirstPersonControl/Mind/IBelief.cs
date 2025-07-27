@@ -9,5 +9,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
     internal interface IBelief
     {
         event Action OnUpdate;
+
+        void Update()
+        {
+
+        }
     }
 }

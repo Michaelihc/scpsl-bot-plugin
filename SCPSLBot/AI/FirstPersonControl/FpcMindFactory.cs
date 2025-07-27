@@ -18,6 +18,8 @@ using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
 using SCPSLBot.Navigation.Mesh;
 using UnityEngine;
 using System.Linq;
+using System;
+using Interactables.Interobjects;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
@@ -31,13 +33,13 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public static void BuildMind(FpcMind mind, FpcBotPlayer botPlayer, FpcBotPerception perception)
         {
-            var navigationBeliefs = new NavigationBeliefs();
-            mind.AddBelief(navigationBeliefs);
-
             var cellWithin = new CellWithin(botPlayer);
             mind.AddBelief(cellWithin);
 
-            var obstacleLayerMask = LayerMask.NameToLayer("Door");
+            var navigationBeliefs = new NavigationBeliefs();
+            mind.AddBelief(navigationBeliefs);
+
+            var sightSense = perception.GetSense<DoorsWithinSightSense>();
             foreach (var (room, mesh) in NavigationMesh.LocalMeshesByRoom)
             {
                 foreach (var cell in mesh.Cells.Select(c => new TransformCell(c, room.transform)))
@@ -45,25 +47,70 @@ namespace SCPSLBot.AI.FirstPersonControl
                     var navCell = new NavigationCell(cell, cellWithin);
                     navigationBeliefs.NavigationCells.Add(cell, navCell);
                     mind.AddBelief(navCell);
+                }
+            }
 
-                    var obstacle = new Obstacle(cell, perception.GetSense<DoorsWithinSightSense>(), obstacleLayerMask);
-                    navigationBeliefs.Obstacles.Add(cell, obstacle);
-                    mind.AddBelief(obstacle);
+            var obstacleLayerMask = LayerMask.NameToLayer("Door");
+            foreach (var door in DoorVariant.AllDoors.Where(d => d is not CheckpointDoor))
+            {
+                if (door.Rooms.Length == 2)
+                {
+                    var doorCenterPosition = door.transform.position + Vector3.up;  // assuming pivot point is located at the bottom of all doors
 
-                    foreach (var (adjacentCell, adjacentEdge) in cell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[cell]))
+                    var edgeInFront = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[0]);
+                    var edgeInBack = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[1]);
+
+                    if (edgeInFront != null && edgeInBack != null)
                     {
-                        foreach (var (adjacent2Cell, adjacent2Edge) in adjacentCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[adjacentCell]))
+                        var cellInFront = NavigationMesh.LocalMeshesByRoom[door.Rooms[0].gameObject].Cells
+                            .Select(lc => new TransformCell(lc, door.Rooms[0].transform))
+                            .First(c => c.Local.Edges.Any(e => e == edgeInFront.Value.Local));
+
+                        var cellInBack = NavigationMesh.LocalMeshesByRoom[door.Rooms[1].gameObject].Cells
+                            .Select(lc => new TransformCell(lc, door.Rooms[1].transform))
+                            .First(c => c.Local.Edges.Any(e => e == edgeInBack.Value.Local));
+
+                        Span<TransformCell> cells = [cellInFront, cellInBack];
+                        foreach (var cell in cells)
                         {
-                            if (adjacent2Edge == new TransformEdge(adjacentEdge.To, adjacentEdge.From, adjacentEdge.Transform))
-                            {
-                                continue;
-                            }
-                            mind.AddAction(new GoToCell(adjacent2Cell, adjacentCell, adjacentEdge, botPlayer));
+                            var obstacle = new Obstacle(cell, sightSense, obstacleLayerMask);
+                            navigationBeliefs.Obstacles.Add(cell, obstacle);
+                            mind.AddBelief(obstacle);
                         }
+                    }
+                }
+                else
+                {
+                    var cellResult = NavigationMesh.GetCellWithin(door.transform.position);
+                    if (cellResult.HasValue)
+                    {
+                        var cell = cellResult.Value;
+                        var obstacle = new Obstacle(cell, sightSense, obstacleLayerMask);
+                        navigationBeliefs.Obstacles.Add(cell, obstacle);
+                        mind.AddBelief(obstacle);
                     }
                 }
             }
 
+            foreach (var (cell, _) in navigationBeliefs.Obstacles)
+            {
+                mind.AddAction(new OpenNonKeycardInteractableObstacle(cell, navigationBeliefs, botPlayer));
+            }
+
+            foreach (var (cell, _) in navigationBeliefs.NavigationCells)
+            {
+                foreach (var (adjacentCell, adjacentEdge) in cell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[cell]))
+                {
+                    foreach (var (adjacent2Cell, adjacent2Edge) in adjacentCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[adjacentCell]))
+                    {
+                        if (adjacent2Edge == new TransformEdge(adjacentEdge.To, adjacentEdge.From, adjacentEdge.Transform))
+                        {
+                            continue;
+                        }
+                        mind.AddAction(new GoToCell(adjacent2Cell, adjacentCell, adjacent2Edge, adjacentEdge, botPlayer));
+                    }
+                }
+            }
 
             //mind.AddBelief(new ElevationObstacle(perception.GetSense<DoorsWithinSightSense>(), botPlayer.Navigator));
             //mind.AddAction(new CallAndWaitForElevator(botPlayer));
@@ -93,20 +140,6 @@ namespace SCPSLBot.AI.FirstPersonControl
             mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, botPlayer));
             mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.Entrance, FacilityZone.HeavyContainment, botPlayer));
             mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.Surface, FacilityZone.Entrance, botPlayer));
-
-
-            mind.AddBelief(new Scp914Location(perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new Scp914Controls(perception.GetSense<InteractablesWithinSightSense>()));
-            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Rough, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Coarse, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.OneToOne, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Fine, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.VeryFine, perception.GetSense<RoomSightSense>()));
-
-            mind.AddAction(new GoToSearchRoomForScp914(botPlayer));
-            mind.AddAction(new GoToStartScp914OnSetting(Scp914.Scp914KnobSetting.Fine, botPlayer));
-            mind.AddAction(new GoToStartScp914OnSetting(Scp914.Scp914KnobSetting.OneToOne, botPlayer));
-            mind.AddAction(new WaitForChamberDoorOpening(botPlayer));
 
 
             mind.AddBelief(new LockerSpawnsLocation(StructureType.StandardLocker, perception.GetSense<RoomSightSense>()));
@@ -155,6 +188,44 @@ namespace SCPSLBot.AI.FirstPersonControl
             mind.AddBelief(new ItemSightedLocation<ItemOfType>(ItemType.KeycardO5, perception.GetSense<ItemsWithinSightSense>()));
             mind.AddBelief(new ItemInInventory<ItemOfType>(ItemType.KeycardO5, perception.GetSense<ItemsInInventorySense>()));
             mind.AddAction(new GoToPickupItem<ItemOfType>(ItemType.KeycardO5, botPlayer));
+
+
+            #region KeycardMTFOperative searching
+            mind.AddBelief(new ItemSpawnsLocation<ItemOfType>(ItemType.KeycardMTFOperative, new[] { ItemType.KeycardMTFOperative }, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
+
+            mind.AddAction(new GoToItemSpawnLocation<ItemOfType>(ItemType.KeycardMTFOperative, botPlayer));
+            mind.AddActions(idx => new GoToSearchRoom<ItemOfType>(ItemType.KeycardMTFOperative, FacilityZone.HeavyContainment, idx, botPlayer));
+            #endregion
+
+            #region KeycardScientist searching
+            mind.AddBelief(new ItemSpawnsLocation<ItemOfType>(ItemType.KeycardScientist, new[] { ItemType.KeycardScientist }, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsInSightedLocker<ItemOfType>(ItemType.KeycardScientist, new[] { ItemType.KeycardScientist }, perception.GetSense<LockersWithinSightSense>()));
+
+            mind.AddAction(new GoToItemSpawnLocation<ItemOfType>(ItemType.KeycardScientist, botPlayer));
+            mind.AddAction(new GoToLockerSpawnLocation<ItemOfType>(ItemType.KeycardScientist, StructureType.StandardLocker, botPlayer));
+            mind.AddAction(new GoToItemSpawnInLocker<ItemOfType>(ItemType.KeycardScientist, botPlayer));
+            mind.AddActions(idx => new GoToSearchRoom<ItemOfType>(ItemType.KeycardScientist, idx, botPlayer));
+            #endregion
+
+            #region KeycardZoneManager searching
+            mind.AddBelief(new ItemSpawnsLocation<ItemOfType>(ItemType.KeycardZoneManager, new[] { ItemType.KeycardZoneManager }, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsInSightedLocker<ItemOfType>(ItemType.KeycardZoneManager, new[] { ItemType.KeycardZoneManager }, perception.GetSense<LockersWithinSightSense>()));
+
+            mind.AddAction(new GoToItemSpawnLocation<ItemOfType>(ItemType.KeycardZoneManager, botPlayer));
+            mind.AddAction(new GoToLockerSpawnLocation<ItemOfType>(ItemType.KeycardZoneManager, StructureType.StandardLocker, botPlayer));
+            mind.AddAction(new GoToItemSpawnInLocker<ItemOfType>(ItemType.KeycardZoneManager, botPlayer));
+            mind.AddActions(idx => new GoToSearchRoom<ItemOfType>(ItemType.KeycardZoneManager, idx, botPlayer));
+            #endregion
+
+            #region KeycardJanitor searching
+            mind.AddBelief(new ItemSpawnsLocation<ItemOfType>(ItemType.KeycardJanitor, new[] { ItemType.KeycardJanitor }, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
+            mind.AddBelief(new ItemSpawnsInSightedLocker<ItemOfType>(ItemType.KeycardJanitor, new[] { ItemType.KeycardJanitor }, perception.GetSense<LockersWithinSightSense>()));
+
+            mind.AddAction(new GoToItemSpawnLocation<ItemOfType>(ItemType.KeycardJanitor, botPlayer));
+            mind.AddAction(new GoToLockerSpawnLocation<ItemOfType>(ItemType.KeycardJanitor, StructureType.StandardLocker, botPlayer));
+            mind.AddAction(new GoToItemSpawnInLocker<ItemOfType>(ItemType.KeycardJanitor, botPlayer));
+            mind.AddActions(idx => new GoToSearchRoom<ItemOfType>(ItemType.KeycardJanitor, idx, botPlayer));
+            #endregion
 
 
             #region ContainmentLevelOne keycard picking up and searching
@@ -233,6 +304,31 @@ namespace SCPSLBot.AI.FirstPersonControl
             mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(DoorPermissionFlags.ExitGates), FacilityZone.HeavyContainment, idx, botPlayer));
             #endregion
 
+            foreach (var (cell, _) in navigationBeliefs.Obstacles)
+            {
+                mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelOne, cell, navigationBeliefs, botPlayer));
+                mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelTwo, cell, navigationBeliefs, botPlayer));
+                mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.Checkpoints, cell, navigationBeliefs, botPlayer));
+                mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ExitGates, cell, navigationBeliefs, botPlayer));
+            }
+
+
+            mind.AddBelief(new Scp914Location(perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914Controls(perception.GetSense<InteractablesWithinSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Rough, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Coarse, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.OneToOne, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.Fine, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new Scp914RunningOnSetting(Scp914.Scp914KnobSetting.VeryFine, perception.GetSense<RoomSightSense>()));
+
+            mind.AddAction(new GoToSearchRoomForScp914(botPlayer));
+            mind.AddAction(new GoToStartScp914OnSetting(Scp914.Scp914KnobSetting.Fine, botPlayer));
+            mind.AddAction(new GoToStartScp914OnSetting(Scp914.Scp914KnobSetting.OneToOne, botPlayer));
+
+            foreach (var (cell, _) in navigationBeliefs.Obstacles)
+            {
+                mind.AddAction(new WaitForChamberDoorOpening(cell, navigationBeliefs, botPlayer));
+            }
 
             var outputDoorPermissionFlags = new (KeycardWithPermissions, bool)[]
             {
@@ -371,51 +467,6 @@ namespace SCPSLBot.AI.FirstPersonControl
             mind.AddAction(new WaitForItemUpgrading(ItemType.KeycardFacilityManager, outputKeycardO5Criterias, Scp914.Scp914KnobSetting.Fine));
             mind.AddAction(new GoToItemInOutakeChamber<ItemOfType>(new(ItemType.KeycardO5), botPlayer));
             #endregion
-
-
-            #region KeycardMTFOperative searching
-            mind.AddBelief(new ItemSpawnsLocation<ItemOfType>(ItemType.KeycardMTFOperative, new[] { ItemType.KeycardMTFOperative }, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
-            
-            mind.AddAction(new GoToItemSpawnLocation<ItemOfType>(ItemType.KeycardMTFOperative, botPlayer));
-            mind.AddActions(idx => new GoToSearchRoom<ItemOfType>(ItemType.KeycardMTFOperative, FacilityZone.HeavyContainment, idx, botPlayer));
-            #endregion
-
-            #region KeycardScientist searching
-            mind.AddBelief(new ItemSpawnsLocation<ItemOfType>(ItemType.KeycardScientist, new[] { ItemType.KeycardScientist }, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemSpawnsInSightedLocker<ItemOfType>(ItemType.KeycardScientist, new[] { ItemType.KeycardScientist }, perception.GetSense<LockersWithinSightSense>()));
-
-            mind.AddAction(new GoToItemSpawnLocation<ItemOfType>(ItemType.KeycardScientist, botPlayer));
-            mind.AddAction(new GoToLockerSpawnLocation<ItemOfType>(ItemType.KeycardScientist, StructureType.StandardLocker, botPlayer));
-            mind.AddAction(new GoToItemSpawnInLocker<ItemOfType>(ItemType.KeycardScientist, botPlayer));
-            mind.AddActions(idx => new GoToSearchRoom<ItemOfType>(ItemType.KeycardScientist, idx, botPlayer));
-            #endregion
-
-            #region KeycardZoneManager searching
-            mind.AddBelief(new ItemSpawnsLocation<ItemOfType>(ItemType.KeycardZoneManager, new[] { ItemType.KeycardZoneManager }, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemSpawnsInSightedLocker<ItemOfType>(ItemType.KeycardZoneManager, new[] { ItemType.KeycardZoneManager }, perception.GetSense<LockersWithinSightSense>()));
-
-            mind.AddAction(new GoToItemSpawnLocation<ItemOfType>(ItemType.KeycardZoneManager, botPlayer));
-            mind.AddAction(new GoToLockerSpawnLocation<ItemOfType>(ItemType.KeycardZoneManager, StructureType.StandardLocker, botPlayer));
-            mind.AddAction(new GoToItemSpawnInLocker<ItemOfType>(ItemType.KeycardZoneManager, botPlayer));
-            mind.AddActions(idx => new GoToSearchRoom<ItemOfType>(ItemType.KeycardZoneManager, idx, botPlayer));
-            #endregion
-
-            #region KeycardJanitor searching
-            mind.AddBelief(new ItemSpawnsLocation<ItemOfType>(ItemType.KeycardJanitor, new[] { ItemType.KeycardJanitor }, perception.GetSense<RoomSightSense>(), perception.GetSense<ItemsWithinSightSense>()));
-            mind.AddBelief(new ItemSpawnsInSightedLocker<ItemOfType>(ItemType.KeycardJanitor, new[] { ItemType.KeycardJanitor }, perception.GetSense<LockersWithinSightSense>()));
-
-            mind.AddAction(new GoToItemSpawnLocation<ItemOfType>(ItemType.KeycardJanitor, botPlayer));
-            mind.AddAction(new GoToLockerSpawnLocation<ItemOfType>(ItemType.KeycardJanitor, StructureType.StandardLocker, botPlayer));
-            mind.AddAction(new GoToItemSpawnInLocker<ItemOfType>(ItemType.KeycardJanitor, botPlayer));
-            mind.AddActions(idx => new GoToSearchRoom<ItemOfType>(ItemType.KeycardJanitor, idx, botPlayer));
-            #endregion
-
-
-            mind.AddAction(new OpenNonKeycardInteractableObstacle(botPlayer));
-            mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelOne, botPlayer));
-            mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelTwo, botPlayer));
-            mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.Checkpoints, botPlayer));
-            mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ExitGates, botPlayer));
 
 
             mind.AddBelief(new FacilityEscapeLocation(perception.GetSense<RoomSightSense>()));
