@@ -37,7 +37,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         {
             this.location = SetEnabledByLocation(fpcMind, b => b.Positions.Count > Idx);
 
-            fpcMind.ActionEnabledBy(this, () => this.navBeliefs.Obstacles[this.getLocationNavCell().TransformCell], b => b.HasHit(targetPositionGetter(), botPlayer.PlayerPosition));
+            fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationObstacle(this.getLocationNavCell()), b => b.HasHit(targetPositionGetter(), botPlayer.PlayerPosition));
             this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(targetPositionGetter()), b => b.IsWithin);
         }
 

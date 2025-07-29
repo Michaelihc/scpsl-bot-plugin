@@ -17,5 +17,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             var cellResult = NavigationMesh.GetCellWithin(position);
             return cellResult.HasValue ? NavigationCells[cellResult.Value] : null;
         }
+
+        public Obstacle GetNavigationObstacle(NavigationCell navCellWithin)
+        {
+            return this.Obstacles.TryGetValue(navCellWithin.TransformCell, out var obstacle) ? obstacle : null;
+        }
     }
 }
