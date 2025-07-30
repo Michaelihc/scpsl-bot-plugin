@@ -1,4 +1,5 @@
 ﻿using SCPSLBot.AI.FirstPersonControl.Mind;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -12,6 +13,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         public float RunningActionCost { get; private set; }
         public FpcMatchProvider MatchProvider { get; private set; }
 
+        [Obsolete]
         public readonly HashSet<IBelief> RelevantBeliefs = new();
         private bool isBeliefsUpdated = false;
 
@@ -33,7 +35,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(Tick)}");
 
             // Run update on all relevant beliefs in undefined order (uses HashSet)
-            foreach (var belief in RelevantBeliefs)
+            foreach (var belief in VisitedActionsEnabledBy.Keys)
             {
                 belief.Update();
             }
@@ -54,14 +56,14 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void OnBeliefUpdate(IBelief updatedBelief)
         {
-            if (!RelevantBeliefs.Contains(updatedBelief))
+            if (!VisitedActionsEnabledBy.ContainsKey(updatedBelief))
             {
                 Debug.Log($"[I] Belief updated: {updatedBelief}");
                 return;
             }
 
             isBeliefsUpdated = true;
-            Debug.Log($"[R] Belief updated: {updatedBelief}");
+            Debug.Log($"[V] Belief updated: {updatedBelief}");
         }
 
         #region Action Finding
@@ -81,16 +83,14 @@ namespace SCPSLBot.AI.FirstPersonControl
         private IEnumerable<(IAction, FpcMatchProvider)> GetEnabledActionsTowardsGoals()
         {
             Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(GetEnabledActionsTowardsGoals)}");
-            
-            RelevantBeliefs.Clear();
+
+            VisitedGoalsEnabledBy.Clear();
+            VisitedActionsEnabledBy.Clear();
+            VisitedActionsImpactedBy.Clear();
+            VisitedGoalsImpactedBy.Clear();
 
             foreach (var goal in BeliefsEnablingGoals.Keys)
             {
-                VisitedGoalsEnabledBy.Clear();
-                VisitedActionsEnabledBy.Clear();
-                VisitedActionsImpactedBy.Clear();
-                VisitedGoalsImpactedBy.Clear();
-
                 var matchProvider = new FpcMatchProvider();
 
                 foreach (var enabledAction in FindEnabledActions(goal))
@@ -108,11 +108,6 @@ namespace SCPSLBot.AI.FirstPersonControl
                     }
 
                     RelevantActionsImpactingGoals[goal] = actionImpacting;
-
-                    foreach (var visitedBelief in VisitedActionsEnabledBy.Keys)
-                    {
-                        RelevantBeliefs.Add(visitedBelief);
-                    }
 
                     yield return (enabledAction, matchProvider);
                     break;

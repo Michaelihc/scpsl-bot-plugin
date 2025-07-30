@@ -353,9 +353,18 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
             numLines++;
 
-            foreach (var (beliefEnabling, _) in MindRunner.BeliefsEnablingActions[actionImpacting])
+            foreach (var (beliefEnablingGetter, enablingPredicate) in MindRunner.BeliefsEnablingActions[actionImpacting])
             {
-                ShowVisitedActionsOfBelief(beliefEnabling.Invoke(), actionImpacting);
+                var beliefEnabling = beliefEnablingGetter.Invoke();
+                if (beliefEnabling != null)
+                {
+                    ShowVisitedActionsOfBelief(beliefEnabling, actionImpacting);
+
+                    if (!enablingPredicate.Invoke(beliefEnabling))
+                    {
+                        break;
+                    }
+                }
             }
 
             level--;
