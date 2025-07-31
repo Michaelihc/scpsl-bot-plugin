@@ -97,18 +97,13 @@ namespace SCPSLBot.AI.FirstPersonControl
                 mind.AddAction(new OpenNonKeycardInteractableObstacle(cell, navigationBeliefs, botPlayer));
             }
 
-            foreach (var (cell, _) in navigationBeliefs.NavigationCells)
+            foreach (var (toCell, _) in navigationBeliefs.NavigationCells)
             {
-                foreach (var (adjacentCell, adjacentEdge) in cell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[cell]))
+                foreach (var (fromCell, toEdge) in toCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[toCell]))
                 {
-                    foreach (var (adjacent2Cell, adjacent2Edge) in adjacentCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[adjacentCell]))
-                    {
-                        if (adjacent2Edge == new TransformEdge(adjacentEdge.To, adjacentEdge.From, adjacentEdge.Transform))
-                        {
-                            continue;
-                        }
-                        mind.AddAction(new GoToCell(adjacent2Cell, adjacentCell, adjacent2Edge, adjacentEdge, botPlayer));
-                    }
+                    var fromEdges = fromCell.AdjacentCellEdges.Values.Concat(NavigationMesh.ForeignConnectedCellEdges[fromCell].Values).ToArray();
+
+                    mind.AddAction(new GoToCell(toCell, fromCell, toEdge, fromEdges, botPlayer));
                 }
             }
 
