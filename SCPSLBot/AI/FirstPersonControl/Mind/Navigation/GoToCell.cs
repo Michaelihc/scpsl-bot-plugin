@@ -30,6 +30,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         }
 
         public float Cost => Vector3.Distance(toCellCenterPosition, navCellFrom.IsWithin ? botPlayer.PlayerPosition : fromCellCenterPosition);
+        public float HeuristicCost => navCellFrom.IsWithin ? 0f : Vector3.Distance(fromCellCenterPosition, botPlayer.PlayerPosition);
 
         public void Tick(FpcMatchProvider matchProvider)
         {

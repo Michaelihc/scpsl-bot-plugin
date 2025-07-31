@@ -20,6 +20,7 @@ using UnityEngine;
 using System.Linq;
 using System;
 using Interactables.Interobjects;
+using System.Collections.Generic;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
@@ -30,6 +31,8 @@ namespace SCPSLBot.AI.FirstPersonControl
                                                                 DoorPermissionFlags.ContainmentLevelOne | DoorPermissionFlags.ContainmentLevelTwo | DoorPermissionFlags.ContainmentLevelThree | 
                                                                 DoorPermissionFlags.ArmoryLevelOne | DoorPermissionFlags.ArmoryLevelTwo | DoorPermissionFlags.ArmoryLevelThree;
         private const DoorPermissionFlags PermissionsCheckpointContainmentLevelOneTwo = DoorPermissionFlags.Checkpoints | DoorPermissionFlags.ContainmentLevelOne | DoorPermissionFlags.ContainmentLevelTwo;
+
+        private static readonly List<Collider> doorColliders = [];
 
         public static void BuildMind(FpcMind mind, FpcBotPlayer botPlayer, FpcBotPerception perception)
         {
@@ -81,14 +84,18 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
                 else
                 {
-                    var cellResult = NavigationMesh.GetCellWithin(door.transform.position);
-                    if (cellResult.HasValue)
+                    var cellResult = doorColliders.Select(collider => NavigationMesh.GetCellWithin(collider.bounds.center)).FirstOrDefault(r => r.HasValue);
+                    //var cellResult = NavigationMesh.GetCellWithin(door.transform.position + Vector3.up);
+                    if (!cellResult.HasValue)
                     {
-                        var cell = cellResult.Value;
-                        var obstacle = new Obstacle(cell, sightSense, obstacleLayerMask);
-                        navigationBeliefs.Obstacles.Add(cell, obstacle);
-                        mind.AddBelief(obstacle);
+                        Debug.LogWarning($"Could not find nav cell for door {door} to create obstacle belief with");
+                        continue;
                     }
+
+                    var cell = cellResult!.Value;
+                    var obstacle = new Obstacle(cell, sightSense, obstacleLayerMask);
+                    navigationBeliefs.Obstacles.Add(cell, obstacle);
+                    mind.AddBelief(obstacle);
                 }
             }
 

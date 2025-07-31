@@ -7,6 +7,7 @@
 
         //float Score { get; }
         float Cost { get; }
+        float HeuristicCost => 0f;
 
         void Tick(FpcMatchProvider matchProvider);
         void Reset();
