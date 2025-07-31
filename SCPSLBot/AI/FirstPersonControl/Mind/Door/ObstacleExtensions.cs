@@ -10,7 +10,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
             IsInteractable(obstacleBelief.GetDoor(), permissionFlags);
 
         public static DoorVariant GetDoor(this Obstacle obstacleBelief) =>
-            obstacleBelief.hit?.collider.GetComponentInParent<DoorVariant>();
+            obstacleBelief.hitResult?.collider.GetComponentInParent<DoorVariant>();
 
         private static bool IsInteractable(DoorVariant door, DoorPermissionFlags permissions)
         {

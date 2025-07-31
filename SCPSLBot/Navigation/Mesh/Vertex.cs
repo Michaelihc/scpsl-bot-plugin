@@ -10,5 +10,10 @@ namespace SCPSLBot.Navigation.Mesh
         {
             Position = position;
         }
+
+        public override string ToString()
+        {
+            return $"{nameof(Vertex)}{Position}";
+        }
     }
 }

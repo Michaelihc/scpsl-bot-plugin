@@ -19,5 +19,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
                 OnUpdate?.Invoke();
             }
         }
+
+        public override string ToString()
+        {
+            return $"{nameof(NavigationCell)}({TransformCell}) {{ {nameof(IsWithin)} = {IsWithin} }}";
+        }
     }
 }

@@ -49,5 +49,10 @@ namespace SCPSLBot.Navigation.Mesh
             AdjacentCells.Remove(adjacentCell);
             AdjacentCellEdges.Remove(adjacentCell);
         }
+
+        public override string ToString()
+        {
+            return $"{nameof(Cell)}: {CenterPosition}";
+        }
     }
 }

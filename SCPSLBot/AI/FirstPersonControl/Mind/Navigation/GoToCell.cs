@@ -15,7 +15,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         {
             if (cellBeliefs.Obstacles.TryGetValue(fromCell, out var obstacleBelief))
             {
-                fpcMind.ActionEnabledBy(this, obstacleBelief, b => b.HasHit(toEdgePos, fromEdgePos));
+                fpcMind.ActionEnabledBy(this, obstacleBelief, b => !b.HasHit(toEdgePos, fromEdgePos));
             }
 
             this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.IsWithin);            
@@ -35,6 +35,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public void Reset()
         {
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(GoToCell)}({toCell}, {fromCell}, {fromEdge})";
         }
     }
 }

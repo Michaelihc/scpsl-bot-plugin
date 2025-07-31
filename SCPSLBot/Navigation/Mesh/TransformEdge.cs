@@ -1,5 +1,4 @@
-﻿using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace SCPSLBot.Navigation.Mesh
@@ -27,6 +26,11 @@ namespace SCPSLBot.Navigation.Mesh
         public static bool operator !=(TransformEdge? left, TransformEdge right)
         {
             throw new NotSupportedException();
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(TransformEdge)}({From.Local}, {To.Local}, {Transform.gameObject.name})";
         }
     }
 }

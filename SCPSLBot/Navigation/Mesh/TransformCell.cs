@@ -42,7 +42,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public override readonly string ToString()
         {
-            return $"{nameof(TransformCell)} {{ Local = {Local}, Transform = {Transform} }}";
+            return $"{nameof(TransformCell)}({Local}, {Transform.gameObject.name})";
         }
     }
 }
