@@ -91,17 +91,18 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         #region Moving
 
-        public void MoveToPosition(Vector3 goalPosition) => MoveToPosition(goalPosition, out _);
-        public void MoveToPosition(Vector3 goalPosition, out Vector3 positionTowardsGoal)
+        public void MoveToPosition(Vector3 targetPosition) => MoveToPosition(targetPosition, out _);
+        public void MoveToPosition(Vector3 targetPosition, out Vector3 positionTowardsGoal)
         {
-            positionTowardsGoal = Navigator.GetPositionTowards(goalPosition);
-            SteerToPosition(positionTowardsGoal);
+            positionTowardsGoal = targetPosition;
+
+            SteerToPosition(targetPosition);
             SteerAwayFromObstacles();
         }
 
-        private void SteerToPosition(Vector3 positionTowardsGoal)
+        private void SteerToPosition(Vector3 targetPosition)
         {
-            var relativePos = positionTowardsGoal - this.FpcRole.CameraPosition;
+            var relativePos = targetPosition - this.FpcRole.CameraPosition;
             var relativeHorizontalPos = Vector3.ProjectOnPlane(relativePos, Vector3.up);
             var turnPosition = relativeHorizontalPos + this.FpcRole.CameraPosition;
 
