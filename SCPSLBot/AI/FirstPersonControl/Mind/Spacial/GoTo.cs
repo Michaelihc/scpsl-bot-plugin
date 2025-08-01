@@ -26,6 +26,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         }
 
         protected TLocation location;
+        private CellWithin cellWithin;
         private Func<NavigationCell> getLocationNavCell;
 
         public virtual void SetEnabledByBeliefs(FpcMind fpcMind)
@@ -38,7 +39,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             this.location = SetEnabledByLocation(fpcMind, b => b.Positions.Count > Idx);
 
             fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationObstacle(this.getLocationNavCell()), b => !b.HasHit(targetPositionGetter(), botPlayer.PlayerPosition));
-            this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(targetPositionGetter()), b => b.IsWithin);
+            
+            this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
+            this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(targetPositionGetter()), b => b.Is(cellWithin.TransformCell!.Value));
         }
 
         public abstract void SetImpactsBeliefs(FpcMind fpcMind);

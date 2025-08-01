@@ -11,6 +11,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         private readonly Vector3 fromCellCenterPosition = fromCell.CenterPosition;
         private readonly Vector3 toEdgePos = toEdge.MiddlePosition;
         private readonly NavigationBeliefs cellBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
+        private CellWithin cellWithin;
         private NavigationCell navCellTo;
         private NavigationCell navCellFrom;
 
@@ -21,7 +22,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
                 fpcMind.ActionEnabledBy(this, obstacleBelief, b => !fromEdges.Any(e => b.HasHit(toEdgePos, e.MiddlePosition)));
             }
 
-            this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.IsWithin);            
+            this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
+            this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.Is(cellWithin.TransformCell!.Value));            
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)

@@ -42,11 +42,11 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             if (isBeliefsUpdated)
             {
-                isBeliefsUpdated = false;
-
                 IEnumerable<(IAction, FpcMatchProvider)> enabledActions = GetEnabledActionsTowardsGoals();
 
                 SelectActionAndRun(enabledActions);
+
+                isBeliefsUpdated = false;
             }
 
             RunningAction?.Tick(MatchProvider);

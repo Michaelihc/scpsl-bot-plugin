@@ -10,9 +10,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public bool IsWithin = false;
 
+        public bool Is(TransformCell otherCell)
+        {
+            IsWithin = otherCell == TransformCell;
+
+            return IsWithin;
+        }
+
         public void Update()
         {
-            var newIsWithin = cellWithin.TransformCell.HasValue ? cellWithin.TransformCell.Value == TransformCell : IsWithin;
+            var newIsWithin = cellWithin.TransformCell.HasValue && cellWithin.TransformCell.Value == TransformCell;
             if (newIsWithin != IsWithin)
             {
                 IsWithin = newIsWithin;
