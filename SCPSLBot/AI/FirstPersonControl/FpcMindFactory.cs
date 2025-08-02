@@ -1,26 +1,28 @@
-﻿using Interactables.Interobjects.DoorUtils;
+﻿using DrawableLine;
+using Interactables.Interobjects;
+using Interactables.Interobjects.DoorUtils;
+using MapGeneration;
+using MapGeneration.Distributors;
 using SCPSLBot.AI.FirstPersonControl.Mind;
-using SCPSLBot.AI.FirstPersonControl.Mind.Goals;
 using SCPSLBot.AI.FirstPersonControl.Mind.Door;
+using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
+using SCPSLBot.AI.FirstPersonControl.Mind.Escape;
+using SCPSLBot.AI.FirstPersonControl.Mind.Goals;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Keycard;
+using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+using SCPSLBot.AI.FirstPersonControl.Mind.Room;
 using SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Mind.Scp914;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
-using MapGeneration.Distributors;
-using MapGeneration;
-using SCPSLBot.AI.FirstPersonControl.Mind.Room;
-using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
-using SCPSLBot.AI.FirstPersonControl.Mind.Escape;
-using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
 using SCPSLBot.Navigation.Mesh;
-using UnityEngine;
-using System.Linq;
 using System;
-using Interactables.Interobjects;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
@@ -54,6 +56,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             var obstacleLayerMask = LayerMask.NameToLayer("Door");
+            var stringBuilder = new StringBuilder();
             foreach (var door in DoorVariant.AllDoors.Where(d => d is not CheckpointDoor))
             {
                 if (door.Rooms.Length == 2)
@@ -84,11 +87,11 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
                 else
                 {
-                    var cellResult = doorColliders.Select(collider => NavigationMesh.GetCellWithin(collider.bounds.center)).FirstOrDefault(r => r.HasValue);
-                    //var cellResult = NavigationMesh.GetCellWithin(door.transform.position + Vector3.up);
+                    var cellResult = NavigationMesh.GetCellWithin(door.transform.position + Vector3.up);
                     if (!cellResult.HasValue)
                     {
-                        Debug.LogWarning($"Could not find nav cell for door {door} to create obstacle belief with");
+                        var doorRoomNames = stringBuilder.Clear().AppendJoin(", ", door.Rooms.Select(r => r.gameObject.name));
+                        Debug.LogWarning($"Could not find nav cell for door {door} at ({doorRoomNames}) to create obstacle belief with");
                         continue;
                     }
 
