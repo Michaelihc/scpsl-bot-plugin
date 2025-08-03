@@ -55,7 +55,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
             }
 
-            var obstacleLayerMask = LayerMask.NameToLayer("Door");
+            var obstacleLayerMask = LayerMask.GetMask("Door");
             var stringBuilder = new StringBuilder();
             foreach (var door in DoorVariant.AllDoors.Where(d => d is not CheckpointDoor))
             {

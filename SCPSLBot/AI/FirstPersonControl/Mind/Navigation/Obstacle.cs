@@ -1,4 +1,5 @@
-﻿using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
+﻿using DrawableLine;
+using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
@@ -45,6 +46,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             {
                 return;
             }
+
+            DrawableLines.GenerateLine(fromPos, toPos);
 
             if (Physics.Linecast(fromPos, toPos, out var hit, layerMask))
             {
