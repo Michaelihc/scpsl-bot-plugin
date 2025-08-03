@@ -109,9 +109,13 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             foreach (var (toCell, _) in navigationBeliefs.NavigationCells)
             {
-                foreach (var (fromCell, toEdge) in toCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[toCell]))
+                foreach (var (fromCell, _) in toCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[toCell]))
                 {
-                    var fromEdges = fromCell.AdjacentCellEdges.Values.Concat(NavigationMesh.ForeignConnectedCellEdges[fromCell].Values).ToArray();
+                    var toEdge = fromCell.AdjacentCellEdges.TryGetValue(toCell, out var roomEdge)? roomEdge : NavigationMesh.ForeignConnectedCellEdges[fromCell][toCell];
+                    var fromEdges = fromCell.AdjacentCellEdges.Keys
+                        .Concat(NavigationMesh.ForeignConnectedCellEdges[fromCell].Keys)
+                        .Select(from2Cell => from2Cell.AdjacentCellEdges.TryGetValue(fromCell, out var edge)? edge : NavigationMesh.ForeignConnectedCellEdges[from2Cell][fromCell])
+                        .ToArray();
 
                     mind.AddAction(new GoToCell(toCell, fromCell, toEdge, fromEdges, botPlayer));
                 }
