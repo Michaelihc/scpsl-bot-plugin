@@ -19,7 +19,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
                 if (cachedPosition != playerPos)
                 {
                     this.cachedPosition = playerPos;
-                    this.cachedTransformCell = NavigationMesh.GetCellWithin(playerPos) ?? this.cachedTransformCell;
+                    this.cachedTransformCell = NavigationMesh.GetCellWithinOrClosest(playerPos) ?? this.cachedTransformCell;
                 }
 
                 return this.cachedTransformCell;

@@ -80,7 +80,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             var withinCell = GetCellWithin();
-            var targetCell = NavigationMesh.GetCellWithin(goalPosition);
+            var targetCell = NavigationMesh.GetCellWithinOrClosest(goalPosition);
 
             if (targetCell == null)
             {
@@ -151,7 +151,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         public TransformCell? GetCellWithin()
         {
             var playerPosition = botPlayer.PlayerPosition;
-            cellWithin = NavigationMesh.GetCellWithin(playerPosition);
+            cellWithin = NavigationMesh.GetCellWithinOrClosest(playerPosition);
             lastPlayerPosition = playerPosition;
 
             return cellWithin;

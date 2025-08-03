@@ -87,7 +87,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
                 else
                 {
-                    var cellResult = NavigationMesh.GetCellWithin(door.transform.position + Vector3.up);
+                    var cellResult = NavigationMesh.GetCellWithinOrClosest(door.transform.position + Vector3.up);
                     if (!cellResult.HasValue)
                     {
                         var doorRoomNames = stringBuilder.Clear().AppendJoin(", ", door.Rooms.Select(r => r.gameObject.name));

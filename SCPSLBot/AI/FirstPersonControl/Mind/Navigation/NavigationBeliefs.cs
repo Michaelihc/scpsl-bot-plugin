@@ -14,7 +14,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public NavigationCell GetNavigationCellWithin(Vector3 position)
         {
-            var cellResult = NavigationMesh.GetCellWithin(position);
+            var cellResult = NavigationMesh.GetCellWithinOrClosest(position);
             return cellResult.HasValue ? NavigationCells[cellResult.Value] : null;
         }
 

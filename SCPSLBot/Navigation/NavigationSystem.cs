@@ -127,7 +127,7 @@ namespace SCPSLBot.Navigation
                     }
                 }
 
-                var cellAt0InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward);
+                var cellAt0InShaft = NavigationMesh.GetCellWithinOrClosest(doorPosition - doorForward);
 
                 doorTransform = elevatorDoors[1].transform;
                 doorPosition = doorTransform.position + Vector3.up;
@@ -145,7 +145,7 @@ namespace SCPSLBot.Navigation
                     }
                 }
 
-                var cellAt1InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward);
+                var cellAt1InShaft = NavigationMesh.GetCellWithinOrClosest(doorPosition - doorForward);
 
                 if (cellAt0InShaft != null && cellAt1InShaft != null)
                 {

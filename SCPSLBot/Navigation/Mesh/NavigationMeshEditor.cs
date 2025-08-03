@@ -623,7 +623,7 @@ namespace SCPSLBot.Navigation.Mesh
             if (PlayerEditing != null && PlayerEditing.Camera)
             {
                 var playerPosition = PlayerEditing.Position;
-                Visuals.NearestCell = NavigationMesh.GetCellWithin(playerPosition);
+                Visuals.NearestCell = NavigationMesh.GetCellWithinOrClosest(playerPosition);
             }
         }
 

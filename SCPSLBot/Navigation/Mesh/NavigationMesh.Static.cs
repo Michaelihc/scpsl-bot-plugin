@@ -17,6 +17,9 @@ namespace SCPSLBot.Navigation.Mesh
         public static Dictionary<TransformCell, List<TransformCell>> ForeignConnectedCells = new();
         public static Dictionary<TransformCell, Dictionary<TransformCell, TransformEdge>> ForeignConnectedCellEdges = new();
 
+        private const float PlayerRadius = 0.5f;
+        private const float PlayerRadiusSqr = PlayerRadius * PlayerRadius;
+
         public static NavigationMesh CreateMesh(string form)
         {
             var mesh = new NavigationMesh();
@@ -57,17 +60,17 @@ namespace SCPSLBot.Navigation.Mesh
 
         #region Mesh querying
 
-        public static TransformCell? GetCellWithin(Vector3 position)
+        public static TransformCell? GetCellWithinOrClosest(Vector3 position)
         {
             if (!RoomUtils.TryGetRoom(position, out var room))
             {
                 return null;
             }
 
-            return GetRoomCellWithin(position, room);
+            return GetRoomCellWithinOrClosest(position, room);
         }
 
-        public static TransformCell? GetRoomCellWithin(Vector3 position, RoomIdentifier room = null)
+        public static TransformCell? GetRoomCellWithinOrClosest(Vector3 position, RoomIdentifier room = null)
         {
             if (!room)
             {
@@ -79,13 +82,25 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             var localPosition = room.transform.InverseTransformPoint(position);
-            var cellWithin = roomMesh.Cells
-                .Where(lc => IsLocalPointWithinCell(lc, localPosition))
-                .Select(lc => new TransformCell(lc, room.transform))
-                .Select(c => new TransformCell?(c))
-                .FirstOrDefault();
 
-            return cellWithin;
+            TransformCell? closestCell = null;
+            float sqrDistToClosestCell = float.MaxValue;
+
+            foreach (var localCell in roomMesh.Cells)
+            {
+                if (IsLocalPointWithinCell(localCell, localPosition, out var sqrDist))
+                {
+                    return new TransformCell(localCell, room.transform);
+                }
+
+                if (sqrDist < PlayerRadiusSqr && sqrDist < sqrDistToClosestCell)
+                {
+                    sqrDistToClosestCell = sqrDist;
+                    closestCell = new TransformCell(localCell, room.transform);
+                }
+            }
+
+            return closestCell;
         }
 
         public static bool IsAtPositiveEdgeSide(Vector3 position, TransformEdge transformEdge)
@@ -369,15 +384,18 @@ namespace SCPSLBot.Navigation.Mesh
 
         #endregion
 
-        private static bool IsLocalPointWithinCell(Cell cell, Vector3 pointLocalPosition)
+        private static bool IsLocalPointWithinCell(Cell cell, Vector3 pointLocalPosition, out float sqrDist)
         {
             var cellLocalEdges = cell.Edges;
 
+            sqrDist = 0f;
             var isAnyVertexWithinVerticalRange = false;
             foreach (var e in cellLocalEdges)
             {
-                if (GetPointDistToEdgePlane(e, pointLocalPosition) <= 0f)
+                if (GetPointDistToEdgePlane(e, pointLocalPosition, out var closestPoint) <= 0f)
                 {
+                    var closestPointWithinEdge = ClampWithinEdgePoints(e, closestPoint);
+                    sqrDist = Vector3.SqrMagnitude(closestPointWithinEdge - pointLocalPosition);
                     return false;
                 }
 
