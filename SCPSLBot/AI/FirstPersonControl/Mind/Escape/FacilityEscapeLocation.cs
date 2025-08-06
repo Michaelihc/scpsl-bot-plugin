@@ -36,7 +36,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Escape
             AddPosition(escapePosition);
         }
 
-        private static readonly Vector3 roughEscapePosition = global::Escape.WorldPos + new Vector3(0f, 0f, -10f);
+        private static readonly Vector3 roughEscapePosition = global::Escape.DefaultEscapeZone.center + new Vector3(0f, 0f, -10f);
 
         public override string ToString()
         {

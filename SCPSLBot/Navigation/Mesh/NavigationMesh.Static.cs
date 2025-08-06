@@ -17,6 +17,8 @@ namespace SCPSLBot.Navigation.Mesh
         public static Dictionary<TransformCell, List<TransformCell>> ForeignConnectedCells = new();
         public static Dictionary<TransformCell, Dictionary<TransformCell, TransformEdge>> ForeignConnectedCellEdges = new();
 
+        public static HashSet<TransformCell> CellsWithObstacles = [];
+
         private const float PlayerRadius = 0.5f;
         private const float PlayerRadiusSqr = PlayerRadius * PlayerRadius;
 
@@ -380,6 +382,7 @@ namespace SCPSLBot.Navigation.Mesh
             LocalMeshesByRoom.Clear();
             ForeignConnectedCells.Clear();
             ForeignConnectedCellEdges.Clear();
+            CellsWithObstacles.Clear();
         }
 
         #endregion

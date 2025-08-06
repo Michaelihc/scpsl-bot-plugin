@@ -56,60 +56,21 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             var obstacleLayerMask = LayerMask.GetMask("Door");
-            var stringBuilder = new StringBuilder();
-            foreach (var door in DoorVariant.AllDoors.Where(d => d is not CheckpointDoor))
+            foreach (var cell in NavigationMesh.CellsWithObstacles)
             {
-                if (door.Rooms.Length == 2)
-                {
-                    var doorCenterPosition = door.transform.position + Vector3.up;  // assuming pivot point is located at the bottom of all doors
-
-                    var edgeInFront = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[0]);
-                    var edgeInBack = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[1]);
-
-                    if (edgeInFront != null && edgeInBack != null)
-                    {
-                        var cellInFront = NavigationMesh.LocalMeshesByRoom[door.Rooms[0].gameObject].Cells
-                            .Select(lc => new TransformCell(lc, door.Rooms[0].transform))
-                            .First(c => c.Local.Edges.Any(e => e == edgeInFront.Value.Local));
-
-                        var cellInBack = NavigationMesh.LocalMeshesByRoom[door.Rooms[1].gameObject].Cells
-                            .Select(lc => new TransformCell(lc, door.Rooms[1].transform))
-                            .First(c => c.Local.Edges.Any(e => e == edgeInBack.Value.Local));
-
-                        Span<TransformCell> cells = [cellInFront, cellInBack];
-                        foreach (var cell in cells)
-                        {
-                            var obstacle = new Obstacle(cell, sightSense, obstacleLayerMask);
-                            navigationBeliefs.Obstacles.Add(cell, obstacle);
-                            mind.AddBelief(obstacle);
-                        }
-                    }
-                }
-                else
-                {
-                    var cellResult = NavigationMesh.GetCellWithinOrClosest(door.transform.position + Vector3.up);
-                    if (!cellResult.HasValue)
-                    {
-                        var doorRoomNames = stringBuilder.Clear().AppendJoin(", ", door.Rooms.Select(r => r.gameObject.name));
-                        Debug.LogWarning($"Could not find nav cell for door {door} at ({doorRoomNames}) to create obstacle belief with");
-                        continue;
-                    }
-
-                    var cell = cellResult!.Value;
-                    var obstacle = new Obstacle(cell, sightSense, obstacleLayerMask);
-                    navigationBeliefs.Obstacles.Add(cell, obstacle);
-                    mind.AddBelief(obstacle);
-                }
+                var obstacle = new Obstacle(cell, sightSense, obstacleLayerMask);
+                navigationBeliefs.Obstacles.Add(cell, obstacle);
+                mind.AddBelief(obstacle);
             }
 
-            foreach (var (cell, _) in navigationBeliefs.Obstacles)
+            foreach (var cell in navigationBeliefs.Obstacles.Keys)
             {
                 mind.AddAction(new OpenNonKeycardInteractableObstacle(cell, navigationBeliefs, botPlayer));
             }
 
-            foreach (var (toCell, _) in navigationBeliefs.NavigationCells)
+            foreach (var toCell in navigationBeliefs.NavigationCells.Keys)
             {
-                foreach (var (fromCell, _) in toCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[toCell]))
+                foreach (var fromCell in toCell.AdjacentCellEdges.Keys.Concat(NavigationMesh.ForeignConnectedCellEdges[toCell].Keys))
                 {
                     var toEdge = fromCell.AdjacentCellEdges.TryGetValue(toCell, out var roomEdge)? roomEdge : NavigationMesh.ForeignConnectedCellEdges[fromCell][toCell];
                     var fromEdges = fromCell.AdjacentCellEdges.Keys
@@ -313,7 +274,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             mind.AddActions(idx => new GoToSearchRoom<KeycardWithPermissions>(new(DoorPermissionFlags.ExitGates), FacilityZone.HeavyContainment, idx, botPlayer));
             #endregion
 
-            foreach (var (cell, _) in navigationBeliefs.Obstacles)
+            foreach (var cell in navigationBeliefs.Obstacles.Keys)
             {
                 mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelOne, cell, navigationBeliefs, botPlayer));
                 mind.AddAction(new OpenKeycardDoorObstacle(DoorPermissionFlags.ContainmentLevelTwo, cell, navigationBeliefs, botPlayer));
@@ -334,7 +295,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             mind.AddAction(new GoToStartScp914OnSetting(Scp914.Scp914KnobSetting.Fine, botPlayer));
             mind.AddAction(new GoToStartScp914OnSetting(Scp914.Scp914KnobSetting.OneToOne, botPlayer));
 
-            foreach (var (cell, _) in navigationBeliefs.Obstacles)
+            foreach (var cell in navigationBeliefs.Obstacles.Keys)
             {
                 mind.AddAction(new WaitForChamberDoorOpening(cell, navigationBeliefs, botPlayer));
             }

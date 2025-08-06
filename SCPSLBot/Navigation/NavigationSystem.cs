@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using UnityEngine;
 
 namespace SCPSLBot.Navigation
@@ -70,7 +71,8 @@ namespace SCPSLBot.Navigation
             Debug.Log($"Loading meshes.");
             LoadMeshes(MeshFileName);
 
-            Debug.Log($"Connecting cells between rooms.");
+            Debug.Log($"Connecting cells between rooms and adding cells with door obstacles.");
+            var stringBuilder = new StringBuilder();
             foreach (var door in DoorVariant.AllDoors)
             {
                 if (door.Rooms.Length == 2)
@@ -96,7 +98,27 @@ namespace SCPSLBot.Navigation
 
                         NavigationMesh.ForeignConnectedCells[cellInBack].Add(cellInFront);
                         NavigationMesh.ForeignConnectedCellEdges[cellInBack].Add(cellInFront, edgeInFront.Value);
+
+                        // Add to cells with obstacle
+                        Span<TransformCell> cells = [cellInFront, cellInBack];
+                        foreach (var cell in cells)
+                        {
+                            NavigationMesh.CellsWithObstacles.Add(cell);
+                        }
                     }
+                }
+                else
+                {
+                    var cellResult = NavigationMesh.GetCellWithinOrClosest(door.transform.position + Vector3.up);
+                    if (!cellResult.HasValue)
+                    {
+                        var doorRoomNames = stringBuilder.Clear().AppendJoin(", ", door.Rooms.Select(r => r.gameObject.name));
+                        Debug.LogWarning($"Could not find nav cell for door {door} at ({doorRoomNames}) to create obstacle belief with");
+                        continue;
+                    }
+
+                    var cell = cellResult.Value;
+                    NavigationMesh.CellsWithObstacles.Add(cell);
                 }
             }
 
@@ -154,7 +176,7 @@ namespace SCPSLBot.Navigation
                     NavigationMesh.ForeignConnectedCells[cellAt1InShaft.Value].Add(cellAt0InShaft.Value);
                 }
             }
-            Debug.Log($"Connecting cells finished.");
+            Debug.Log($"Connecting cells and adding cells with obstacle finished.");
         }
 
         public void LoadMeshes(string fileName)
