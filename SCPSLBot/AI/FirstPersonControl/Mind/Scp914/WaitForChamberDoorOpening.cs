@@ -48,7 +48,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
     {
         public static bool IsScp914ChamberDoor(this Obstacle obstacle)
         {
-            return obstacle.GetDoor() is BasicNonInteractableDoor;
+            return obstacle.Door is BasicNonInteractableDoor;
         }
     }
 }

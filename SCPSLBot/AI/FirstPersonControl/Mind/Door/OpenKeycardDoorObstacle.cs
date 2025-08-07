@@ -46,7 +46,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 keycard.Owner.inventory.ServerSelectItem(keycard.ItemSerial);
             }
 
-            var doorToOpen = doorObstacleBelief.GetDoor();
+            var doorToOpen = doorObstacleBelief.Door;
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
 
             if (doorToOpen && !doorToOpen.TargetState)

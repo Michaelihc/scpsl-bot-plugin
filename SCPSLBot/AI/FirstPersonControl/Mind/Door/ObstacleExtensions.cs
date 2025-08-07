@@ -6,11 +6,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 {
     internal static class ObstacleExtensions
     {
-        public static bool IsInteractable(this Obstacle obstacleBelief, DoorPermissionFlags permissionFlags) =>
-            IsInteractable(obstacleBelief.GetDoor(), permissionFlags);
+        extension(Obstacle obstacleBelief)
+        {
+            public DoorVariant Door => obstacleBelief.hitResult?.collider.GetComponentInParent<DoorVariant>();
 
-        public static DoorVariant GetDoor(this Obstacle obstacleBelief) =>
-            obstacleBelief.hitResult?.collider.GetComponentInParent<DoorVariant>();
+            public bool IsInteractable(DoorPermissionFlags permissionFlags) =>
+                IsInteractable(obstacleBelief.Door, permissionFlags);
+        }
 
         private static bool IsInteractable(DoorVariant door, DoorPermissionFlags permissions)
         {

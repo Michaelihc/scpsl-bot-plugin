@@ -24,7 +24,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public void Tick(FpcMatchProvider matchProvider)
         {
-            var doorToOpen = doorObstacleBelief.GetDoor();
+            var doorToOpen = doorObstacleBelief.Door;
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
 
             if (!doorToOpen)
