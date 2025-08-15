@@ -8,7 +8,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
     {
         extension(Obstacle obstacleBelief)
         {
-            public DoorVariant Door => obstacleBelief.hitResult?.collider.GetComponentInParent<DoorVariant>();
+            public DoorVariant Door => obstacleBelief.HitResult?.collider.GetComponentInParent<DoorVariant>();
 
             public bool IsInteractable(DoorPermissionFlags permissionFlags) =>
                 IsInteractable(obstacleBelief.Door, permissionFlags);

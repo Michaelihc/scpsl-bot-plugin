@@ -82,10 +82,21 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
             }
 
-            //mind.AddBelief(new ElevationObstacle(perception.GetSense<DoorsWithinSightSense>(), botPlayer.Navigator));
-            //mind.AddAction(new CallAndWaitForElevator(botPlayer));
-            //mind.AddAction(new TravelOnElevator(botPlayer));
+            foreach (var (cellZero, cellOne) in NavigationMesh.ElevationCells)
+            {
+                var elevatorBelief = new Elevator(cellZero, cellOne, sightSense);
+                navigationBeliefs.Elevators.Add((cellZero, cellOne), elevatorBelief);
+                navigationBeliefs.Elevators.Add((cellOne, cellZero), elevatorBelief);
+                mind.AddBelief(elevatorBelief);
+            }
 
+            foreach (var (toCell, fromCell) in navigationBeliefs.Elevators.Keys)
+            {
+                mind.AddAction(new TravelOnElevator(toCell, fromCell, botPlayer));
+            }
+
+            //mind.AddAction(new TravelOnElevator(botPlayer));
+            //mind.AddAction(new CallAndWaitForElevator(botPlayer));
 
             mind.AddBelief(new RoomEnterLocation(perception.GetSense<RoomSightSense>()));
             mind.AddBelief(new ZoneWithin(FacilityZone.Surface, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));

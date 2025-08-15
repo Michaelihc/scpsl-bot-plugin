@@ -43,14 +43,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
             var relPosDestDoor = playerPosition - elevator.DestinationDoor.transform.position;
             var relPosNextDestDoor = playerPosition - elevator.NextDestinationDoor.transform.position;
 
-            var elevatorDoor = relPosDestDoor.sqrMagnitude < relPosNextDestDoor.sqrMagnitude ? elevator.DestinationDoor : elevator.NextDestinationDoor;
-            if (elevator.DestinationDoor == elevatorDoor && elevator.IsReady)
+            var closestElevatorDoor = relPosDestDoor.sqrMagnitude < relPosNextDestDoor.sqrMagnitude ? elevator.DestinationDoor : elevator.NextDestinationDoor;
+            if (elevator.DestinationDoor == closestElevatorDoor && elevator.IsReady)
             {
                 botPlayer.MoveToPosition(elevationObstacle.GoalPosition!.Value);
                 return;
             }
 
-            var panel = elevatorDoor.GetComponentInChildren<ElevatorPanel>();
+            var panel = closestElevatorDoor.GetComponentInChildren<ElevatorPanel>();
             var panelPosition = panel.GetComponent<Collider>().bounds.center;
 
             var dist = Vector3.Distance(panelPosition, playerPosition);
@@ -69,7 +69,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 return;
             }
 
-            elevatorDoor.ServerInteract(botPlayer.BotHub.PlayerHub, panel.ColliderId);
+            closestElevatorDoor.ServerInteract(botPlayer.BotHub.PlayerHub, panel.ColliderId);
         }
 
         public void Reset()

@@ -11,7 +11,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
     {
         private Vector3 toPos;
         private Vector3 fromPos;
-        public RaycastHit? hitResult;
+        public RaycastHit? HitResult;
 
         public Vector3 ToPos => this.toPos;
 
@@ -22,14 +22,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             if (this.toPos != toPos)
             {
                 this.toPos = toPos;
-                this.hitResult = null;
+                this.HitResult = null;
             }
             if (this.fromPos != fromPos)
             {
                 this.fromPos = fromPos;
             }
 
-            return hitResult.HasValue;
+            return HitResult.HasValue;
         }
 
         public void Update()
@@ -51,17 +51,17 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
             if (Physics.Linecast(fromPos, toPos, out var hit, layerMask))
             {
-                if (!this.hitResult.HasValue)
+                if (!this.HitResult.HasValue)
                 {
-                    this.hitResult = hit;
+                    this.HitResult = hit;
                     OnUpdate?.Invoke();
                 }
             }
             else
             {
-                if (this.hitResult.HasValue)
+                if (this.HitResult.HasValue)
                 {
-                    this.hitResult = null;
+                    this.HitResult = null;
                     OnUpdate?.Invoke();
                 }
             }
@@ -69,7 +69,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public override string ToString()
         {
-            return $"{nameof(Obstacle)}({transformCell}): {hitResult.HasValue}";
+            return $"{nameof(Obstacle)}({transformCell}): {HitResult.HasValue}";
         }
     }
 }

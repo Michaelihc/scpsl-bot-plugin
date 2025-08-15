@@ -122,7 +122,7 @@ namespace SCPSLBot.Navigation
                 }
             }
 
-            Debug.Log($"Connecting cells between elevator destinations.");
+            Debug.Log($"Connecting cells between elevator destinations and adding elevation cells.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
             foreach (ElevatorGroup group in elevatorGroups)
             {
@@ -174,6 +174,9 @@ namespace SCPSLBot.Navigation
                     // Connect
                     NavigationMesh.ForeignConnectedCells[cellAt0InShaft.Value].Add(cellAt1InShaft.Value);
                     NavigationMesh.ForeignConnectedCells[cellAt1InShaft.Value].Add(cellAt0InShaft.Value);
+
+                    // Add elevation cells
+                    NavigationMesh.ElevationCells.Add((cellAt0InShaft.Value, cellAt1InShaft.Value));
                 }
             }
             Debug.Log($"Connecting cells and adding cells with obstacle finished.");

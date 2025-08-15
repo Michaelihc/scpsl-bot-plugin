@@ -18,6 +18,7 @@ namespace SCPSLBot.Navigation.Mesh
         public static Dictionary<TransformCell, Dictionary<TransformCell, TransformEdge>> ForeignConnectedCellEdges = new();
 
         public static HashSet<TransformCell> CellsWithObstacles = [];
+        public static List<(TransformCell, TransformCell)> ElevationCells = [];
 
         private const float PlayerRadius = 0.5f;
         private const float PlayerRadiusSqr = PlayerRadius * PlayerRadius;

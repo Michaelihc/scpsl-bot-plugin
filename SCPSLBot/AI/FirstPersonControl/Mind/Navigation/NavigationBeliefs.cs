@@ -1,4 +1,5 @@
-﻿using SCPSLBot.Navigation.Mesh;
+﻿using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
+using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,8 +10,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
     {
         public event Action OnUpdate;
 
-        public readonly Dictionary<TransformCell, Obstacle> Obstacles = new();
-        public readonly Dictionary<TransformCell, NavigationCell> NavigationCells = new();
+        public readonly Dictionary<TransformCell, Obstacle> Obstacles = [];
+        public readonly Dictionary<TransformCell, NavigationCell> NavigationCells = [];
+        public readonly Dictionary<(TransformCell, TransformCell), Elevator> Elevators = [];
 
         public NavigationCell GetNavigationCellWithin(Vector3 position)
         {
