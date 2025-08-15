@@ -73,6 +73,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
             componentsWithinSightHandle = GCHandle.Alloc(ComponentsWithinSight);
         }
 
+        ~SightSense()
+        {
+            collidersWithinSightHandle.Free();
+            collidersToComponentHandle.Free();
+            componentsWithinSightHandle.Free();
+        }
+
         protected virtual void UpdateColliderData(Dictionary<ColliderData, TComponent> data)
         { }
 
@@ -142,14 +149,15 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
         }
 
         private NativeArray<ColliderData> withinFovColliderDatas;
-        private NativeArray<int> numRaycasts;
+        private NativeReference<int> numRaycastsRef;
 
         protected JobHandle GetWithinFovHandle(ICollection<ColliderData> values)
         {
             var cameraPosition = _fpcBotPlayer.CameraPosition;
             var cameraForward = _fpcBotPlayer.CameraForward;
 
-            var colliderDatas = new NativeArray<ColliderData>(values.Count, Allocator.Temp);
+            var colliderDatas = new NativeArray<ColliderData>(values.Count, Allocator.TempJob);
+            var isWithinFov = new NativeArray<bool>(values.Count, Allocator.TempJob);
 
             var colliderCount = 0;
             foreach (var colliderData in values)
@@ -164,26 +172,36 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
                 Direction = cameraForward,
                 ColliderDatas = colliderDatas,
 
-                IsWithinFov = new NativeArray<bool>(values.Count, Allocator.Temp)
+                IsWithinFov = isWithinFov
             };
 
             var withinFovHandle = withinFovJob.ScheduleParallel(colliderCount, 8, default);
 
-            withinFovColliderDatas = new NativeArray<ColliderData>(colliderCount, Allocator.Temp);
-            numRaycasts = new NativeArray<int>(1, Allocator.Temp);
+            withinFovColliderDatas = new NativeArray<ColliderData>(colliderCount, Allocator.TempJob);
+            numRaycastsRef = new NativeReference<int>(Allocator.TempJob);
             var filterWithinFovJob = new FilterWithinFovResultsJob
             {
                 CameraPosition = cameraPosition,
                 ColliderDatas = colliderDatas,
-                IsWithinFov = withinFovJob.IsWithinFov,
+                IsWithinFov = isWithinFov,
                 CollisionMask = collisionLayerMask,
                 ColliderCount = colliderCount,
 
                 RaycastCommands = raycastCommandsBuffer,
                 WithinFovColliderDatas = withinFovColliderDatas,
-                NumRaycasts = numRaycasts,
+                NumRaycastsRef = numRaycastsRef,
             };
-            return filterWithinFovJob.Schedule(withinFovHandle);
+            var filterWithinFovHandle = filterWithinFovJob.Schedule(withinFovHandle);
+
+            var disposeColliderDatasHandle = colliderDatas.Dispose(filterWithinFovHandle);
+            var disposeWithinFovHandle = isWithinFov.Dispose(filterWithinFovHandle);
+            return JobHandle.CombineDependencies(disposeColliderDatasHandle, disposeWithinFovHandle);
+        }
+
+        ~SightSense()
+        {
+            raycastCommandsBuffer.Dispose();
+            raycastResultsBuffer.Dispose();
         }
 
         private NativeArray<RaycastCommand> raycastCommandsBuffer = new(1000, Allocator.Persistent);
@@ -191,7 +209,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
 
         protected JobHandle GetRaycastsResultHandle(GCHandle withinSightHandle)
         {
-            var numRaycasts = this.numRaycasts[0];
+            var numRaycasts = numRaycastsRef.Value;
 
             var raycastCommands = raycastCommandsBuffer.GetSubArray(0, numRaycasts);
             var raycastsJobHandle = RaycastCommand.ScheduleBatch(raycastCommands, raycastResultsBuffer, 1);
@@ -208,9 +226,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
                 ColliderDatas = withinFovColliderDatas,
                 WithinSightHandle = withinSightHandle,
             };
+            var raycastResultJobHandle = raycastResultJob.Schedule(raycastsJobHandle);
 
-            return raycastResultJob.Schedule(raycastsJobHandle);
-        }        
+            var disposeNumRaycastsRefHandle = numRaycastsRef.Dispose(raycastResultJobHandle);
+            var disposeWithinFovColliderDatasHandle = withinFovColliderDatas.Dispose(raycastResultJobHandle);
+            return JobHandle.CombineDependencies(disposeNumRaycastsRefHandle, disposeWithinFovColliderDatasHandle);
+        }
 
         protected static bool IsWithinFov(Transform transform, Transform targetTransform) =>
             IsWithinFov(transform.position, transform.forward, targetTransform.position);

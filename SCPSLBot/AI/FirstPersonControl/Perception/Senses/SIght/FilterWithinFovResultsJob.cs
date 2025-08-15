@@ -15,7 +15,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
         [ReadOnly] public int ColliderCount;
 
         [WriteOnly] public NativeArray<RaycastCommand> RaycastCommands;
-        [WriteOnly] public NativeArray<int> NumRaycasts;
+        [WriteOnly] public NativeReference<int> NumRaycastsRef;
         [WriteOnly] public NativeArray<ColliderData> WithinFovColliderDatas;
 
         public void Execute()
@@ -34,7 +34,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
                 }
             }
 
-            NumRaycasts[0] = numRaycasts;
+            NumRaycastsRef.Value = numRaycasts;
         }
     }
 }
