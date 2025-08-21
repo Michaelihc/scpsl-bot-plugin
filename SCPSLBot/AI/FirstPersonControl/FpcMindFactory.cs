@@ -76,6 +76,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                     var fromEdges = fromCell.AdjacentCellEdges.Keys
                         .Concat(NavigationMesh.ForeignConnectedCellEdges[fromCell].Keys)
                         .Select(from2Cell => from2Cell.AdjacentCellEdges.TryGetValue(fromCell, out var edge)? edge : NavigationMesh.ForeignConnectedCellEdges[from2Cell][fromCell])
+                        .Where(fromEdge => fromEdge.Inversed != toEdge)
                         .ToArray();
 
                     mind.AddAction(new GoToCell(toCell, fromCell, toEdge, fromEdges, botPlayer));

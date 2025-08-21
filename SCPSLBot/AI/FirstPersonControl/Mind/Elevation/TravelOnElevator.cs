@@ -28,8 +28,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
             this.navCellTo = fpcMind.ActionImpacts(this, cellBeliefs.NavigationCells[toCell], b => !b.IsWithin);
         }
 
-        public float Cost => Vector3.Distance(toCellCenterPosition, fromCellCenterPosition);
-        public float HeuristicCost => navCellFrom.IsWithin ? 0f : Vector3.Distance(fromCellCenterPosition, botPlayer.PlayerPosition);
+        public float Cost => Vector3.Distance(toCellCenterPosition, fromCellCenterPosition) / 40f;
+        //public float HeuristicCost => 0f;
 
         public void Tick(FpcMatchProvider matchProvider)
         {

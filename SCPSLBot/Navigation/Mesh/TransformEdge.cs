@@ -16,6 +16,7 @@ namespace SCPSLBot.Navigation.Mesh
         { }
 
         public readonly Vector3 MiddlePosition => Vector3.Lerp(From.Position, To.Position, 0.5f);
+        public readonly TransformEdge Inversed => new(To, From, Transform);
 
         [Obsolete]
         public static bool operator ==(TransformEdge? left, TransformEdge right)

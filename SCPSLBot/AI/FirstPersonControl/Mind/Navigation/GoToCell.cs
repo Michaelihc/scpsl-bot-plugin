@@ -32,7 +32,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         }
 
         public float Cost => Vector3.Distance(toCellCenterPosition, navCellFrom.IsWithin ? botPlayer.PlayerPosition : fromCellCenterPosition);
-        public float HeuristicCost => navCellFrom.IsWithin ? 0f : Vector3.Distance(fromCellCenterPosition, botPlayer.PlayerPosition);
+        public float HeuristicCost => navCellFrom.IsWithin ? 0f : DistanceToPlayerOrEntryPoint;
 
         public void Tick(FpcMatchProvider matchProvider)
         {
@@ -46,6 +46,47 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         public override string ToString()
         {
             return $"{nameof(GoToCell)}({toCell}, {fromCell})";
+        }
+
+        private float DistanceToPlayerOrEntryPoint
+        {
+            get
+            {
+                var levelPlayerAt = Mathf.FloorToInt(botPlayer.PlayerPosition.y / NavigationMesh.LevelScale);
+                var levelFromCellAt = Mathf.FloorToInt(fromCellCenterPosition.y / NavigationMesh.LevelScale);
+
+                if (Mathf.Abs(levelPlayerAt - levelFromCellAt) <= NavigationMesh.NumLevels)
+                {
+                    return Vector3.Distance(fromCellCenterPosition, botPlayer.PlayerPosition);
+                }
+
+                if (!NavigationMesh.ExitEntryCellsByLevelFrom.TryGetValue(levelPlayerAt, out var entryCellsByDestLevel)
+                    || !entryCellsByDestLevel.TryGetValue(levelFromCellAt, out var entryCells))
+                {
+                    return float.MaxValue;
+                }
+
+                var closestDistSqr = float.MaxValue;
+                var closestCellsResult = new (TransformCell Exit, TransformCell Enter)?();
+                foreach (var (exitCell, entryCell) in entryCells)
+                {
+                    var distSqr = Vector3.SqrMagnitude(fromCellCenterPosition - entryCell.CenterPosition);
+                    if (distSqr < closestDistSqr)
+                    {
+                        closestDistSqr = distSqr;
+                        closestCellsResult = (exitCell, entryCell);
+                    }
+                }
+
+                if (!closestCellsResult.HasValue)
+                {
+                    return float.MaxValue;
+                }
+
+                var closestCells = closestCellsResult.Value;
+                var distExitPlayer = Vector3.Magnitude(closestCells.Exit.CenterPosition - botPlayer.PlayerPosition);
+                return Mathf.Sqrt(closestDistSqr) + distExitPlayer;
+            }
         }
     }
 }

@@ -235,7 +235,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
                 var actionImpactingHeuristicCost = actionImpacting.HeuristicCost;
 
-                Debug.Log($"{prefix}  Action {actionImpacting} can impact belief with general cost {actionImpactingCostToGoal}.");
+                Debug.Log($"{prefix}  Action {actionImpacting} can impact belief with general cost {actionImpactingCostToGoal} and heuristic {actionImpactingHeuristicCost}.");
 
                 VisitedActionsTotalCosts[actionImpacting] = actionImpactingCostToGoal;
                 remainingActionsToExplore[actionImpacting] = actionImpactingCostToGoal + actionImpactingHeuristicCost;

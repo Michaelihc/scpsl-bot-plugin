@@ -20,6 +20,12 @@ namespace SCPSLBot.Navigation.Mesh
         public static HashSet<TransformCell> CellsWithObstacles = [];
         public static List<(TransformCell, TransformCell)> ElevationCells = [];
 
+        public static Dictionary<int, Dictionary<int, HashSet<(TransformCell ExitCell, TransformCell EntryCell)>>> ExitEntryCellsByLevelFrom = [];
+        public const float LevelScale = 5f;
+        public const int NumLevelsBelow = 2;
+        public const int NumLevelsAbove = 2;
+        public const int NumLevels = NumLevelsBelow + NumLevelsAbove + 1;
+
         private const float PlayerRadius = 0.5f;
         private const float PlayerRadiusSqr = PlayerRadius * PlayerRadius;
 
