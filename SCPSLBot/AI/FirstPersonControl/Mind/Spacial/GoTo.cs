@@ -59,10 +59,5 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
 
         public abstract void Reset();
         public abstract void Tick();
-
-        public void Tick(FpcMatchProvider matchProvider)
-        {
-            Tick();
-        }
     }
 }
