@@ -62,7 +62,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
                     //.Where(fa => fa.Room.Identifier.Shape != RoomShape.Endroom || zoneTransitionRoomNames.Contains(fa.Room.Identifier.Name))
                     .OrderBy(fa => roomsLastVisitTime.TryGetValue(fa.Transform.GetComponent<RoomIdentifier>(), out var time) ? time : -Random.Range(0f, 4f));
 
-                SetPositions(enteringCells.Select(a => a.CenterPosition));
+                SetPositions(enteringCells.Select(a => a.MeanPosition));
 
                 //Random.state = prevRandomState;
             }

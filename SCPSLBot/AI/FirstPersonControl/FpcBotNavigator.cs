@@ -165,7 +165,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             if (!currentCell.AdjacentCellEdges.TryGetValue(nextTargetCell, out var targetCellEdge)
                 && !NavigationMesh.ForeignConnectedCellEdges[currentCell].TryGetValue(nextTargetCell, out targetCellEdge))
             {
-                return currentCell.CenterPosition;
+                return currentCell.MeanPosition;
             }
             var nextTargetEdgeMiddlePosition = Vector3.Lerp(targetCellEdge.From.Position, targetCellEdge.To.Position, 0.5f);
 
@@ -185,7 +185,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 if (!nextTargetCell.AdjacentCellEdges.TryGetValue(aheadTargetCell, out var aheadTargetCellEdge)
                     && !NavigationMesh.ForeignConnectedCellEdges[currentCell].TryGetValue(nextTargetCell, out aheadTargetCellEdge))
                 {
-                    goalPosition = nextTargetCell.CenterPosition;
+                    goalPosition = nextTargetCell.MeanPosition;
                     break;
                 }
 

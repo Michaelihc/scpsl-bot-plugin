@@ -296,7 +296,7 @@ namespace SCPSLBot.Navigation.Mesh
                         CellVisuals.Add(cell, visual);
                     }
 
-                    visual.transform.position = cell.CenterPosition;
+                    visual.transform.position = cell.MeanPosition;
 
                     var isWithinRange = Vector3.SqrMagnitude(PlayerEnabledVisualsFor.Position - visual.transform.position) < Mathf.Pow(20f, 2);
                     if (isWithinRange && !visual.gameObject.activeInHierarchy)
@@ -483,10 +483,10 @@ namespace SCPSLBot.Navigation.Mesh
                             else
                             {
                                 // Elevator/warping connection
-                                var fromCellCenterPosition = transformCellFrom.CenterPosition;
+                                var fromCellMeanPosition = transformCellFrom.MeanPosition;
 
                                 newConnectionVisual.NetworkPrimitiveType = PrimitiveType.Cylinder;
-                                newConnectionVisual.transform.position = fromCellCenterPosition;
+                                newConnectionVisual.transform.position = fromCellMeanPosition;
                                 newConnectionVisual.transform.localScale *= 0.01f;
                             }
 

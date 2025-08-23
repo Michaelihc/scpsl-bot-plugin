@@ -108,7 +108,7 @@ namespace SCPSLBot.Navigation.Mesh
             var radiusSqr = Mathf.Pow(radius, 2);
             var localPosition = room.transform.InverseTransformPoint(position);
 
-            var cellsWithinRadius = mesh.Cells.Select(cell => (cell, distSqr: Vector3.SqrMagnitude(cell.CenterPosition - localPosition)))
+            var cellsWithinRadius = mesh.Cells.Select(cell => (cell, distSqr: Vector3.SqrMagnitude(cell.MeanPosition - localPosition)))
                 .Where(t => t.distSqr < radiusSqr);
 
             if (!cellsWithinRadius.Any())
@@ -126,11 +126,11 @@ namespace SCPSLBot.Navigation.Mesh
             var cells = NavigationMesh.LocalMeshesByRoom[room].Cells;
 
             var targetCell = cells
-                .Select(a => (n: a, d: Vector3.SqrMagnitude(a.CenterPosition - localPosition)))
+                .Select(a => (n: a, d: Vector3.SqrMagnitude(a.MeanPosition - localPosition)))
                 .Where(t => t.d < 50f && t.d > 1f)
                 .OrderBy(t => t.d)
                 .Select(t => t.n)
-                .FirstOrDefault(a => Vector3.Dot(Vector3.Normalize(a.CenterPosition - localPosition), localDirection) > 0.999848f);
+                .FirstOrDefault(a => Vector3.Dot(Vector3.Normalize(a.MeanPosition - localPosition), localDirection) > 0.999848f);
 
             return targetCell;
         }
@@ -186,7 +186,7 @@ namespace SCPSLBot.Navigation.Mesh
                 {
                     mesh.RemoveCell(cell);
 
-                    Debug.LogWarning($"Cell at local center position {cell.CenterPosition} dissolved under {form}.");
+                    Debug.LogWarning($"Cell at local mean position {cell.MeanPosition} dissolved under {form}.");
                 }
             }
 
@@ -299,7 +299,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             var newCell = mesh.MakeCell(SelectedVertices.Select(sv => sv.Local));
 
-            Debug.Log($"Cell #{mesh.Cells.IndexOf(newCell)} at local center position {newCell.CenterPosition} added under {form}.");
+            Debug.Log($"Cell #{mesh.Cells.IndexOf(newCell)} at local mean position {newCell.MeanPosition} added under {form}.");
 
             SelectedVertices.Clear();
             AutoSelectModeEnabled = false;
@@ -350,7 +350,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
             else
             {
-                Debug.Log($"Cell at local center position {cell.Local.CenterPosition} removed under {form}.");
+                Debug.Log($"Cell at local mean position {cell.Local.MeanPosition} removed under {form}.");
             }
 
             return true;

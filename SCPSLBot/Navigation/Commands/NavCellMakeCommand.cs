@@ -52,7 +52,7 @@ namespace SCPSLBot.Navigation.Commands
                 return false;
             }
 
-            response = $"Cell at local center position {formCell.CenterPosition} created.";
+            response = $"Cell at local mean position {formCell.MeanPosition} created.";
             return true;
         }
     }

@@ -256,7 +256,7 @@ namespace SCPSLBot.Tests.Navigation
                 foreach (var room in rooms)
                 {
                     var transformCell = new TransformCell(cell, room.transform);
-                    Assert.AreEqual(room.transform.TransformPoint(cell.CenterPosition), transformCell.CenterPosition);
+                    Assert.AreEqual(room.transform.TransformPoint(cell.MeanPosition), transformCell.MeanPosition);
 
                     Assert.IsTrue(NavigationMesh.ForeignConnectedCells.ContainsKey(transformCell));
                     Assert.IsNotNull(NavigationMesh.ForeignConnectedCells[transformCell]);

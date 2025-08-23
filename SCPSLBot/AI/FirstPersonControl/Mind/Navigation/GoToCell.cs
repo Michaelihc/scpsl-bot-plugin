@@ -7,8 +7,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
     internal class GoToCell(TransformCell toCell, TransformCell fromCell, TransformEdge toEdge, IEnumerable<TransformEdge> fromEdges, FpcBotPlayer botPlayer) : IAction
     {
-        private readonly Vector3 toCellCenterPosition = toCell.CenterPosition;
-        private readonly Vector3 fromCellCenterPosition = fromCell.CenterPosition;
+        private readonly Vector3 toCellMeanPosition = toCell.MeanPosition;
+        private readonly Vector3 fromCellMeanPosition = fromCell.MeanPosition;
         private readonly Vector3 toEdgePos = toEdge.MiddlePosition;
         private readonly NavigationBeliefs cellBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
         private CellWithin cellWithin;
@@ -31,7 +31,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             this.navCellTo = fpcMind.ActionImpacts(this, cellBeliefs.NavigationCells[toCell]);
         }
 
-        public float Cost => Vector3.Distance(toCellCenterPosition, navCellFrom.IsWithin ? botPlayer.PlayerPosition : fromCellCenterPosition);
+        public float Cost => Vector3.Distance(toCellMeanPosition, navCellFrom.IsWithin ? botPlayer.PlayerPosition : fromCellMeanPosition);
         public float HeuristicCost => navCellFrom.IsWithin ? 0f : DistanceToPlayerOrEntryPoint;
 
         public void Tick()
@@ -53,11 +53,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             get
             {
                 var levelPlayerAt = Mathf.FloorToInt(botPlayer.PlayerPosition.y / NavigationMesh.LevelScale);
-                var levelFromCellAt = Mathf.FloorToInt(fromCellCenterPosition.y / NavigationMesh.LevelScale);
+                var levelFromCellAt = Mathf.FloorToInt(fromCellMeanPosition.y / NavigationMesh.LevelScale);
 
                 if (Mathf.Abs(levelPlayerAt - levelFromCellAt) <= NavigationMesh.NumLevels)
                 {
-                    return Vector3.Distance(fromCellCenterPosition, botPlayer.PlayerPosition);
+                    return Vector3.Distance(fromCellMeanPosition, botPlayer.PlayerPosition);
                 }
 
                 if (!NavigationMesh.ExitEntryCellsByLevelFrom.TryGetValue(levelPlayerAt, out var entryCellsByDestLevel)
@@ -70,7 +70,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
                 var closestCellsResult = new (TransformCell Exit, TransformCell Enter)?();
                 foreach (var (exitCell, entryCell) in entryCells)
                 {
-                    var distSqr = Vector3.SqrMagnitude(fromCellCenterPosition - entryCell.CenterPosition);
+                    var distSqr = Vector3.SqrMagnitude(fromCellMeanPosition - entryCell.MeanPosition);
                     if (distSqr < closestDistSqr)
                     {
                         closestDistSqr = distSqr;
@@ -84,7 +84,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
                 }
 
                 var closestCells = closestCellsResult.Value;
-                var distExitPlayer = Vector3.Magnitude(closestCells.Exit.CenterPosition - botPlayer.PlayerPosition);
+                var distExitPlayer = Vector3.Magnitude(closestCells.Exit.MeanPosition - botPlayer.PlayerPosition);
                 return Mathf.Sqrt(closestDistSqr) + distExitPlayer;
             }
         }

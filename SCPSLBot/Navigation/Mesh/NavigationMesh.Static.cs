@@ -182,7 +182,7 @@ namespace SCPSLBot.Navigation.Mesh
             var costsTill = new Dictionary<TransformCell, float>();
 
             var cost = 0f;
-            var heuristic = Vector3.Magnitude(endCell.CenterPosition - startingCell.CenterPosition);
+            var heuristic = Vector3.Magnitude(endCell.MeanPosition - startingCell.MeanPosition);
 
             cellsWithPriorityToEvaluate.Add(startingCell, cost + heuristic);
             costsTill.Add(startingCell, cost);
@@ -209,7 +209,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 foreach (var connectedCell in cell.AdjacentCells.Concat(ForeignConnectedCells[cell]))
                 {
-                    var connectedCost = cost + Vector3.Magnitude(connectedCell.CenterPosition - cell.CenterPosition);
+                    var connectedCost = cost + Vector3.Magnitude(connectedCell.MeanPosition - cell.MeanPosition);
 
                     //var connCellIdx = CellsByRoom[connectedCell.Room].IndexOf(connectedCell);
                     //Log.Debug($"Connected cell #{connCellIdx} cost so far {connectedCost} {connectedCell.FormCell.RoomForm}");
@@ -217,7 +217,7 @@ namespace SCPSLBot.Navigation.Mesh
                     if (!costsTill.ContainsKey(connectedCell) || connectedCost < costsTill[connectedCell])
                     {
                         costsTill[connectedCell] = connectedCost;
-                        heuristic = Vector3.Magnitude(endCell.CenterPosition - connectedCell.CenterPosition);
+                        heuristic = Vector3.Magnitude(endCell.MeanPosition - connectedCell.MeanPosition);
                         cellsWithPriorityToEvaluate[connectedCell] = connectedCost + heuristic;
                         cameFromCells[connectedCell] = cell;
 

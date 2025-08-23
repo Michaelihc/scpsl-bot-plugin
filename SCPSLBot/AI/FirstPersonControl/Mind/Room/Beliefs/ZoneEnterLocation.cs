@@ -38,7 +38,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
                 .FirstOrDefault();
             if (foreignRoomCellOfTargetZoneResult != null && foreignRoomCellOfTargetZoneResult.Value.Transform.GetComponent<RoomIdentifier>().Zone != this.roomSightSense.RoomWithin.Zone)
             {
-                var enterPosition = foreignRoomCellOfTargetZoneResult.Value.CenterPosition;
+                var enterPosition = foreignRoomCellOfTargetZoneResult.Value.MeanPosition;
                 AddPosition(enterPosition);
             }
         }

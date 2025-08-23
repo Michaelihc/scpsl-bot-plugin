@@ -51,7 +51,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
             // path has edgeless segment
 
-            var originPoint = edgelessSegment.Cell.CenterPosition;
+            var originPoint = edgelessSegment.Cell.MeanPosition;
             var goalPosition = navigator.GoalPosition;
 
             if (!sightSense.IsPositionWithinFov(originPoint))
@@ -88,7 +88,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 }
             }
 
-            var destPoint = edgelessSegment.NextCell.CenterPosition;
+            var destPoint = edgelessSegment.NextCell.MeanPosition;
             if (Physics.Raycast(destPoint, Vector3.down, out hit, 2f))
             {
                 var elevator = hit.collider.GetComponentInParent<ElevatorChamber>();

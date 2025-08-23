@@ -7,8 +7,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 {
     internal class TravelOnElevator(TransformCell toCell, TransformCell fromCell, FpcBotPlayer botPlayer) : IAction
     {
-        private readonly Vector3 toCellCenterPosition = toCell.CenterPosition;
-        private readonly Vector3 fromCellCenterPosition = fromCell.CenterPosition;
+        private readonly Vector3 toCellMeanPosition = toCell.MeanPosition;
+        private readonly Vector3 fromCellMeanPosition = fromCell.MeanPosition;
         private readonly NavigationBeliefs cellBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
         private CellWithin cellWithin;
         private NavigationCell navCellFrom;
@@ -28,7 +28,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
             this.navCellTo = fpcMind.ActionImpacts(this, cellBeliefs.NavigationCells[toCell], b => !b.IsWithin);
         }
 
-        public float Cost => Vector3.Distance(toCellCenterPosition, fromCellCenterPosition) / 40f;
+        public float Cost => Vector3.Distance(toCellMeanPosition, fromCellMeanPosition) / 40f;
         //public float HeuristicCost => 0f;
 
         public void Tick()

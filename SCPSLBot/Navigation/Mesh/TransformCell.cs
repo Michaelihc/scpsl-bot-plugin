@@ -13,7 +13,7 @@ namespace SCPSLBot.Navigation.Mesh
         public readonly SelectingDictionary<TransformCell, TransformEdge, Cell, Edge> AdjacentCellEdges
             => new(Local.AdjacentCellEdges, ToLocalCell, ToTransformCell, ToTransformEdge);
 
-        public readonly Vector3 CenterPosition => Transform.TransformPoint(Local.CenterPosition);
+        public readonly Vector3 MeanPosition => Transform.TransformPoint(Local.MeanPosition);
 
         public TransformCell((Cell Cell, Transform Tranform) tuple)
             : this(tuple.Cell, tuple.Tranform)

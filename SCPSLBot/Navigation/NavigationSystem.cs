@@ -183,8 +183,8 @@ namespace SCPSLBot.Navigation
                     NavigationMesh.ElevationCells.Add((cellAt0InShaft, cellAt1InShaft));
 
                     // Add level cells
-                    int cell0Level = Mathf.FloorToInt(cellAt0InShaft.CenterPosition.y / NavigationMesh.LevelScale);
-                    int cell1Level = Mathf.FloorToInt(cellAt1InShaft.CenterPosition.y / NavigationMesh.LevelScale);
+                    int cell0Level = Mathf.FloorToInt(cellAt0InShaft.MeanPosition.y / NavigationMesh.LevelScale);
+                    int cell1Level = Mathf.FloorToInt(cellAt1InShaft.MeanPosition.y / NavigationMesh.LevelScale);
 
                     if (Mathf.Abs(cell1Level - cell0Level) <= NavigationMesh.NumLevels)
                     {

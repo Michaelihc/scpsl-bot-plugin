@@ -14,7 +14,7 @@ namespace SCPSLBot.Navigation.Mesh
         public IEnumerable<Edge> Edges => Vertices.Zip(Vertices.Skip(1), (v1, v2) => new Edge(v1, v2))
             .Append(new Edge(Vertices.Last(), Vertices.First()));
 
-        public Vector3 CenterPosition => Vertices.Select(v => v.Position)
+        public Vector3 MeanPosition => Vertices.Select(v => v.Position)
             .Aggregate(Vector3.zero, (a, u) => a + u) / Vertices.Count;
 
         public Cell(IEnumerable<Vertex> vertices)
@@ -52,7 +52,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public override string ToString()
         {
-            return $"{nameof(Cell)}: {CenterPosition}";
+            return $"{nameof(Cell)}: {MeanPosition}";
         }
     }
 }

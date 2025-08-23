@@ -34,7 +34,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public void Update()
         {
-            var originPoint = this.elevationCellAtOrigin.CenterPosition;
+            var originPoint = this.elevationCellAtOrigin.MeanPosition;
 
             if (!sightSense.IsPositionWithinFov(originPoint))
             {
