@@ -30,7 +30,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public float Cost => 0f;
 
-        public void Tick(FpcMatchProvider matchProvider)
+        public void Tick()
         {
             var elevator = elevationObstacle.Elevator;
             if (!elevator)

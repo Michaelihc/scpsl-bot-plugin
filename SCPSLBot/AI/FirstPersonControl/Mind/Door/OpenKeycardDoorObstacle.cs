@@ -38,7 +38,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public float Cost => 0f;
 
-        public void Tick(FpcMatchProvider matchProvider)
+        public void Tick()
         {
             var keycard = keycardInInventory.Item;
             if (!keycard.IsEquipped)

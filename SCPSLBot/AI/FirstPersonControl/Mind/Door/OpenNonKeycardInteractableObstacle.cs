@@ -22,7 +22,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public float Cost => 0f;
 
-        public void Tick(FpcMatchProvider matchProvider)
+        public void Tick()
         {
             var doorToOpen = doorObstacleBelief.Door;
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;

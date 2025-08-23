@@ -109,7 +109,8 @@ namespace SCPSLBot.Navigation
                 }
                 else
                 {
-                    var cellResult = NavigationMesh.GetCellWithinOrClosest(door.transform.position + Vector3.up);
+                    const float PlayerRadius = .5f;
+                    var cellResult = NavigationMesh.GetCellWithinOrClosest(door.transform.position + Vector3.up, PlayerRadius);
                     if (!cellResult.HasValue)
                     {
                         var doorRoomNames = stringBuilder.Clear().AppendJoin(", ", door.Rooms.Select(r => r.gameObject.name));

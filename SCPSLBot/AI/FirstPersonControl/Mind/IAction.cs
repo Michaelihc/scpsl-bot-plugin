@@ -9,7 +9,7 @@
         float Cost { get; }
         float HeuristicCost => 0f;
 
-        void Tick(FpcMatchProvider matchProvider);
+        void Tick();
         void Reset();
     }
 }

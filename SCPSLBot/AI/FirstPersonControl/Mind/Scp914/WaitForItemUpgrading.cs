@@ -48,7 +48,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
             this.lastItemsTransformedTime = this.runningOnSetting.ItemsTransformedTime;
         }
 
-        public void Tick(FpcMatchProvider matchProvider)
+        public void Tick()
         {
             if (this.lastItemsTransformedTime != this.runningOnSetting.ItemsTransformedTime)
             {

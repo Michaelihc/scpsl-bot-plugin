@@ -26,9 +26,6 @@ namespace SCPSLBot.Navigation.Mesh
         public const int NumLevelsAbove = 2;
         public const int NumLevels = NumLevelsBelow + NumLevelsAbove + 1;
 
-        private const float PlayerRadius = 0.5f;
-        private const float PlayerRadiusSqr = PlayerRadius * PlayerRadius;
-
         public static NavigationMesh CreateMesh(string form)
         {
             var mesh = new NavigationMesh();
@@ -69,17 +66,17 @@ namespace SCPSLBot.Navigation.Mesh
 
         #region Mesh querying
 
-        public static TransformCell? GetCellWithinOrClosest(Vector3 position)
+        public static TransformCell? GetCellWithinOrClosest(Vector3 position, float maxDist = 0f)
         {
             if (!RoomUtils.TryGetRoom(position, out var room))
             {
                 return null;
             }
 
-            return GetRoomCellWithinOrClosest(position, room);
+            return GetRoomCellWithinOrClosest(position, room, maxDist);
         }
 
-        public static TransformCell? GetRoomCellWithinOrClosest(Vector3 position, RoomIdentifier room = null)
+        public static TransformCell? GetRoomCellWithinOrClosest(Vector3 position, RoomIdentifier room = null, float maxDist = 0f)
         {
             if (!room)
             {
@@ -93,18 +90,18 @@ namespace SCPSLBot.Navigation.Mesh
             var localPosition = room.transform.InverseTransformPoint(position);
 
             TransformCell? closestCell = null;
-            float sqrDistToClosestCell = float.MaxValue;
+            float sqrDistToClosestCell = maxDist * maxDist;
 
             foreach (var localCell in roomMesh.Cells)
             {
-                if (IsLocalPointWithinCell(localCell, localPosition, out var sqrDist))
+                if (IsLocalPointWithinCell(localCell, localPosition, out var sqrNearestDist))
                 {
                     return new TransformCell(localCell, room.transform);
                 }
 
-                if (sqrDist < PlayerRadiusSqr && sqrDist < sqrDistToClosestCell)
+                if (sqrNearestDist < sqrDistToClosestCell)
                 {
-                    sqrDistToClosestCell = sqrDist;
+                    sqrDistToClosestCell = sqrNearestDist;
                     closestCell = new TransformCell(localCell, room.transform);
                 }
             }

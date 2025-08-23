@@ -11,7 +11,6 @@ namespace SCPSLBot.AI.FirstPersonControl
     {
         public IAction RunningAction { get; private set; }
         public float RunningActionCost { get; private set; }
-        public FpcMatchProvider MatchProvider { get; private set; }
 
         [Obsolete]
         public readonly HashSet<IBelief> RelevantBeliefs = new();
@@ -42,14 +41,14 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             if (isBeliefsUpdated)
             {
-                IEnumerable<(IAction, FpcMatchProvider)> enabledActions = GetEnabledActionsTowardsGoals();
+                IEnumerable<IAction> enabledActions = GetEnabledActionsTowardsGoals();
 
                 SelectActionAndRun(enabledActions);
 
                 isBeliefsUpdated = false;
             }
 
-            RunningAction?.Tick(MatchProvider);
+            RunningAction?.Tick();
 
             Profiler.EndSample();
         }
@@ -80,7 +79,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         public readonly Dictionary<IAction, IAction> RelevantActionsImpactingActions = new();
         public readonly Dictionary<IGoal, IAction> RelevantActionsImpactingGoals = new();
 
-        private IEnumerable<(IAction, FpcMatchProvider)> GetEnabledActionsTowardsGoals()
+        private IEnumerable<IAction> GetEnabledActionsTowardsGoals()
         {
             Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(GetEnabledActionsTowardsGoals)}");
 
@@ -91,8 +90,6 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             foreach (var goal in BeliefsEnablingGoals.Keys)
             {
-                var matchProvider = new FpcMatchProvider();
-
                 foreach (var enabledAction in FindEnabledActions(goal))
                 {
                     RelevantActionsImpactingActions.Clear();
@@ -109,7 +106,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
                     RelevantActionsImpactingGoals[goal] = actionImpacting;
 
-                    yield return (enabledAction, matchProvider);
+                    yield return enabledAction;
                     break;
                 }
             }
@@ -246,17 +243,16 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         #endregion
 
-        private void SelectActionAndRun(IEnumerable<(IAction, FpcMatchProvider)> enabledActions)
+        private void SelectActionAndRun(IEnumerable<IAction> enabledActions)
         {
             Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(SelectActionAndRun)}");
 
-            var (action, provider) = enabledActions.FirstOrDefault();
+            var action = enabledActions.FirstOrDefault();
 
             var prevAction = RunningAction;
 
             RunningAction = action ?? null;
             RunningActionCost = action?.Cost ?? 0f;
-            MatchProvider = provider ?? null;
 
             Debug.Log($"New Action for bot: {RunningAction} (Cost: {RunningActionCost})");
 

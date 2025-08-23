@@ -31,7 +31,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         public float Cost => Vector3.Distance(toCellCenterPosition, fromCellCenterPosition) / 40f;
         //public float HeuristicCost => 0f;
 
-        public void Tick(FpcMatchProvider matchProvider)
+        public void Tick()
         {
             var playerPosition = botPlayer.PlayerPosition;
             var elevatorMiddle = elevator.ChamberAtOrigin.WorldspaceBounds.center with { y = playerPosition.y };
