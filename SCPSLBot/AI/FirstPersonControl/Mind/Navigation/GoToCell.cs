@@ -7,6 +7,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
     internal class GoToCell(TransformCell toCell, TransformCell fromCell, TransformEdge toEdge, IEnumerable<TransformEdge> fromEdges, FpcBotPlayer botPlayer) : IAction
     {
+        public TransformEdge ToEdge { get; } = toEdge;
+
         private readonly Vector3 toCellMeanPosition = toCell.MeanPosition;
         private readonly Vector3 fromCellMeanPosition = fromCell.MeanPosition;
         private readonly Vector3 toEdgePos = toEdge.MiddlePosition;
@@ -36,7 +38,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public void Tick()
         {
-            botPlayer.MoveToPosition(toEdgePos);
+            var cellToPosition = botPlayer.MindRunner.GetNextCorner(this, botPlayer.PlayerPosition);
+            botPlayer.MoveToPosition(cellToPosition);
         }
 
         public void Reset()

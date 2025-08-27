@@ -5,27 +5,33 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
 {
-    internal abstract class GoTo<TLocation> : IAction
+    internal abstract class GoTo<TLocation>(int idx, FpcBotPlayer botPlayer) : GoTo(idx, botPlayer)
         where TLocation : Location
     {
-        public int Idx;
-
-        private readonly FpcBotPlayer botPlayer;
-        private readonly NavigationBeliefs navBeliefs;
-
-        protected GoTo(int idx, FpcBotPlayer botPlayer)
-        {
-            this.Idx = idx;
-            this.botPlayer = botPlayer;
-            this.navBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
-        }
+        protected new TLocation location => base.location as TLocation;
 
         protected virtual TLocation SetEnabledByLocation(FpcMind fpcMind, Predicate<TLocation> enablingPredicate)
         {
             return fpcMind.ActionEnabledBy<TLocation>(this, enablingPredicate);
         }
 
-        protected TLocation location;
+        protected override Location SetEnabledByLocation(FpcMind fpcMind, Predicate<Location> enablingPredicate)
+        {
+            return SetEnabledByLocation(fpcMind, l => enablingPredicate(l));
+        }
+    }
+
+    internal abstract class GoTo(int idx, FpcBotPlayer botPlayer) : IAction
+    {
+        public int Idx = idx;
+        public Location Location => this.location;
+
+        private readonly FpcBotPlayer botPlayer = botPlayer;
+        private readonly NavigationBeliefs navBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
+
+        protected abstract Location SetEnabledByLocation(FpcMind fpcMind, Predicate<Location> enablingPredicate);
+
+        protected Location location;
         private CellWithin cellWithin;
         private Func<NavigationCell> getLocationNavCell;
 
