@@ -70,13 +70,13 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             foreach (var toCell in navigationBeliefs.NavigationCells.Keys)
             {
-                foreach (var fromCell in toCell.AdjacentCellEdges.Keys.Concat(NavigationMesh.ForeignConnectedCellEdges[toCell].Keys))
+                foreach (var (fromCell, fromEdge) in toCell.AdjacentCellEdges.Concat(NavigationMesh.ForeignConnectedCellEdges[toCell]))
                 {
                     var toEdge = fromCell.AdjacentCellEdges.TryGetValue(toCell, out var roomEdge)? roomEdge : NavigationMesh.ForeignConnectedCellEdges[fromCell][toCell];
                     var fromEdges = fromCell.AdjacentCellEdges.Keys
                         .Concat(NavigationMesh.ForeignConnectedCellEdges[fromCell].Keys)
                         .Select(from2Cell => from2Cell.AdjacentCellEdges.TryGetValue(fromCell, out var edge)? edge : NavigationMesh.ForeignConnectedCellEdges[from2Cell][fromCell])
-                        .Where(fromEdge => fromEdge.Inversed != toEdge)
+                        .Except([fromEdge])
                         .ToArray();
 
                     mind.AddAction(new GoToCell(toCell, fromCell, toEdge, fromEdges, botPlayer));
