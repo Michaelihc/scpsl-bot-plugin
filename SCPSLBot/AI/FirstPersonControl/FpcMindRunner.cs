@@ -179,13 +179,14 @@ namespace SCPSLBot.AI.FirstPersonControl
             foreach (var (getBelief, isSatisfied) in beliefsEnabling)
             {
                 var b = getBelief();
-                if (b == null)
+                if (b is not null)
+                {
+                    VisitedActionsEnabledBy[b] = actionToEnable;
+                }
+                else
                 {
                     Debug.Log($"{prefix}  Belief getter {getBelief} returned null.");
-                    continue;
                 }
-
-                VisitedActionsEnabledBy[b] = actionToEnable;
 
                 if (isSatisfied(b))
                 {
@@ -196,7 +197,10 @@ namespace SCPSLBot.AI.FirstPersonControl
                 Debug.Log($"{prefix}  Belief {b} needs to satisfy action.");
                 actionEnabled = false;
 
-                ProcessActionsImpacting(b, actionToEnable);
+                if (b is not null)
+                {
+                    ProcessActionsImpacting(b, actionToEnable);
+                }
 
                 break;
             }

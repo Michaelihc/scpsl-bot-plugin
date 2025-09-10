@@ -44,10 +44,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         {
             this.location = SetEnabledByLocation(fpcMind, b => b.Positions.Count > Idx);
 
-            fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationObstacle(this.getLocationNavCell()), b => !b.HasHit(targetPositionGetter(), botPlayer.PlayerPosition));
+            fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationObstacle(this.getLocationNavCell()), b => !b?.HasHit(targetPositionGetter(), botPlayer.PlayerPosition) ?? true);
             
             this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
-            this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(targetPositionGetter()), b => b.Is(cellWithin.TransformCell!.Value));
+            this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(targetPositionGetter()), b => b?.Is(cellWithin.TransformCell!.Value) ?? false);
         }
 
         public abstract void SetImpactsBeliefs(FpcMind fpcMind);
@@ -55,7 +55,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         private const float DefaultDistance = 10f;
 
         private float Distance => location.Positions.Count > Idx
-            ? this.getLocationNavCell().IsWithin
+            ? this.getLocationNavCell()?.IsWithin ?? false
                 ? Vector3.Distance(location.Positions[Idx], botPlayer.PlayerPosition)
                 : 0f
             : DefaultDistance;

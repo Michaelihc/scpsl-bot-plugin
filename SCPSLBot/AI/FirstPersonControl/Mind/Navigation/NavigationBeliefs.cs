@@ -22,7 +22,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public Obstacle GetNavigationObstacle(NavigationCell navCellWithin)
         {
-            return this.Obstacles.TryGetValue(navCellWithin.TransformCell, out var obstacle) ? obstacle : null;
+            return navCellWithin is not null && this.Obstacles.TryGetValue(navCellWithin.TransformCell, out var obstacle) ? obstacle : null;
         }
     }
 }
