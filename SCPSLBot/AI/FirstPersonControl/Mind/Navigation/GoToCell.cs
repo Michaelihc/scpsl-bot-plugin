@@ -1,11 +1,13 @@
-﻿using SCPSLBot.Navigation.Mesh;
+﻿using MapGeneration;
+using SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs;
+using SCPSLBot.Navigation.Mesh;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 {
-    internal class GoToCell(TransformCell toCell, TransformCell fromCell, TransformEdge toEdge, IEnumerable<TransformEdge> fromEdges, FpcBotPlayer botPlayer) : IAction
+    internal class GoToCell(TransformCell toCell, TransformCell fromCell, TransformEdge toEdge, IEnumerable<TransformEdge> fromEdges, FacilityZone fromZone, FpcBotPlayer botPlayer) : IAction
     {
         public TransformEdge ToEdge { get; } = toEdge;
 
@@ -21,8 +23,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         {
             if (cellBeliefs.Obstacles.TryGetValue(fromCell, out var obstacleBelief))
             {
-                fpcMind.ActionEnabledBy(this, obstacleBelief, b => !fromEdges.Any(e => b.HasHit(toEdgePos, e.MiddlePosition)));
+                fpcMind.ActionEnabledBy(this, obstacleBelief, b => !fromEdges.Any(fromEdge => b.HasHit(toEdgePos, fromEdge.MiddlePosition)));
             }
+
+            fpcMind.ActionEnabledBy<ZoneWithin>(this, b => b.Zone == fromZone, b => b.IsWithin);
 
             this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
             this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.Is(cellWithin.TransformCell!.Value));            

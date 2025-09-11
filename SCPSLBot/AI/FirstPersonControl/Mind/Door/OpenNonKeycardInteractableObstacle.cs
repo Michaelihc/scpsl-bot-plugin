@@ -62,7 +62,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public override string ToString()
         {
-            return $"{nameof(OpenNonKeycardInteractableObstacle)}";
+            return $"{nameof(OpenNonKeycardInteractableObstacle)}({transformCell})";
         }
     }
 }

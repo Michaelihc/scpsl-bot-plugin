@@ -63,6 +63,31 @@ namespace SCPSLBot.AI.FirstPersonControl
                 mind.AddBelief(obstacle);
             }
 
+            mind.AddBelief(new ZoneWithin(FacilityZone.Surface, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.Entrance, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.LightContainment, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneEnterLocation(FacilityZone.LightContainment, FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new ZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.LightContainment, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new ZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new ZoneEnterLocation(FacilityZone.Entrance, FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new ZoneEnterLocation(FacilityZone.Entrance, FacilityZone.Surface, perception.GetSense<RoomSightSense>()));
+            mind.AddBelief(new ZoneEnterLocation(FacilityZone.Surface, FacilityZone.Entrance, perception.GetSense<RoomSightSense>()));
+
+            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.LightContainment, FacilityZone.HeavyContainment, botPlayer));
+            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.LightContainment, botPlayer));
+            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, botPlayer));
+            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.Entrance, FacilityZone.HeavyContainment, botPlayer));
+            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.Entrance, FacilityZone.Surface, botPlayer));
+            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.Surface, FacilityZone.Entrance, botPlayer));
+
+            mind.AddBelief(new RoomEnterLocation(perception.GetSense<RoomSightSense>()));
+            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.LightContainment, FacilityZone.HeavyContainment, botPlayer));
+            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.LightContainment, botPlayer));
+            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, botPlayer));
+            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.Entrance, FacilityZone.HeavyContainment, botPlayer));
+            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.Surface, FacilityZone.Entrance, botPlayer));
+
             foreach (var cell in navigationBeliefs.Obstacles.Keys)
             {
                 mind.AddAction(new OpenNonKeycardInteractableObstacle(cell, navigationBeliefs, botPlayer));
@@ -79,7 +104,9 @@ namespace SCPSLBot.AI.FirstPersonControl
                         .Except([fromEdge])
                         .ToArray();
 
-                    mind.AddAction(new GoToCell(toCell, fromCell, toEdge, fromEdges, botPlayer));
+                    var fromZone = fromCell.Transform.GetComponent<RoomIdentifier>().Zone;
+
+                    mind.AddAction(new GoToCell(toCell, fromCell, toEdge, fromEdges, fromZone, botPlayer));
                 }
             }
 
@@ -98,30 +125,6 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             //mind.AddAction(new TravelOnElevator(botPlayer));
             //mind.AddAction(new CallAndWaitForElevator(botPlayer));
-
-            mind.AddBelief(new RoomEnterLocation(perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new ZoneWithin(FacilityZone.Surface, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
-            mind.AddBelief(new ZoneWithin(FacilityZone.Entrance, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
-            mind.AddBelief(new ZoneWithin(FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
-            mind.AddBelief(new ZoneWithin(FacilityZone.LightContainment, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
-            mind.AddBelief(new ZoneEnterLocation(FacilityZone.LightContainment, FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new ZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.LightContainment, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new ZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new ZoneEnterLocation(FacilityZone.Entrance, FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new ZoneEnterLocation(FacilityZone.Entrance, FacilityZone.Surface, perception.GetSense<RoomSightSense>()));
-            mind.AddBelief(new ZoneEnterLocation(FacilityZone.Surface, FacilityZone.Entrance, perception.GetSense<RoomSightSense>()));
-
-            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.LightContainment, FacilityZone.HeavyContainment, botPlayer));
-            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.LightContainment, botPlayer));
-            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, botPlayer));
-            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.Entrance, FacilityZone.HeavyContainment, botPlayer));
-            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.Entrance, FacilityZone.Surface, botPlayer));
-            mind.AddAction(new GoToZoneEnterLocation(FacilityZone.Surface, FacilityZone.Entrance, botPlayer));
-            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.LightContainment, FacilityZone.HeavyContainment, botPlayer));
-            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.LightContainment, botPlayer));
-            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, botPlayer));
-            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.Entrance, FacilityZone.HeavyContainment, botPlayer));
-            mind.AddAction(new GoToSearchRoomForZoneEnterLocation(FacilityZone.Surface, FacilityZone.Entrance, botPlayer));
 
 
             mind.AddBelief(new LockerSpawnsLocation(StructureType.StandardLocker, perception.GetSense<RoomSightSense>()));
