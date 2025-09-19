@@ -56,9 +56,12 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             var obstacleLayerMask = LayerMask.GetMask("Door");
-            foreach (var cell in NavigationMesh.CellsWithObstacles)
+            foreach (var (cell, transform) in NavigationMesh.CellsWithObstacles)
             {
-                var obstacle = new Obstacle(cell, sightSense, obstacleLayerMask);
+                var position = transform.position + Vector3.up;
+                var colliders = transform.GetComponentsInChildren<Collider>().ToHashSet();
+
+                var obstacle = new Obstacle(cell, position, colliders, sightSense, obstacleLayerMask);
                 navigationBeliefs.Obstacles.Add(cell, obstacle);
                 mind.AddBelief(obstacle);
             }

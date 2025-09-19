@@ -43,15 +43,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
                 if (!botPlayer.OpenDoor(doorToOpen, interactDistance))
                 {
-                    botPlayer.LookToPosition(doorToOpen.transform.position + Vector3.up * 1f);
+                    var doorPos = doorToOpen.transform.position + Vector3.up * 1f;
+                    botPlayer.LookToPosition(doorPos);
                     //Log.Debug($"Looking towards door interactable");
                 }
             }
 
             if (!isTargetStateOpen || dist > interactDistance)
             {
-                var toPos = doorObstacleBelief.ToPos;
-                botPlayer.MoveToPosition(toPos);
+                var doorPos = doorToOpen.transform.position + Vector3.up * 1f;
+                botPlayer.MoveToPosition(doorPos);
             }
         }
 

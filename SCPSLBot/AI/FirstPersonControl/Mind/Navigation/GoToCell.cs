@@ -23,7 +23,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         {
             if (cellBeliefs.Obstacles.TryGetValue(fromCell, out var obstacleBelief))
             {
-                fpcMind.ActionEnabledBy(this, obstacleBelief, b => !fromEdges.Any(fromEdge => b.HasHit(toEdgePos, fromEdge.MiddlePosition)));
+                fpcMind.ActionEnabledBy(this, obstacleBelief, b => !b.HitResult.HasValue);
             }
 
             fpcMind.ActionEnabledBy<ZoneWithin>(this, b => b.Zone == fromZone, b => b.IsWithin);

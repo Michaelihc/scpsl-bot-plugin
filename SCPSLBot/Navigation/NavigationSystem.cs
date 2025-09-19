@@ -75,6 +75,11 @@ namespace SCPSLBot.Navigation
             var stringBuilder = new StringBuilder();
             foreach (var door in DoorVariant.AllDoors)
             {
+                if (door is CheckpointDoor)
+                {
+                    continue;
+                }
+
                 if (door.Rooms.Length == 2)
                 {
                     var doorCenterPosition = door.transform.position + Vector3.up;  // assuming pivot point is located at the bottom of all doors
@@ -103,7 +108,7 @@ namespace SCPSLBot.Navigation
                         Span<TransformCell> cells = [cellInFront, cellInBack];
                         foreach (var cell in cells)
                         {
-                            NavigationMesh.CellsWithObstacles.Add(cell);
+                            NavigationMesh.CellsWithObstacles.Add(cell, door.transform);
                         }
                     }
                 }
@@ -118,8 +123,10 @@ namespace SCPSLBot.Navigation
                         continue;
                     }
 
+                    Debug.Log($"{door}, {door.transform.position}");
+
                     var cell = cellResult.Value;
-                    NavigationMesh.CellsWithObstacles.Add(cell);
+                    NavigationMesh.CellsWithObstacles.Add(cell, door.transform);
                 }
             }
 

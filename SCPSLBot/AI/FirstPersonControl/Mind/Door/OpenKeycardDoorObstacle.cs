@@ -48,11 +48,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
             var doorToOpen = doorObstacleBelief.Door;
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
+            var interactablePosition = doorToOpen.transform.position + Vector3.up;
 
             if (doorToOpen && !doorToOpen.TargetState)
             {
-                var interactablePosition = doorToOpen.transform.position + Vector3.up;
-
                 if (Vector3.Distance(interactablePosition, playerPosition) <= interactDistance)
                 {
                     Debug.Log($"{doorToOpen} is within interactable distance");
@@ -65,8 +64,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 }
             }
 
-            var toPos = doorObstacleBelief.ToPos;
-            botPlayer.MoveToPosition(toPos);
+            botPlayer.MoveToPosition(interactablePosition);
         }
 
         public void Reset()
