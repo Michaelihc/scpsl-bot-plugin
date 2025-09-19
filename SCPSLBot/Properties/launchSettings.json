@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "SCPSL Dedicated Server": {
+      "commandName": "Executable",
+      "executablePath": "$(SL_REFERENCES)\\..\\..\\LocalAdmin.exe",
+      "workingDirectory": "$(SL_REFERENCES)\\..\\..",
+      "remoteDebugEnabled": false,
+      "remoteDebugMachine": ""
+    }
+  }
+}
