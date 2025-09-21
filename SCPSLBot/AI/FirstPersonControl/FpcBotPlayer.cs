@@ -6,6 +6,7 @@ using PlayerRoles.FirstPersonControl;
 using PlayerRoles.Spectating;
 using SCPSLBot.AI.FirstPersonControl.Looking;
 using SCPSLBot.AI.FirstPersonControl.Mind;
+using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
 using SCPSLBot.AI.FirstPersonControl.Movement;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
@@ -340,19 +341,22 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void ShowVisitedAction(IAction actionImpacting)
         {
-            level++;
-            debugStringBuilder.Append(' ', level*4);
+            if (actionImpacting is not GoToCell)
+            {
+                level++;
+                debugStringBuilder.Append(' ', level * 4);
 
-            var actionTotalCost = MindRunner.VisitedActionsTotalCosts[actionImpacting];
-            if (MindRunner.RelevantActionsImpactingActions.ContainsKey(actionImpacting) || actionImpacting == MindRunner.RunningAction)
-            {
-                debugStringBuilder.AppendLine($"<color=yellow>{actionImpacting}</color> <b>[{actionTotalCost}]</b>");
+                var actionTotalCost = MindRunner.VisitedActionsTotalCosts[actionImpacting];
+                if (MindRunner.RelevantActionsImpactingActions.ContainsKey(actionImpacting) || actionImpacting == MindRunner.RunningAction)
+                {
+                    debugStringBuilder.AppendLine($"<color=yellow>{actionImpacting}</color> <b>[{actionTotalCost}]</b>");
+                }
+                else
+                {
+                    debugStringBuilder.AppendLine($"{actionImpacting} <b>[{actionTotalCost}]</b>");
+                }
+                numLines++;
             }
-            else
-            {
-                debugStringBuilder.AppendLine($"{actionImpacting} <b>[{actionTotalCost}]</b>");
-            }
-            numLines++;
 
             foreach (var (beliefEnablingGetter, enablingPredicate) in MindRunner.BeliefsEnablingActions[actionImpacting])
             {
@@ -368,7 +372,10 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
             }
 
-            level--;
+            if (actionImpacting is not GoToCell)
+            {
+                level--;
+            }
         }
 
         private void ShowVisitedActionsOfBelief(IBelief belief, IAction actionToEnable)
