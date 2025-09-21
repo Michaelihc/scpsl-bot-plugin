@@ -29,6 +29,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
             keycardInInventory = fpcMind.ActionEnabledBy<ItemInInventory<KeycardWithPermissions>>(this, b => b.Criteria.Equals(new (Permissions)), b => b.Item);
+            fpcMind.ActionEnabledBy<NavigationCell>(this, navigationBeliefs.NavigationCells[transformCell], b => b.IsWithin);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)

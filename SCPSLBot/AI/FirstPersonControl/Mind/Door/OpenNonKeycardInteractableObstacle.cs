@@ -13,6 +13,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
+            fpcMind.ActionEnabledBy<NavigationCell>(this, navigationBeliefs.NavigationCells[transformCell], b => b.IsWithin);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
