@@ -10,6 +10,7 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 {
+    [Obsolete]
     internal class Elevator(TransformCell transformCellZero, TransformCell transformCellOne, SightSense sightSense) : IBelief
     {
         private static readonly int doorLayer = LayerMask.NameToLayer("Door");

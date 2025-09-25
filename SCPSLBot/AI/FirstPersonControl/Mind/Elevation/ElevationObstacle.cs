@@ -14,6 +14,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         IsElevatorAtOrigin
     }
 
+    [Obsolete]
     internal class ElevationObstacle : IBelief
     {
         public event Action OnUpdate;

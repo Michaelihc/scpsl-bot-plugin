@@ -115,18 +115,17 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             foreach (var (cellZero, cellOne) in NavigationMesh.ElevationCells)
             {
-                var elevatorBelief = new Elevator(cellZero, cellOne, sightSense);
-                navigationBeliefs.Elevators.Add((cellZero, cellOne), elevatorBelief);
-                navigationBeliefs.Elevators.Add((cellOne, cellZero), elevatorBelief);
-                mind.AddBelief(elevatorBelief);
+                foreach (var cellAtLevel in (ReadOnlySpan<TransformCell>)[cellZero, cellOne])
+                {
+                    var elevatorLevelBelief = new ElevatorLevel(cellAtLevel, sightSense);
+                    navigationBeliefs.ElevatorLevels.Add(cellAtLevel, elevatorLevelBelief);
+                    mind.AddBelief(elevatorLevelBelief);
+                }
+
+                mind.AddAction(new TravelOnElevator(cellZero, cellOne, botPlayer));
+                mind.AddAction(new TravelOnElevator(cellOne, cellZero, botPlayer));
             }
 
-            foreach (var (toCell, fromCell) in navigationBeliefs.Elevators.Keys)
-            {
-                mind.AddAction(new TravelOnElevator(toCell, fromCell, botPlayer));
-            }
-
-            //mind.AddAction(new TravelOnElevator(botPlayer));
             //mind.AddAction(new CallAndWaitForElevator(botPlayer));
 
 

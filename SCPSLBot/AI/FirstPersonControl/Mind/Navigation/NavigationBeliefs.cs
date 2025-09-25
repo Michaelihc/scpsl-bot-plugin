@@ -12,7 +12,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public readonly Dictionary<TransformCell, Obstacle> Obstacles = [];
         public readonly Dictionary<TransformCell, NavigationCell> NavigationCells = [];
-        public readonly Dictionary<(TransformCell, TransformCell), Elevator> Elevators = [];
+        public readonly Dictionary<TransformCell, ElevatorLevel> ElevatorLevels = [];
 
         public NavigationCell GetNavigationCellWithin(Vector3 position)
         {

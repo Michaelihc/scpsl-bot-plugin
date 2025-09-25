@@ -13,13 +13,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         private CellWithin cellWithin;
         private NavigationCell navCellFrom;
         private NavigationCell navCellTo;
-        private Elevator elevator;
+        private ElevatorLevel elevatorLevelFrom;
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            this.elevator = fpcMind.ActionEnabledBy(this, cellBeliefs.Elevators[(toCell, fromCell)], e => e.IsAt(fromCell));
-
             this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
+
+            this.elevatorLevelFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.ElevatorLevels[fromCell], e => cellWithin.TransformCell!.Value == fromCell || e.IsElevatorAt);
+
             this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.Is(cellWithin.TransformCell!.Value));
         }
 
@@ -34,7 +35,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         public void Tick()
         {
             var playerPosition = botPlayer.PlayerPosition;
-            var elevatorMiddle = elevator.ChamberAtOrigin.WorldspaceBounds.center with { y = playerPosition.y };
+            var elevatorMiddle = elevatorLevelFrom.HitChamber.WorldspaceBounds.center with { y = playerPosition.y };
 
             if (Vector3.Distance(playerPosition, elevatorMiddle) > 0.1f)
             {
@@ -42,7 +43,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 return;
             }
 
-            var elevatorChamber = elevator.ChamberAtOrigin;
+            var elevatorChamber = elevatorLevelFrom.HitChamber;
             var panelPosition = elevatorChamber.GetComponentInChildren<ElevatorPanel>().GetComponent<Collider>().bounds.center;
 
             var directionToPanel = Vector3.Normalize(panelPosition - playerPosition);
