@@ -1,4 +1,5 @@
-﻿using Interactables.Interobjects;
+﻿using DrawableLine;
+using Interactables.Interobjects;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Navigation.Mesh;
 using System;
@@ -6,54 +7,49 @@ using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 {
-    internal class ElevatorLevel(TransformCell cell, SightSense sightSense) : IBelief
+    internal class ElevatorLevel(TransformCell cell, Vector3 panelPosition, Vector3 panelUp, SightSense sightSense) : IBelief
     {
         public event Action OnUpdate;
 
-        public ElevatorChamber HitChamber;
-        public bool IsElevatorAt => HitChamber is not null;
+        public readonly Vector3 PanelPosition = panelPosition;
+        public readonly Vector3 PanelUp = panelUp;
+        public ElevatorPanel HitPanel;
+
+        public ElevatorChamber ChamberAtLevel;
+        public bool IsElevatorAt => ChamberAtLevel is not null;
 
         public void Update()
         {
-            var levelPosition = cell.MeanPosition;
+            DrawableLines.GenerateSphere(PanelPosition + PanelUp, .5f);
 
-            if (!sightSense.IsPositionWithinFov(levelPosition))
+            if (!sightSense.IsPositionWithinFov(PanelPosition))
             {
                 return;
             }
 
-            if (sightSense.IsPositionObstructed(levelPosition, out var hit))
+            if (!sightSense.IsPositionObstructed(PanelPosition, out var hit)
+                || hit.collider.GetComponent<ElevatorPanel>() is not ElevatorPanel panel)
             {
-                if (hit.collider.gameObject.layer != doorLayer || hit.collider.GetComponentInParent<ElevatorDoor>() is not ElevatorDoor door)
-                {
-                    return;
-                }
-
-                if (!door.IsConsideredOpen())
-                {
-                    if (HitChamber is not null)
-                    {
-                        HitChamber = null;
-                        OnUpdate?.Invoke();
-                    }
-                    return;
-                }
+                return;
             }
 
+            HitPanel ??= panel;
+
+            var levelPosition = cell.MeanPosition;
             if (!Physics.Raycast(levelPosition, Vector3.down, out hit, 2f)
                 || hit.collider.GetComponentInParent<ElevatorChamber>() is not ElevatorChamber chamber)
             {
-                if (HitChamber is not null)
+                if (ChamberAtLevel is not null)
                 {
-                    HitChamber = null;
+                    ChamberAtLevel = null;
                     OnUpdate?.Invoke();
                 }
                 return;
             }
 
-            if (HitChamber is null)
+            if (ChamberAtLevel is null)
             {
-                HitChamber = chamber;
+                ChamberAtLevel = chamber;
                 OnUpdate?.Invoke();
             }
         }
@@ -62,7 +58,5 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         {
             return $"{nameof(ElevatorLevel)}({cell}): {IsElevatorAt}";
         }
-
-        private static readonly int doorLayer = LayerMask.NameToLayer("Door");
     }
 }

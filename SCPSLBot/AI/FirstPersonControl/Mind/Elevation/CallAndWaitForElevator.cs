@@ -1,63 +1,39 @@
 ﻿using Interactables.Interobjects;
-using Mirror;
-using SCPSLBot.AI.FirstPersonControl.Mind.Door;
-using System;
-using System.Linq;
+using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+using SCPSLBot.Navigation.Mesh;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 {
-    internal class CallAndWaitForElevator : IAction
+    internal class CallAndWaitForElevator(TransformCell levelCell, FpcBotPlayer botPlayer) : IAction
     {
-        private readonly FpcBotPlayer botPlayer;
+        private readonly NavigationBeliefs navigationBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
+
         private const float interactDistance = 2f;
-
-        public CallAndWaitForElevator(FpcBotPlayer botPlayer)
-        {
-            this.botPlayer = botPlayer;
-        }
-
-        private ElevationObstacle elevationObstacle;
+        private ElevatorLevel elevationLevel;
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
+            var cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
+            fpcMind.ActionEnabledBy<NavigationCell>(this, () => navigationBeliefs.GetNavigationCellWithin(elevationLevel.PanelPosition + elevationLevel.PanelUp), b => b?.Is(cellWithin.TransformCell!.Value) ?? false);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            //elevationObstacle = fpcMind.ActionImpacts<ElevationObstacle, ElevationObstacleMode>(this, ElevationObstacleMode.IsElevatorAtOrigin);
+            elevationLevel = fpcMind.ActionImpacts<ElevatorLevel>(this, navigationBeliefs.ElevatorLevels[levelCell]);
         }
 
-        public float Cost => 0f;
+        public float Cost => 5f;
 
         public void Tick()
         {
-            var elevator = elevationObstacle.Elevator;
-            if (!elevator)
-            {
-                // waiting
-                return;
-            }
-
+            var panelPosition = elevationLevel.PanelPosition;
             var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
-            var relPosDestDoor = playerPosition - elevator.DestinationDoor.transform.position;
-            var relPosNextDestDoor = playerPosition - elevator.NextDestinationDoor.transform.position;
-
-            var closestElevatorDoor = relPosDestDoor.sqrMagnitude < relPosNextDestDoor.sqrMagnitude ? elevator.DestinationDoor : elevator.NextDestinationDoor;
-            if (elevator.DestinationDoor == closestElevatorDoor && elevator.IsReady)
-            {
-                botPlayer.MoveToPosition(elevationObstacle.GoalPosition!.Value);
-                return;
-            }
-
-            var panel = closestElevatorDoor.GetComponentInChildren<ElevatorPanel>();
-            var panelPosition = panel.GetComponent<Collider>().bounds.center;
 
             var dist = Vector3.Distance(panelPosition, playerPosition);
             if (dist > interactDistance)
             {
-                var goalPos = elevationObstacle.GoalPosition!.Value;
-                botPlayer.MoveToPosition(goalPos);
+                botPlayer.MoveToPosition(panelPosition);
 
                 var directionToPanel = Vector3.Normalize(panelPosition - playerPosition);
                 var playerDirection = botPlayer.BotHub.PlayerHub.transform.forward;
@@ -69,7 +45,18 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 return;
             }
 
-            closestElevatorDoor.ServerInteract(botPlayer.BotHub.PlayerHub, panel.ColliderId);
+            var panel = elevationLevel.HitPanel;
+            if (panel is null)
+            {
+                return;
+            }
+
+            if (panel.Target is not ElevatorDoor elevatorDoor)
+            {
+                return;
+            }
+
+            elevatorDoor.ServerInteract(botPlayer.BotHub.PlayerHub, panel.ColliderId);
         }
 
         public void Reset()

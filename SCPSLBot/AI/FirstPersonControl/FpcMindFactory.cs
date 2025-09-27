@@ -113,20 +113,20 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
             }
 
-            foreach (var (cellZero, cellOne) in NavigationMesh.ElevationCells)
+            foreach (var (cellZero, cellOne, panelTransformZero, panelTransformOne) in NavigationMesh.ElevationCells)
             {
-                foreach (var cellAtLevel in (ReadOnlySpan<TransformCell>)[cellZero, cellOne])
+                foreach (var (cellAtLevel, panelTransformAtLevel) in (ReadOnlySpan<(TransformCell, Transform)>)[(cellZero, panelTransformZero), (cellOne, panelTransformOne)])
                 {
-                    var elevatorLevelBelief = new ElevatorLevel(cellAtLevel, sightSense);
+                    var elevatorLevelBelief = new ElevatorLevel(cellAtLevel, panelTransformAtLevel.position, panelTransformAtLevel.up, sightSense);
                     navigationBeliefs.ElevatorLevels.Add(cellAtLevel, elevatorLevelBelief);
                     mind.AddBelief(elevatorLevelBelief);
+
+                    mind.AddAction(new CallAndWaitForElevator(cellAtLevel, botPlayer));
                 }
 
                 mind.AddAction(new TravelOnElevator(cellZero, cellOne, botPlayer));
                 mind.AddAction(new TravelOnElevator(cellOne, cellZero, botPlayer));
             }
-
-            //mind.AddAction(new CallAndWaitForElevator(botPlayer));
 
 
             mind.AddBelief(new LockerSpawnsLocation(StructureType.StandardLocker, perception.GetSense<RoomSightSense>()));

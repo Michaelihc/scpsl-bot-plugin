@@ -187,7 +187,9 @@ namespace SCPSLBot.Navigation
                     NavigationMesh.ForeignConnectedCells[cellAt1InShaft].Add(cellAt0InShaft);
 
                     // Add elevation cells
-                    NavigationMesh.ElevationCells.Add((cellAt0InShaft, cellAt1InShaft));
+                    var panelAt0 = elevatorDoors[0].GetComponentInChildren<ElevatorPanel>().transform;
+                    var panelAt1 = elevatorDoors[1].GetComponentInChildren<ElevatorPanel>().transform;
+                    NavigationMesh.ElevationCells.Add((cellAt0InShaft, cellAt1InShaft, panelAt0, panelAt1));
 
                     // Add level cells
                     int cell0Level = Mathf.FloorToInt(cellAt0InShaft.MeanPosition.y / NavigationMesh.LevelScale);
