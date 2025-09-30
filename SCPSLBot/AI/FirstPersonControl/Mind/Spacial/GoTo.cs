@@ -40,14 +40,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             SetEnabledByBeliefs(fpcMind, () => this.location.Positions[Idx]);
         }
 
-        protected virtual void SetEnabledByBeliefs(FpcMind fpcMind, Func<Vector3> targetPositionGetter)
+        protected virtual void SetEnabledByBeliefs(FpcMind fpcMind, Func<Vector3> getTargetPosition)
         {
             this.location = SetEnabledByLocation(fpcMind, b => b.Positions.Count > Idx);
 
             fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationObstacle(this.getLocationNavCell()), b => !(b?.HitResult.HasValue ?? false));
             
-            this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
-            this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(targetPositionGetter()), b => b?.Is(cellWithin.TransformCell!.Value) ?? false);
+            this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => location.NearPositions.Contains(getTargetPosition()) || b.TransformCell.HasValue);
+            this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(getTargetPosition()), b => location.NearPositions.Contains(getTargetPosition()) || (b?.Is(cellWithin.TransformCell!.Value) ?? false));
         }
 
         public abstract void SetImpactsBeliefs(FpcMind fpcMind);

@@ -48,13 +48,27 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
                 }
                 RemoveAllPositions(absentPositions.Remove);
             }
-
             numItemsWithinSight = 0;
+
+            // Evaluate nearness to positions
+            foreach (var position in Positions)
+            {
+                if (itemsSightSense.GetDistanceToPositionSqr(position) <= NearDistSqr)
+                {
+                    AddNearPosition(position);
+                }
+                else
+                {
+                    RemoveNearPosition(position);
+                }
+            }
         }
 
         public override string ToString()
         {
             return $"{nameof(ItemSightedLocation<C>)}({this.Criteria}): {this.Positions.Count}";
         }
+
+        private const float NearDistSqr = 1.75f * 1.75f;
     }
 }

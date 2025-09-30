@@ -148,6 +148,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
             return Vector3.Distance(targetPosition, _fpcBotPlayer.CameraPosition);
         }
 
+        public float GetDistanceToPositionSqr(Vector3 targetPosition)
+        {
+            return Vector3.SqrMagnitude(targetPosition - _fpcBotPlayer.CameraPosition);
+        }
+
         private NativeArray<ColliderData> withinFovColliderDatas;
         private NativeReference<int> numRaycastsRef;
 

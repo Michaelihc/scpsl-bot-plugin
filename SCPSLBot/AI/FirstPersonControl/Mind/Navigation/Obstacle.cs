@@ -13,9 +13,18 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         public event Action OnUpdate;
 
         public RaycastHit? HitResult;
+        public bool IsNear;
 
         public void Update()
         {
+            var distSqr = sightSense.GetDistanceToPositionSqr(position);
+            var newIsNear = distSqr <= nearDistSqr;
+            if (IsNear != newIsNear)
+            {
+                IsNear = newIsNear;
+                OnUpdate?.Invoke();
+            }
+
             if (!sightSense.IsPositionWithinFov(position))
             {
                 return;
@@ -47,5 +56,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         {
             return $"{nameof(Obstacle)}({transformCell}): {HitResult.HasValue}";
         }
+
+        private const float nearDistSqr = 2f * 2f;
     }
 }

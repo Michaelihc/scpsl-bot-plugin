@@ -13,7 +13,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionEnabledBy<NavigationCell>(this, navigationBeliefs.NavigationCells[transformCell], b => b.IsWithin);
+            fpcMind.ActionEnabledBy<NavigationCell>(this, navigationBeliefs.NavigationCells[transformCell], b => doorObstacleBelief.IsNear || b.IsWithin);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
@@ -26,33 +26,27 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
         public void Tick()
         {
             var doorToOpen = doorObstacleBelief.Door;
-            var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
-
             if (!doorToOpen)
             {
-                Debug.LogWarning($"doorToOpen is null to open");
-                return;
+                throw new System.Exception($"{nameof(doorToOpen)} is null to open");
             }
 
-            var doorPlane = new Plane(doorToOpen.transform.forward, doorToOpen.transform.position);
-            var dist = Mathf.Abs(doorPlane.GetDistanceToPoint(playerPosition));
             var isTargetStateOpen = doorToOpen.TargetState;
 
-            if (!isTargetStateOpen && dist <= interactDistance)
-            {
-                Debug.Log($"{doorToOpen} is within interactable distance");
+            var doorPos = doorToOpen.transform.position + Vector3.up * 1f;
+            var isNear = doorObstacleBelief.IsNear;
 
+            if (!isTargetStateOpen && isNear)
+            {
                 if (!botPlayer.OpenDoor(doorToOpen, interactDistance))
                 {
-                    var doorPos = doorToOpen.transform.position + Vector3.up * 1f;
                     botPlayer.LookToPosition(doorPos);
                     //Log.Debug($"Looking towards door interactable");
                 }
             }
 
-            if (!isTargetStateOpen || dist > interactDistance)
+            if (!isTargetStateOpen || !isNear)
             {
-                var doorPos = doorToOpen.transform.position + Vector3.up * 1f;
                 botPlayer.MoveToPosition(doorPos);
             }
         }

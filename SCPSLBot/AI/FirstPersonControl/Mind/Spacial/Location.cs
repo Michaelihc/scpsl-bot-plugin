@@ -8,6 +8,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
     {
         public event Action OnUpdate;
         public readonly List<Vector3> Positions = new();
+        public readonly List<Vector3> NearPositions = [];
 
         protected void AddPosition(Vector3 position)
         {
@@ -31,13 +32,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             var changed = false;
 
             var posCount = Positions.Count;
-            var i = 0;
+            var newPosCount = 0;
+            
             foreach (var pos in newPositions)
             {
+                var i = newPosCount;
                 if (posCount > i)
                 {
                     if (Positions[i] != pos)
                     {
+                        NearPositions.Remove(Positions[i]);
                         Positions[i] = pos;
                         changed = true;
                     }
@@ -48,12 +52,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
                     changed = true;
                 }
 
-                i++;
+                newPosCount++;
             }
 
-            if (posCount > i)
+            if (posCount > newPosCount)
             {
-                Positions.RemoveRange(i, posCount - i);
+                for (var i = newPosCount; i < posCount; i++)
+                {
+                    NearPositions.Remove(Positions[i]);
+                }
+                Positions.RemoveRange(newPosCount, posCount - newPosCount);
                 changed = true;
             }
 
@@ -67,7 +75,25 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         {
             if (Positions.RemoveAll(predicate) > 0)
             {
+                NearPositions.RemoveAll(predicate);
                 OnUpdate?.Invoke(); 
+            }
+        }
+
+        protected void AddNearPosition(Vector3 pos)
+        {
+            if (!NearPositions.Contains(pos))
+            {
+                NearPositions.Add(pos);
+                OnUpdate?.Invoke();
+            }
+        }
+
+        protected void RemoveNearPosition(Vector3 pos)
+        {
+            if (NearPositions.Remove(pos))
+            {
+                OnUpdate?.Invoke();
             }
         }
     }

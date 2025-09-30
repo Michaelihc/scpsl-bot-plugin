@@ -29,7 +29,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
             keycardInInventory = fpcMind.ActionEnabledBy<ItemInInventory<KeycardWithPermissions>>(this, b => b.Criteria.Equals(new (Permissions)), b => b.Item);
-            fpcMind.ActionEnabledBy<NavigationCell>(this, navigationBeliefs.NavigationCells[transformCell], b => b.IsWithin);
+            fpcMind.ActionEnabledBy<NavigationCell>(this, navigationBeliefs.NavigationCells[transformCell], b => doorObstacleBelief.IsNear || b.IsWithin);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
@@ -48,15 +48,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
             }
 
             var doorToOpen = doorObstacleBelief.Door;
-            var playerPosition = botPlayer.BotHub.PlayerHub.transform.position;
             var interactablePosition = doorToOpen.transform.position + Vector3.up;
 
             if (doorToOpen && !doorToOpen.TargetState)
             {
-                if (Vector3.Distance(interactablePosition, playerPosition) <= interactDistance)
+                if (doorObstacleBelief.IsNear)
                 {
-                    Debug.Log($"{doorToOpen} is within interactable distance");
-
                     if (!botPlayer.OpenDoor(doorToOpen, interactDistance))
                     {
                         botPlayer.LookToPosition(interactablePosition);
