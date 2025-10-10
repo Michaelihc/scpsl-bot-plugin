@@ -34,8 +34,14 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public void Tick()
         {
+            var elevatorChamber = elevatorLevelFrom.ChamberAtLevel;
+            if (elevatorChamber is null)
+            {
+                return;
+            }
+
             var playerPosition = botPlayer.PlayerPosition;
-            var elevatorMiddle = elevatorLevelFrom.ChamberAtLevel.WorldspaceBounds.center with { y = playerPosition.y };
+            var elevatorMiddle = elevatorChamber.WorldspaceBounds.center with { y = playerPosition.y };
 
             if (Vector3.Distance(playerPosition, elevatorMiddle) > 0.1f)
             {
@@ -43,7 +49,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
                 return;
             }
 
-            var elevatorChamber = elevatorLevelFrom.ChamberAtLevel;
             var panelPosition = elevatorChamber.GetComponentInChildren<ElevatorPanel>().GetComponent<Collider>().bounds.center;
 
             var directionToPanel = Vector3.Normalize(panelPosition - playerPosition);

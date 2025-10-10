@@ -1,4 +1,5 @@
 ﻿using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
+using SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs;
 using SCPSLBot.Navigation.Mesh;
 using System;
 using UnityEngine;
@@ -44,8 +45,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         {
             this.location = SetEnabledByLocation(fpcMind, b => b.Positions.Count > Idx);
 
+            fpcMind.ActionEnabledBy<NavigationBeliefs>(this, this.navBeliefs, b => true);
+            fpcMind.ActionEnabledBy<Obstacle>(this, () => this.navBeliefs.GetReceivedObstacle(this.location.Positions[Idx]), b => !(b?.HitResult.HasValue ?? false));
+
             fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationObstacle(this.getLocationNavCell()), b => !(b?.HitResult.HasValue ?? false));
-            
+
             this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => location.NearPositions.Contains(getTargetPosition()) || b.TransformCell.HasValue);
             this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(getTargetPosition()), b => location.NearPositions.Contains(getTargetPosition()) || (b?.Is(cellWithin.TransformCell!.Value) ?? false));
         }

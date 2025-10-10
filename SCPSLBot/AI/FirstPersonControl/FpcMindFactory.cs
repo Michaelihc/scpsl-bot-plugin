@@ -41,7 +41,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             var cellWithin = new CellWithin(botPlayer);
             mind.AddBelief(cellWithin);
 
-            var navigationBeliefs = new NavigationBeliefs();
+            var navigationBeliefs = new NavigationBeliefs(botPlayer.MindRunner);
             mind.AddBelief(navigationBeliefs);
 
             var sightSense = perception.GetSense<DoorsWithinSightSense>();
@@ -63,13 +63,16 @@ namespace SCPSLBot.AI.FirstPersonControl
 
                 var obstacle = new Obstacle(cell, position, colliders, sightSense, obstacleLayerMask);
                 navigationBeliefs.Obstacles.Add(cell, obstacle);
+
+                obstacle.OnUpdate += () => navigationBeliefs.HandleObstacleUpdate(obstacle);
+
                 mind.AddBelief(obstacle);
             }
 
-            mind.AddBelief(new ZoneWithin(FacilityZone.Surface, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
-            mind.AddBelief(new ZoneWithin(FacilityZone.Entrance, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
-            mind.AddBelief(new ZoneWithin(FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
-            mind.AddBelief(new ZoneWithin(FacilityZone.LightContainment, perception.GetSense<RoomSightSense>(), botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.Surface, cellWithin, botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.Entrance, cellWithin, botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.HeavyContainment, cellWithin, botPlayer.Navigator));
+            mind.AddBelief(new ZoneWithin(FacilityZone.LightContainment, cellWithin, botPlayer.Navigator));
             mind.AddBelief(new ZoneEnterLocation(FacilityZone.LightContainment, FacilityZone.HeavyContainment, perception.GetSense<RoomSightSense>()));
             mind.AddBelief(new ZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.LightContainment, perception.GetSense<RoomSightSense>()));
             mind.AddBelief(new ZoneEnterLocation(FacilityZone.HeavyContainment, FacilityZone.Entrance, perception.GetSense<RoomSightSense>()));

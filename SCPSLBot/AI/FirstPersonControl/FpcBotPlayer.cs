@@ -295,6 +295,17 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void DisplayVisitedActionsGraph()
         {
+            DumpVisitedActionsGraph();
+
+            debugStringBuilder.Append('\n', Mathf.Max(40 - numLines, 0));
+
+            var debugString = debugStringBuilder.ToString();
+
+            SendTextHintToSpectators(debugString, 10);
+        }
+
+        public StringBuilder DumpVisitedActionsGraph(bool allActions = false)
+        {
             debugStringBuilder.Clear();
             debugStringBuilder.AppendLine("<size=14><align=left>");
             numLines = 0;
@@ -312,18 +323,14 @@ namespace SCPSLBot.AI.FirstPersonControl
                         continue;
                     }
 
-                    ShowVisitedGoalBelief(goalBelief, goal);
+                    ShowVisitedGoalBelief(goalBelief, goal, allActions);
                 }
             }
 
-            debugStringBuilder.Append('\n', Mathf.Max(40 - numLines, 0));
-
-            var debugString = debugStringBuilder.ToString();
-
-            SendTextHintToSpectators(debugString, 10);
+            return debugStringBuilder;
         }
 
-        private void ShowVisitedGoalBelief(IBelief goalBelief, IGoal goal)
+        private void ShowVisitedGoalBelief(IBelief goalBelief, IGoal goal, bool allActions)
         {
             level++;
 
@@ -335,13 +342,13 @@ namespace SCPSLBot.AI.FirstPersonControl
                     continue;
                 }
 
-                ShowVisitedAction(actionImpacting);
+                ShowVisitedAction(actionImpacting, allActions);
             }
         }
 
-        private void ShowVisitedAction(IAction actionImpacting)
+        private void ShowVisitedAction(IAction actionImpacting, bool allActions)
         {
-            if (actionImpacting is not GoToCell)
+            if (allActions || actionImpacting is not GoToCell)
             {
                 level++;
                 debugStringBuilder.Append(' ', level * 4);
@@ -363,7 +370,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 var beliefEnabling = beliefEnablingGetter.Invoke();
                 if (beliefEnabling != null)
                 {
-                    ShowVisitedActionsOfBelief(beliefEnabling, actionImpacting);
+                    ShowVisitedActionsOfBelief(beliefEnabling, actionImpacting, allActions);
 
                     if (!enablingPredicate.Invoke(beliefEnabling))
                     {
@@ -372,13 +379,13 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
             }
 
-            if (actionImpacting is not GoToCell)
+            if (allActions || actionImpacting is not GoToCell)
             {
                 level--;
             }
         }
 
-        private void ShowVisitedActionsOfBelief(IBelief belief, IAction actionToEnable)
+        private void ShowVisitedActionsOfBelief(IBelief belief, IAction actionToEnable, bool allActions)
         {
             foreach (var (actionImpacting, _) in MindRunner.ActionsImpactingBeliefs[belief])
             {
@@ -388,7 +395,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                     continue;
                 }
 
-                ShowVisitedAction(actionImpacting);
+                ShowVisitedAction(actionImpacting, allActions);
             }
         }
 

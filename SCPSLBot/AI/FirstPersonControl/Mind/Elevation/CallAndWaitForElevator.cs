@@ -7,6 +7,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 {
     internal class CallAndWaitForElevator(TransformCell levelCell, FpcBotPlayer botPlayer) : IAction
     {
+        public ElevatorLevel Level => elevationLevel;
+
         private readonly NavigationBeliefs navigationBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
 
         private const float interactDistance = 2f;
@@ -14,6 +16,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
+            var navBeliefs = fpcMind.ActionEnabledBy<NavigationBeliefs>(this, b => true);
+            fpcMind.ActionEnabledBy<Obstacle>(this, () => navBeliefs.GetReceivedObstacle(elevationLevel.PanelPosition), b => !(b?.HitResult.HasValue ?? false));
+
             var cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
             fpcMind.ActionEnabledBy<NavigationCell>(this, () => navigationBeliefs.GetNavigationCellWithin(elevationLevel.PanelPosition + elevationLevel.PanelUp), b => b?.Is(cellWithin.TransformCell!.Value) ?? false);
         }

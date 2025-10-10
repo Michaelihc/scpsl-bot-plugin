@@ -1,5 +1,5 @@
 ﻿using MapGeneration;
-using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
+using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
 using System;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
@@ -10,12 +10,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
         public event Action OnUpdate;
 
         private readonly FpcBotNavigator navigator;
-        private readonly RoomSightSense roomSightSense;
+        private readonly CellWithin cellWithin;
 
-        public ZoneWithin(FacilityZone zone, RoomSightSense roomSightSense, FpcBotNavigator navigator)
+        public ZoneWithin(FacilityZone zone, CellWithin cellWithin, FpcBotNavigator navigator)
         {
             this.Zone = zone;
-            this.roomSightSense = roomSightSense;
+            this.cellWithin = cellWithin;
             this.navigator = navigator;
         }
 
@@ -23,7 +23,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs
 
         public void Update()
         {
-            var newZoneValue = roomSightSense.RoomWithin?.Zone;
+            var newZoneValue = cellWithin.TransformCell?.Transform.GetComponent<RoomIdentifier>().Zone;
 
             var newIsWithin = newZoneValue == Zone;
             if (newIsWithin != IsWithin)
