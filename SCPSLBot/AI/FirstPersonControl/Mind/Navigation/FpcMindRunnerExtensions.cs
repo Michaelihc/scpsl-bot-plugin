@@ -1,4 +1,5 @@
-﻿using SCPSLBot.AI.FirstPersonControl.Mind.Spacial;
+﻿using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
+using SCPSLBot.AI.FirstPersonControl.Mind.Spacial;
 using SCPSLBot.Navigation.Mesh;
 using System;
 using System.Collections.Generic;
@@ -54,13 +55,21 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
                 currentGoToCell = nextGoToCell;
             }
 
-            if (nextAction is GoTo goTo)
+            Vector3? goalPosResult = nextAction switch
+            {
+                GoTo goTo => goTo.Location.Positions[goTo.Idx],
+                CallAndWaitForElevator callWaitElevator => callWaitElevator.Level.PanelPosition,
+
+                _ => null
+            };
+
+            if (goalPosResult.HasValue)
             {
                 var relTargetEdgePos = (
                     from: nextCellEdge.From.Position - playerPosition,
                     to: nextCellEdge.To.Position - playerPosition);
 
-                var goalPos = goTo.Location.Positions[goTo.Idx];
+                var goalPos = goalPosResult.Value;
                 var relGoalPos = goalPos - playerPosition;
                 var dirToGoalNormal = Vector3.Cross(relGoalPos, Vector3.up);
 

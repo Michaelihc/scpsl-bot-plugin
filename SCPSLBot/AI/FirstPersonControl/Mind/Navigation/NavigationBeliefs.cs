@@ -20,7 +20,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         public NavigationCell GetNavigationCellWithin(Vector3 position)
         {
             const float PlayerRadius = .5f;
-            var cellResult = NavigationMesh.GetCellWithinOrClosest(position, PlayerRadius);
+            const float Extents = .5f;
+            var cellResult = NavigationMesh.GetCellWithinOrClosest(position, PlayerRadius + Extents);
             return cellResult.HasValue ? NavigationCells[cellResult.Value] : null;
         }
 
