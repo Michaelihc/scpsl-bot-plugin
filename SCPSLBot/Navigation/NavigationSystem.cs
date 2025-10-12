@@ -149,10 +149,11 @@ namespace SCPSLBot.Navigation
                 {
                     var doorForwardX = doorForward * i;
 
-                    if (!RoomUtils.TryGetRoom(doorPosition - doorForwardX, out var room))
+                    var coords = RoomUtils.PositionToCoords(doorPosition - doorForwardX);
+                    if (!RoomIdentifier.RoomsByCoords.TryGetValue(coords, out var room))
                     {
                         RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
-                        RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForwardX), room);
+                        RoomIdentifier.RoomsByCoords.Add(coords, room);
                         break;
                     }
                 }
@@ -167,10 +168,11 @@ namespace SCPSLBot.Navigation
                 {
                     var doorForwardX = doorForward * i;
 
-                    if (!RoomUtils.TryGetRoom(doorPosition - doorForwardX, out var room))
+                    var coords = RoomUtils.PositionToCoords(doorPosition - doorForwardX);
+                    if (!RoomIdentifier.RoomsByCoords.TryGetValue(coords, out var room))
                     {
                         RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
-                        RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForwardX), room);
+                        RoomIdentifier.RoomsByCoords.Add(coords, room);
                         break;
                     }
                 }
