@@ -37,6 +37,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Keycard
             return other.Permissions == this.Permissions;
         }
 
+        public override readonly int GetHashCode() => Permissions.GetHashCode();
+
         public override string ToString()
         {
             return $"{Permissions}";

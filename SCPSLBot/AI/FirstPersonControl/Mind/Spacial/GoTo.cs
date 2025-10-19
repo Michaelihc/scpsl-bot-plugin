@@ -28,11 +28,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         public Location Location => this.location;
 
         private readonly FpcBotPlayer botPlayer = botPlayer;
-        private readonly NavigationBeliefs navBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
 
         protected abstract Location SetEnabledByLocation(FpcMind fpcMind, Predicate<Location> enablingPredicate);
 
         protected Location location;
+        private NavigationBeliefs navBeliefs;
         private CellWithin cellWithin;
         private Func<NavigationCell> getLocationNavCell;
 
@@ -45,7 +45,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         {
             this.location = SetEnabledByLocation(fpcMind, b => b.Positions.Count > Idx);
 
-            fpcMind.ActionEnabledBy<NavigationBeliefs>(this, this.navBeliefs, b => true);
+            this.navBeliefs = fpcMind.ActionEnabledBy<NavigationBeliefs>(this, b => true);
             fpcMind.ActionEnabledBy<Obstacle>(this, () => this.navBeliefs.GetReceivedObstacle(this.location.Positions[Idx]), b => !(b?.HitResult.HasValue ?? false));
 
             fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationObstacle(this.getLocationNavCell()), b => !(b?.HitResult.HasValue ?? false));

@@ -1,4 +1,6 @@
-﻿using SCPSLBot.AI.FirstPersonControl.Mind;
+﻿using LabApi.Features.Console;
+using PlayerRoles;
+using SCPSLBot.AI.FirstPersonControl.Mind;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +9,12 @@ using UnityEngine.Profiling;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
-    internal class FpcMindRunner : FpcMind
+    internal class FpcMindRunner
     {
+        public readonly FpcMindFactory MindFactory;
+        public readonly Dictionary<RoleTypeId, FpcMind> MindsByRoles = [];
+
+        public FpcMind RunningMind { get; private set; }
         public IAction RunningAction { get; private set; }
         public float RunningActionCost { get; private set; }
 
@@ -16,11 +22,36 @@ namespace SCPSLBot.AI.FirstPersonControl
         public readonly HashSet<IBelief> RelevantBeliefs = new();
         private bool isBeliefsUpdated = false;
 
+        public FpcMindRunner(FpcMindFactory mindFactory)
+        {
+            this.MindFactory = mindFactory;
+
+            var mind = new FpcMind();
+            this.MindFactory.BuildMindClassD(mind);
+            this.MindsByRoles.Add(RoleTypeId.ClassD, mind);
+
+            mind = new FpcMind();
+            this.MindFactory.BuildMindClassD(mind);
+            this.MindsByRoles.Add(RoleTypeId.Scientist, mind);
+        }
+
         public void SubscribeToBeliefUpdates()
         {
-            foreach (var belief in Beliefs.Values.SelectMany(bc => bc))
+            foreach (var belief in MindFactory.Beliefs)
             {
                 belief.OnUpdate += () => OnBeliefUpdate(belief);
+            }
+        }
+
+        public void SwitchMind(RoleTypeId roleType)
+        {            
+            if (!MindsByRoles.TryGetValue(roleType, out var mind))
+            {
+                Debug.Log($"No mind defined for role {roleType}");
+            }
+            else
+            {
+                RunningMind = mind;
             }
         }
 
@@ -88,7 +119,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             VisitedActionsImpactedBy.Clear();
             VisitedGoalsImpactedBy.Clear();
 
-            foreach (var goal in BeliefsEnablingGoals.Keys)
+            foreach (var goal in RunningMind.BeliefsEnablingGoals.Keys)
             {
                 foreach (var enabledAction in FindEnabledActions(goal))
                 {
@@ -121,7 +152,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             VisitedActionsTotalCosts.Clear();
             remainingActionsToExplore.Clear();
 
-            foreach (var (b, isSatisfied) in BeliefsEnablingGoals[goal])
+            foreach (var (b, isSatisfied) in RunningMind.BeliefsEnablingGoals[goal])
             {
                 VisitedGoalsEnabledBy[b] = goal;
 
@@ -151,7 +182,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void ProcessActionsImpacting(IBelief belief, IGoal goalToEnable)
         {
-            foreach (var (actionImpacting, canImpact) in ActionsImpactingBeliefs[belief])
+            foreach (var (actionImpacting, canImpact) in RunningMind.ActionsImpactingBeliefs[belief])
             {
                 VisitedGoalsImpactedBy[actionImpacting] = goalToEnable;
 
@@ -173,7 +204,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             //var prefix = "      ";
 
-            var beliefsEnabling = BeliefsEnablingActions[actionToEnable];
+            var beliefsEnabling = RunningMind.BeliefsEnablingActions[actionToEnable];
 
             var actionEnabled = true;
             foreach (var (getBelief, isSatisfied) in beliefsEnabling)
@@ -219,7 +250,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             var actionToEnableCostToGoal = VisitedActionsTotalCosts[actionToEnable];
 
-            foreach (var (actionImpacting, canImpact) in ActionsImpactingBeliefs[belief])
+            foreach (var (actionImpacting, canImpact) in RunningMind.ActionsImpactingBeliefs[belief])
             {
                 if (!canImpact(belief))
                 {

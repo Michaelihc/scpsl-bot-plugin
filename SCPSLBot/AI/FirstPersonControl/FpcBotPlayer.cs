@@ -2,6 +2,7 @@
 using Interactables;
 using Interactables.Interobjects.DoorUtils;
 using MapGeneration.Distributors;
+using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
 using PlayerRoles.Spectating;
 using SCPSLBot.AI.FirstPersonControl.Looking;
@@ -30,6 +31,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         public FpcBotPerception Perception { get; }
         public PerceptionComponent PerceptionComponent { get; private set; }
         public FpcMindRunner MindRunner { get; }
+        public FpcMindFactory MindFactory { get; }
 
         public FpcBotNavigator Navigator { get; }
 
@@ -46,15 +48,12 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             BotHub = botHub;
             Perception = new FpcBotPerception(this);
-            MindRunner = new FpcMindRunner();
+            MindFactory = new(this, Perception);
+            MindRunner = new FpcMindRunner(MindFactory);
 
             Navigator = new(this);
             Look = new(this);
             Move = new(this);
-
-            FpcMindFactory.BuildMind(MindRunner, this, Perception);
-
-            MindRunner.SubscribeToBeliefUpdates();
         }
 
         public IEnumerator<JobHandle> Update()
@@ -80,13 +79,14 @@ namespace SCPSLBot.AI.FirstPersonControl
             yield break;
         }
 
-        public void OnRoleChanged()
+        public void OnRoleChanged(RoleTypeId newRoleType)
         {
             Debug.Log($"Bot got FPC role assigned.");
 
             PerceptionComponent = BotHub.PlayerHub.GetComponentInChildren<PerceptionComponent>();
             PerceptionComponent.enabled = true;
 
+            MindRunner.SwitchMind(newRoleType);
             MindRunner.EvaluateGoalsToActions();
         }
 
@@ -310,7 +310,12 @@ namespace SCPSLBot.AI.FirstPersonControl
             debugStringBuilder.AppendLine("<size=14><align=left>");
             numLines = 0;
 
-            foreach (var (goal, goalEnablingBeliefs) in MindRunner.BeliefsEnablingGoals)
+            if (MindRunner.RunningMind is null)
+            {
+                return debugStringBuilder;
+            }
+
+            foreach (var (goal, goalEnablingBeliefs) in MindRunner.RunningMind.BeliefsEnablingGoals)
             {
                 level = 0;
                 debugStringBuilder.AppendLine($"Goal: {goal.GetType().Name}");
@@ -334,7 +339,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             level++;
 
-            foreach (var (actionImpacting, _) in MindRunner.ActionsImpactingBeliefs[goalBelief])
+            foreach (var (actionImpacting, _) in MindRunner.RunningMind.ActionsImpactingBeliefs[goalBelief])
             {
                 if (!MindRunner.VisitedGoalsImpactedBy.TryGetValue(actionImpacting, out var goalImpactedBy)
                     || goalImpactedBy != goal)
@@ -365,7 +370,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 numLines++;
             }
 
-            foreach (var (beliefEnablingGetter, enablingPredicate) in MindRunner.BeliefsEnablingActions[actionImpacting])
+            foreach (var (beliefEnablingGetter, enablingPredicate) in MindRunner.RunningMind.BeliefsEnablingActions[actionImpacting])
             {
                 var beliefEnabling = beliefEnablingGetter.Invoke();
                 if (beliefEnabling != null)
@@ -387,7 +392,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void ShowVisitedActionsOfBelief(IBelief belief, IAction actionToEnable, bool allActions)
         {
-            foreach (var (actionImpacting, _) in MindRunner.ActionsImpactingBeliefs[belief])
+            foreach (var (actionImpacting, _) in MindRunner.RunningMind.ActionsImpactingBeliefs[belief])
             {
                 if (!MindRunner.VisitedActionsImpactedBy.TryGetValue(actionImpacting, out var actionImpactedBy)
                     || actionImpactedBy != actionToEnable)

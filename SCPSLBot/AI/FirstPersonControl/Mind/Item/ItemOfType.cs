@@ -39,6 +39,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item
             return other.ItemType == this.ItemType;
         }
 
+        public override readonly int GetHashCode() => ItemType.GetHashCode();
+
         public static implicit operator ItemOfType(ItemType itemType) => new(itemType);
 
         public override string ToString()

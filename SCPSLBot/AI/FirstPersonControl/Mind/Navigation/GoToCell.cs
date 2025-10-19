@@ -14,13 +14,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         private readonly Vector3 toCellMeanPosition = toCell.MeanPosition;
         private readonly Vector3 fromCellMeanPosition = fromCell.MeanPosition;
         private readonly Vector3 toEdgePos = toEdge.MiddlePosition;
-        private readonly NavigationBeliefs cellBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
         private CellWithin cellWithin;
         private NavigationCell navCellTo;
         private NavigationCell navCellFrom;
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
+            var cellBeliefs = fpcMind.GetBelief<NavigationBeliefs>();
             if (cellBeliefs.Obstacles.TryGetValue(fromCell, out var obstacleBelief))
             {
                 fpcMind.ActionEnabledBy(this, obstacleBelief, b => !b.HitResult.HasValue);
@@ -34,6 +34,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
+            var cellBeliefs = fpcMind.GetBelief<NavigationBeliefs>();
             this.navCellTo = fpcMind.ActionImpacts(this, cellBeliefs.NavigationCells[toCell]);
         }
 

@@ -9,8 +9,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
     {
         public ElevatorLevel Level => elevationLevel;
 
-        private readonly NavigationBeliefs navigationBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
-
         private const float interactDistance = 2f;
         private ElevatorLevel elevationLevel;
 
@@ -20,12 +18,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
             fpcMind.ActionEnabledBy<Obstacle>(this, () => navBeliefs.GetReceivedObstacle(elevationLevel.PanelPosition), b => !(b?.HitResult.HasValue ?? false));
 
             var cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
-            fpcMind.ActionEnabledBy<NavigationCell>(this, () => navigationBeliefs.GetNavigationCellWithin(elevationLevel.PanelPosition + elevationLevel.PanelUp), b => b?.Is(cellWithin.TransformCell!.Value) ?? false);
+            fpcMind.ActionEnabledBy<NavigationCell>(this, () => navBeliefs.GetNavigationCellWithin(elevationLevel.PanelPosition + elevationLevel.PanelUp), b => b?.Is(cellWithin.TransformCell!.Value) ?? false);
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
-            elevationLevel = fpcMind.ActionImpacts<ElevatorLevel>(this, navigationBeliefs.ElevatorLevels[levelCell]);
+            var navBeliefs = fpcMind.GetBelief<NavigationBeliefs>();
+            elevationLevel = fpcMind.ActionImpacts<ElevatorLevel>(this, navBeliefs.ElevatorLevels[levelCell]);
         }
 
         public float Cost => 5f;

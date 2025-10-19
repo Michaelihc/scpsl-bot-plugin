@@ -9,7 +9,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
     {
         private readonly Vector3 toCellMeanPosition = toCell.MeanPosition;
         private readonly Vector3 fromCellMeanPosition = fromCell.MeanPosition;
-        private readonly NavigationBeliefs cellBeliefs = botPlayer.MindRunner.GetBelief<NavigationBeliefs>();
         private CellWithin cellWithin;
         private NavigationCell navCellFrom;
         private NavigationCell navCellTo;
@@ -19,6 +18,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         {
             this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
 
+            var cellBeliefs = fpcMind.GetBelief<NavigationBeliefs>();
             this.elevatorLevelFrom = fpcMind.ActionEnabledBy<ElevatorLevel>(this, cellBeliefs.ElevatorLevels[fromCell], e => cellWithin.TransformCell!.Value == fromCell || e.IsElevatorAt);
 
             this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.Is(cellWithin.TransformCell!.Value));
@@ -26,6 +26,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
         {
+            var cellBeliefs = fpcMind.GetBelief<NavigationBeliefs>();
             this.navCellTo = fpcMind.ActionImpacts(this, cellBeliefs.NavigationCells[toCell], b => !b.IsWithin);
         }
 

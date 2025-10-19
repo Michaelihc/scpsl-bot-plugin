@@ -65,7 +65,7 @@ namespace SCPSLBot.AI
                 CurrentBotPlayer = null;
             }
 
-            CurrentBotPlayer?.OnRoleChanged();
+            CurrentBotPlayer?.OnRoleChanged(newRole.RoleTypeId);
 
             Debug.Log($"Bot got new role assigned. Role Id: {newRole.RoleTypeId}");
             Debug.Log($"Type of role: {newRole.GetType()}");
