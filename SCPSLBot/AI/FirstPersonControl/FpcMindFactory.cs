@@ -499,9 +499,9 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         #region Mind elements flyweights
 
-        private readonly Dictionary<Type, object> beliefsObjects = [];
-        private readonly Dictionary<Type, object> actionsObjects = [];
-        private readonly Dictionary<Type, object> goalsObjects = [];
+        private readonly Dictionary<Type, Dictionary<Type, IDictionary>> beliefsObjects = [];
+        private readonly Dictionary<Type, Dictionary<Type, IDictionary>> actionsObjects = [];
+        private readonly Dictionary<Type, IGoal> goalsObjects = [];
 
         private TBelief GetBelief<TBelief>(Func<TBelief> create) where TBelief : class, IBelief
         {
@@ -529,13 +529,12 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private TBelief GetBelief<TBelief, TParams>(Func<TBelief> create, Type paramsType, TParams @params) where TBelief : IBelief
         {
-            if (!beliefsObjects.TryGetValue(typeof(TBelief), out var beliefsObject))
+            if (!beliefsObjects.TryGetValue(typeof(TBelief), out var byParam))
             {
-                beliefsObject = new Dictionary<Type, object>();
-                beliefsObjects.Add(typeof(TBelief), beliefsObject);
+                byParam = [];
+                beliefsObjects.Add(typeof(TBelief), byParam);
             }
 
-            var byParam = (Dictionary<Type, object>)beliefsObject;
             if (!byParam.TryGetValue(paramsType, out var paramsObject))
             {
                 paramsObject = new Dictionary<TParams, TBelief>();
@@ -593,13 +592,12 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private TAction GetAction<TAction, TParams>(Func<TAction> create, Type paramsType, TParams @params) where TAction : IAction
         {
-            if (!actionsObjects.TryGetValue(typeof(TAction), out var actionsObject))
+            if (!actionsObjects.TryGetValue(typeof(TAction), out var byParam))
             {
-                actionsObject = new Dictionary<Type, object>();
-                actionsObjects.Add(typeof(TAction), actionsObject);
+                byParam = [];
+                actionsObjects.Add(typeof(TAction), byParam);
             }
 
-            var byParam = (Dictionary<Type, object>)actionsObject;
             if (!byParam.TryGetValue(paramsType, out var paramsObject))
             {
                 paramsObject = new Dictionary<TParams, TAction>();
