@@ -505,25 +505,29 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private TBelief GetBelief<TBelief>(Func<TBelief> create) where TBelief : class, IBelief
         {
-            if (!beliefsObjects.TryGetValue(typeof(TBelief), out var beliefObject))
-            {
-                beliefObject = create();
-                beliefsObjects.Add(typeof(TBelief), beliefObject);
-                Beliefs.Add((IBelief)beliefObject);
+            var paramsType = typeof(ValueTuple);
+            var @params = new ValueTuple();
 
-                //Debug.Log($"Created flyweight belief {beliefObject}");
-            }
-            else
-            {
-                //Debug.Log($"Found existing flyweight belief {beliefObject}");
-            }
-
-            var belief = (TBelief)beliefObject;
-
-            return belief;
+            return GetBelief(create, paramsType, @params);
         }
 
         private TBelief GetBelief<TBelief, TParam>(Func<TBelief> create, TParam param) where TBelief : class, IBelief
+        {
+            var paramsType = typeof(ValueTuple<TParam>);
+            var @params = new ValueTuple<TParam>(param);
+
+            return GetBelief(create, paramsType, @params);
+        }
+
+        private TBelief GetBelief<TBelief, TParam1, TParam2>(Func<TBelief> create, TParam1 param1, TParam2 param2) where TBelief : IBelief
+        {
+            var paramsType = typeof((TParam1, TParam2));
+            var @params = (param1, param2);
+
+            return GetBelief(create, paramsType, @params);
+        }
+
+        private TBelief GetBelief<TBelief, TParams>(Func<TBelief> create, Type paramsType, TParams @params) where TBelief : IBelief
         {
             if (!beliefsObjects.TryGetValue(typeof(TBelief), out var beliefsObject))
             {
@@ -532,50 +536,24 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             var byParam = (Dictionary<Type, object>)beliefsObject;
-            if (!byParam.TryGetValue(typeof(TParam), out beliefsObject))
+            if (!byParam.TryGetValue(paramsType, out var paramsObject))
             {
-                beliefsObject = new Dictionary<TParam, TBelief>();
-                byParam.Add(typeof(TParam), beliefsObject);
+                paramsObject = new Dictionary<TParams, TBelief>();
+                byParam.Add(paramsType, paramsObject);
             }
 
-            var typeBeliefs = (Dictionary<TParam, TBelief>)beliefsObject;
-            if (!typeBeliefs.TryGetValue(param, out var belief))
-            {
-                belief = create();
-                typeBeliefs.Add(param, belief);
-                Beliefs.Add(belief);
-
-                //Debug.Log($"Created flyweight belief {belief} with param {param}");
-            }
-            else
-            {
-                //Debug.Log($"Found existing flyweight belief {belief} with param {param}");
-            }
-
-            return belief;
-        }
-
-        private TBelief GetBelief<TBelief, TParam1, TParam2>(Func<TBelief> create, TParam1 param1, TParam2 param2) where TBelief : class, IBelief
-        {
-            if (!beliefsObjects.TryGetValue(typeof(TBelief), out var beliefsObject))
-            {
-                beliefsObject = new Dictionary<(TParam1, TParam2), TBelief>();
-                beliefsObjects.Add(typeof(TBelief), beliefsObject);
-            }
-
-            var typeBeliefs = (Dictionary<(TParam1, TParam2), TBelief>)beliefsObject;
-            var @params = (param1, param2);
+            var typeBeliefs = (Dictionary<TParams, TBelief>)paramsObject;
             if (!typeBeliefs.TryGetValue(@params, out var belief))
             {
                 belief = create();
                 typeBeliefs.Add(@params, belief);
                 Beliefs.Add(belief);
 
-                //Debug.Log($"Created flyweight belief {belief} with params {param1} and {param2}");
+                //Debug.Log($"Created flyweight belief {belief} with params {@params}");
             }
             else
             {
-                //Debug.Log($"Found existing flyweight belief {belief} with param {param1} and {param2}");
+                //Debug.Log($"Found flyweight belief {belief} with params {@params}");
             }
 
             return belief;
@@ -583,24 +561,37 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private TAction GetAction<TAction>(Func<TAction> create) where TAction : class, IAction
         {
-            if (!actionsObjects.TryGetValue(typeof(TAction), out var actionObject))
-            {
-                actionObject = create();
-                actionsObjects.Add(typeof(TAction), actionObject);
+            var paramsType = typeof(ValueTuple);
+            var @params = new ValueTuple();
 
-                //Debug.Log($"Created flyweight action {actionObject}");
-            }
-            else
-            {
-                //Debug.Log($"Found existing flyweight action {actionObject}");
-            }
-
-            var action = (TAction)actionObject;
-
-            return action;
+            return GetAction(create, paramsType, @params);
         }
 
         private TAction GetAction<TAction, TParam>(Func<TAction> create, TParam param) where TAction : class, IAction
+        {
+            var paramsType = typeof(ValueTuple<TParam>);
+            var @params = new ValueTuple<TParam>(param);
+
+            return GetAction(create, paramsType, @params);
+        }
+
+        private TAction GetAction<TAction, TParam1, TParam2>(Func<TAction> create, TParam1 param1, TParam2 param2) where TAction : IAction
+        {
+            var paramsType = typeof((TParam1, TParam2));
+            var @params = (param1, param2);
+
+            return GetAction(create, paramsType, @params);
+        }
+
+        private TAction GetAction<TAction, TParam1, TParam2, TParam3>(Func<TAction> create, TParam1 param1, TParam2 param2, TParam3 param3) where TAction : IAction
+        {
+            var paramsType = typeof((TParam1, TParam2, TParam3));
+            var @params = (param1, param2, param3);
+
+            return GetAction(create, paramsType, @params);
+        }
+
+        private TAction GetAction<TAction, TParams>(Func<TAction> create, Type paramsType, TParams @params) where TAction : IAction
         {
             if (!actionsObjects.TryGetValue(typeof(TAction), out var actionsObject))
             {
@@ -609,74 +600,23 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             var byParam = (Dictionary<Type, object>)actionsObject;
-
-            if (!byParam.TryGetValue(typeof(TParam), out actionsObject))
+            if (!byParam.TryGetValue(paramsType, out var paramsObject))
             {
-                actionsObject = new Dictionary<TParam, TAction>();
-                byParam.Add(typeof(TParam), actionsObject);
+                paramsObject = new Dictionary<TParams, TAction>();
+                byParam.Add(paramsType, paramsObject);
             }
 
-            var actions = (Dictionary<TParam, TAction>)actionsObject;
-            if (!actions.TryGetValue(param, out var action))
+            var typeActions = (Dictionary<TParams, TAction>)paramsObject;
+            if (!typeActions.TryGetValue(@params, out var action))
             {
                 action = create();
-                actions.Add(param, action);
+                typeActions.Add(@params, action);
 
-                //Debug.Log($"Created flyweight action {action} with param {param}");
+                //Debug.Log($"Created flyweight action {action} with params {@params}");
             }
             else
             {
-                //Debug.Log($"Found existing flyweight action {action} with param {param}");
-            }
-
-            return action;
-        }
-
-        private TAction GetAction<TAction, TParam1, TParam2>(Func<TAction> create, TParam1 param1, TParam2 param2) where TAction : class, IAction
-        {
-            if (!actionsObjects.TryGetValue(typeof(TAction), out var actionsObject))
-            {
-                actionsObject = new Dictionary<(TParam1, TParam2), TAction>();
-                actionsObjects.Add(typeof(TAction), actionsObject);
-            }
-
-            var actions = (Dictionary<(TParam1, TParam2), TAction>)actionsObject;
-            var @params = (param1, param2);
-            if (!actions.TryGetValue(@params, out var action))
-            {
-                action = create();
-                actions.Add(@params, action);
-
-                //Debug.Log($"Created flyweight action {action} with params {param1} and {param2}");
-            }
-            else
-            {
-                //Debug.Log($"Found existing flyweight action {action} with params {param1} and {param2}");
-            }
-
-            return action;
-        }
-
-        private TAction GetAction<TAction, TParam1, TParam2, TParam3>(Func<TAction> create, TParam1 param1, TParam2 param2, TParam3 param3) where TAction : class, IAction
-        {
-            if (!actionsObjects.TryGetValue(typeof(TAction), out var actionsObject))
-            {
-                actionsObject = new Dictionary<(TParam1, TParam2, TParam3), TAction>();
-                actionsObjects.Add(typeof(TAction), actionsObject);
-            }
-
-            var actions = (Dictionary<(TParam1, TParam2, TParam3), TAction>)actionsObject;
-            var @params = (param1, param2, param3);
-            if (!actions.TryGetValue(@params, out var action))
-            {
-                action = create();
-                actions.Add(@params, action);
-
-                //Debug.Log($"Created flyweight action {action} with params {param1} and {param2} and {param3}");
-            }
-            else
-            {
-                //Debug.Log($"Found existing flyweight action {action} with params {param1} and {param2} and {param3}");
+                //Debug.Log($"Found flyweight action {action} with params {@params}");
             }
 
             return action;
