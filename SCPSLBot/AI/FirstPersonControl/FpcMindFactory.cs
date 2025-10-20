@@ -22,6 +22,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
 
@@ -505,29 +506,26 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private TBelief GetBelief<TBelief>(Func<TBelief> create) where TBelief : class, IBelief
         {
-            var paramsType = typeof(ValueTuple);
             var @params = new ValueTuple();
 
-            return GetBelief(create, paramsType, @params);
+            return GetBeliefInternal(create, @params);
         }
 
         private TBelief GetBelief<TBelief, TParam>(Func<TBelief> create, TParam param) where TBelief : class, IBelief
         {
-            var paramsType = typeof(ValueTuple<TParam>);
             var @params = new ValueTuple<TParam>(param);
 
-            return GetBelief(create, paramsType, @params);
+            return GetBeliefInternal(create, @params);
         }
 
         private TBelief GetBelief<TBelief, TParam1, TParam2>(Func<TBelief> create, TParam1 param1, TParam2 param2) where TBelief : IBelief
         {
-            var paramsType = typeof((TParam1, TParam2));
             var @params = (param1, param2);
 
-            return GetBelief(create, paramsType, @params);
+            return GetBeliefInternal(create, @params);
         }
 
-        private TBelief GetBelief<TBelief, TParams>(Func<TBelief> create, Type paramsType, TParams @params) where TBelief : IBelief
+        private TBelief GetBeliefInternal<TBelief, TParams>(Func<TBelief> create, TParams @params) where TBelief : IBelief
         {
             if (!beliefsObjects.TryGetValue(typeof(TBelief), out var byParam))
             {
@@ -535,10 +533,10 @@ namespace SCPSLBot.AI.FirstPersonControl
                 beliefsObjects.Add(typeof(TBelief), byParam);
             }
 
-            if (!byParam.TryGetValue(paramsType, out var paramsObject))
+            if (!byParam.TryGetValue(typeof(TParams), out var paramsObject))
             {
                 paramsObject = new Dictionary<TParams, TBelief>();
-                byParam.Add(paramsType, paramsObject);
+                byParam.Add(typeof(TParams), paramsObject);
             }
 
             var typeBeliefs = (Dictionary<TParams, TBelief>)paramsObject;
@@ -560,37 +558,33 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private TAction GetAction<TAction>(Func<TAction> create) where TAction : class, IAction
         {
-            var paramsType = typeof(ValueTuple);
             var @params = new ValueTuple();
 
-            return GetAction(create, paramsType, @params);
+            return GetActionInternal(create, @params);
         }
 
-        private TAction GetAction<TAction, TParam>(Func<TAction> create, TParam param) where TAction : class, IAction
+        private TAction GetAction<TAction, TParam>(Func<TAction> create, TParam param) where TAction : IAction
         {
-            var paramsType = typeof(ValueTuple<TParam>);
             var @params = new ValueTuple<TParam>(param);
 
-            return GetAction(create, paramsType, @params);
+            return GetActionInternal(create, @params);
         }
 
         private TAction GetAction<TAction, TParam1, TParam2>(Func<TAction> create, TParam1 param1, TParam2 param2) where TAction : IAction
         {
-            var paramsType = typeof((TParam1, TParam2));
             var @params = (param1, param2);
 
-            return GetAction(create, paramsType, @params);
+            return GetActionInternal(create, @params);
         }
 
         private TAction GetAction<TAction, TParam1, TParam2, TParam3>(Func<TAction> create, TParam1 param1, TParam2 param2, TParam3 param3) where TAction : IAction
         {
-            var paramsType = typeof((TParam1, TParam2, TParam3));
             var @params = (param1, param2, param3);
 
-            return GetAction(create, paramsType, @params);
+            return GetActionInternal(create, @params);
         }
 
-        private TAction GetAction<TAction, TParams>(Func<TAction> create, Type paramsType, TParams @params) where TAction : IAction
+        private TAction GetActionInternal<TAction, TParams>(Func<TAction> create, TParams @params) where TAction : IAction
         {
             if (!actionsObjects.TryGetValue(typeof(TAction), out var byParam))
             {
@@ -598,10 +592,10 @@ namespace SCPSLBot.AI.FirstPersonControl
                 actionsObjects.Add(typeof(TAction), byParam);
             }
 
-            if (!byParam.TryGetValue(paramsType, out var paramsObject))
+            if (!byParam.TryGetValue(typeof(TParams), out var paramsObject))
             {
                 paramsObject = new Dictionary<TParams, TAction>();
-                byParam.Add(paramsType, paramsObject);
+                byParam.Add(typeof(TParams), paramsObject);
             }
 
             var typeActions = (Dictionary<TParams, TAction>)paramsObject;
