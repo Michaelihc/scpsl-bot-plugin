@@ -26,12 +26,14 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             this.MindFactory = mindFactory;
 
-            var mind = new FpcMind();
+            FpcMind mind;
+
+            mind = new();
             this.MindFactory.BuildMindClassD(mind);
             this.MindsByRoles.Add(RoleTypeId.ClassD, mind);
 
-            mind = new FpcMind();
-            this.MindFactory.BuildMindClassD(mind);
+            mind = new();
+            this.MindFactory.BuildMindScientist(mind);
             this.MindsByRoles.Add(RoleTypeId.Scientist, mind);
         }
 
