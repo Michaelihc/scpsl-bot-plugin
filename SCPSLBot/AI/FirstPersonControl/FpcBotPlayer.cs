@@ -51,6 +51,18 @@ namespace SCPSLBot.AI.FirstPersonControl
             MindFactory = new(this, Perception);
             MindRunner = new FpcMindRunner(MindFactory);
 
+            FpcMind mind;
+
+            mind = new();
+            MindFactory.BuildMindClassD(mind);
+            MindRunner.MindsByRoles.Add(RoleTypeId.ClassD, mind);
+
+            mind = new();
+            MindFactory.BuildMindScientist(mind);
+            MindRunner.MindsByRoles.Add(RoleTypeId.Scientist, mind);
+
+            MindRunner.SubscribeToBeliefUpdates();
+
             Navigator = new(this);
             Look = new(this);
             Move = new(this);

@@ -25,16 +25,6 @@ namespace SCPSLBot.AI.FirstPersonControl
         public FpcMindRunner(FpcMindFactory mindFactory)
         {
             this.MindFactory = mindFactory;
-
-            FpcMind mind;
-
-            mind = new();
-            this.MindFactory.BuildMindClassD(mind);
-            this.MindsByRoles.Add(RoleTypeId.ClassD, mind);
-
-            mind = new();
-            this.MindFactory.BuildMindScientist(mind);
-            this.MindsByRoles.Add(RoleTypeId.Scientist, mind);
         }
 
         public void SubscribeToBeliefUpdates()
