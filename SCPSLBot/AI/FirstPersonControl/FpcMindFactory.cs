@@ -259,7 +259,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             mind.AddAction(GetAction(() => new GoToLockerSpawnLocation<ItemOfType>(ItemType.KeycardZoneManager, StructureType.StandardLocker, botPlayer), ItemType.KeycardZoneManager));
             mind.AddAction(GetAction(() => new GoToItemSpawnInLocker<ItemOfType>(ItemType.KeycardZoneManager, botPlayer), ItemType.KeycardZoneManager));
 
-            mind.AddAction(GetAction(() => new GoToSearchRoom<ItemOfType>(ItemType.KeycardZoneManager, 0, botPlayer), ItemType.KeycardZoneManager));
+            mind.AddAction(GetAction(() => new GoToSearchRoom<ItemOfType>(ItemType.KeycardZoneManager, FacilityZone.LightContainment, 0, botPlayer), ItemType.KeycardZoneManager));
             #endregion
 
             #region KeycardScientist picking up and searching

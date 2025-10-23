@@ -75,7 +75,7 @@ namespace SCPSLBot.Navigation
             var stringBuilder = new StringBuilder();
             foreach (var door in DoorVariant.AllDoors)
             {
-                if (door is CheckpointDoor)
+                if (door is CheckpointDoor or ElevatorDoor)
                 {
                     continue;
                 }

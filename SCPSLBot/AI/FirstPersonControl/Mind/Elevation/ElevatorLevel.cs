@@ -20,23 +20,24 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
 
         public void Update()
         {
-            DrawableLines.GenerateSphere(PanelPosition + PanelUp, .5f);
-
-            if (!sightSense.IsPositionWithinFov(PanelPosition))
+            if (sightSense.GetDistanceToPositionSqr(cell.MeanPosition) > 4f)
             {
-                return;
-            }
+                if (!sightSense.IsPositionWithinFov(PanelPosition))
+                {
+                    return;
+                }
 
-            if (!sightSense.IsPositionObstructed(PanelPosition, out var hit)
-                || hit.collider.GetComponent<ElevatorPanel>() is not ElevatorPanel panel)
-            {
-                return;
-            }
+                if (!sightSense.IsPositionObstructed(PanelPosition, out var panelPosHit)
+                    || panelPosHit.collider.GetComponent<ElevatorPanel>() is not ElevatorPanel panel)
+                {
+                    return;
+                }
 
-            HitPanel ??= panel;
+                HitPanel = panel;
+            }            
 
             var levelPosition = cell.MeanPosition;
-            if (!Physics.Raycast(levelPosition, Vector3.down, out hit, 2f)
+            if (!Physics.Raycast(levelPosition, Vector3.down, out var hit, 2f, ElevatorMask)
                 || hit.collider.GetComponentInParent<ElevatorChamber>() is not ElevatorChamber chamber)
             {
                 if (ChamberAtLevel is not null)
@@ -58,5 +59,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         {
             return $"{nameof(ElevatorLevel)}({cell}): {IsElevatorAt}";
         }
+
+        private readonly int ElevatorMask = ~LayerMask.GetMask("Player", "Hitbox");
     }
 }

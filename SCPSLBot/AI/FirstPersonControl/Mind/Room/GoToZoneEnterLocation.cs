@@ -28,7 +28,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Room
             fpcMind.ActionImpacts<ZoneWithin>(this, b => b.Zone == Zone);
         }
 
+        private const float MaxZoneExtent = 150f;
+
         public override float Weight { get; } = 1f;
+        public override float Cost { get; } = MaxZoneExtent;
 
         private readonly FpcBotPlayer botPlayer;
 

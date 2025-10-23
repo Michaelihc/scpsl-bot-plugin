@@ -57,6 +57,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             return $"{nameof(Obstacle)}({transformCell}): {HitResult.HasValue}";
         }
 
-        private const float nearDistSqr = 2f * 2f;
+        private const float nearDist = 2f;
+        private const float nearDistSqr = nearDist * nearDist;
     }
 }

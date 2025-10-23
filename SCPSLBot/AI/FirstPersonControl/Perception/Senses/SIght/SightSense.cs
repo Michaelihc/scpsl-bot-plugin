@@ -243,6 +243,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
 
         protected static bool IsWithinFov(Vector3 position, Vector3 forward, Vector3 targetPosition)
         {
+            const float sightDistSqr = 32f * 32f;
+            if (Vector3.SqrMagnitude(targetPosition - position) > sightDistSqr)
+            {
+                return false;
+            }
+
             var facingDir = forward;
             var diff = Vector3.Normalize(targetPosition - position);
 
