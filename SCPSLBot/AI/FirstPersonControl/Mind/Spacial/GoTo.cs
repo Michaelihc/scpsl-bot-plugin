@@ -61,7 +61,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
         private float Distance => location.Positions.Count > Idx
             ? this.getLocationNavCell()?.IsWithin ?? false
                 ? Vector3.Distance(location.Positions[Idx], botPlayer.PlayerPosition)
-                : 0f
+                : DefaultDistance
             : DefaultDistance;
 
         public abstract float Weight { get; }

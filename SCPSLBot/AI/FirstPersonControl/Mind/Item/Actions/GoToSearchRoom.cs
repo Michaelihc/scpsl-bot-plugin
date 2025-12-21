@@ -38,7 +38,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
             fpcMind.ActionImpacts<ItemSightedLocation<C>>(this, b => b.Criteria.Equals(Criteria));
         }
 
-        public override float Weight => 20f;    // to make this action as last resort as possible
+        public override float Weight => 30f;    // to make this action as last resort as possible
         public override float Cost => Weight * 10;
 
         private readonly FpcBotPlayer botPlayer;

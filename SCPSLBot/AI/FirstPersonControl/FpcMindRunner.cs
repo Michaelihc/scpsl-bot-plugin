@@ -40,6 +40,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             if (!MindsByRoles.TryGetValue(roleType, out var mind))
             {
                 Debug.Log($"No mind defined for role {roleType}");
+                RunningMind = null;
             }
             else
             {
@@ -56,7 +57,6 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(Tick)}");
 
-            // Run update on all relevant beliefs in undefined order (uses HashSet)
             foreach (var belief in VisitedActionsEnabledBy.Keys)
             {
                 belief.Update();
@@ -110,6 +110,11 @@ namespace SCPSLBot.AI.FirstPersonControl
             VisitedActionsEnabledBy.Clear();
             VisitedActionsImpactedBy.Clear();
             VisitedGoalsImpactedBy.Clear();
+
+            if (RunningMind is null)
+            {
+                yield break;
+            }
 
             foreach (var goal in RunningMind.BeliefsEnablingGoals.Keys)
             {
