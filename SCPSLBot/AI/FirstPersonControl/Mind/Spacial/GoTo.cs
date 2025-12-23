@@ -48,7 +48,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             this.navBeliefs = fpcMind.ActionEnabledBy<NavigationBeliefs>(this, b => true);
             fpcMind.ActionEnabledBy<Obstacle>(this, () => this.navBeliefs.GetReceivedObstacle(this.location.Positions[Idx]), b => !(b?.HitResult.HasValue ?? false));
 
-            fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationObstacle(this.getLocationNavCell()), b => !(b?.HitResult.HasValue ?? false));
+            // Add obstacle belief enabling this action once needed.
 
             this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => location.NearPositions.Contains(getTargetPosition()) || b.TransformCell.HasValue);
             this.getLocationNavCell = fpcMind.ActionEnabledBy(this, () => this.navBeliefs.GetNavigationCellWithin(getTargetPosition()), b => location.NearPositions.Contains(getTargetPosition()) || (b?.Is(cellWithin.TransformCell!.Value) ?? false));

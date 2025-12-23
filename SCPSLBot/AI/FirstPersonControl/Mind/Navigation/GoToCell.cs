@@ -23,10 +23,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             var cellBeliefs = fpcMind.GetBelief<NavigationBeliefs>();
             if (cellBeliefs.Obstacles.TryGetValue(fromCell, out var obstacleBelief))
             {
-                fpcMind.ActionEnabledBy(this, obstacleBelief, b => !b.HitResult.HasValue);
+                fpcMind.ActionEnabledBy(this, obstacleBelief, b => true);
             }
-
-            fpcMind.ActionEnabledBy<ZoneWithin>(this, b => b.Zone == fromZone, b => b.IsWithin);
 
             this.cellWithin = fpcMind.ActionEnabledBy<CellWithin>(this, b => b.TransformCell.HasValue);
             this.navCellFrom = fpcMind.ActionEnabledBy(this, cellBeliefs.NavigationCells[fromCell], c => c.Is(cellWithin.TransformCell!.Value));            
