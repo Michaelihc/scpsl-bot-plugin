@@ -23,7 +23,12 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
-    internal partial class FpcBotPlayer : IBotPlayer
+    internal class FpcBotPlayer<TFpcRole>(BotHub botHub) : FpcBotPlayer(botHub) where TFpcRole : FpcStandardRoleBase
+    {
+        public new TFpcRole FpcRole => (TFpcRole)base.FpcRole;
+    }
+
+    internal class FpcBotPlayer : IBotPlayer
     {
         public FpcStandardRoleBase FpcRole { get; set; }
 

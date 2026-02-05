@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
 {
-    internal class Location : IBelief
+    internal class Location : IBelief, INotifyPropertyChanged
     {
         public event Action OnUpdate;
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public readonly List<Vector3> Positions = new();
         public readonly List<Vector3> NearPositions = [];
 
@@ -68,6 +71,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             if (changed)
             {
                 OnUpdate?.Invoke();
+
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Positions)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NearPositions)));
             }
         }
 
@@ -76,7 +82,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             if (Positions.RemoveAll(predicate) > 0)
             {
                 NearPositions.RemoveAll(predicate);
-                OnUpdate?.Invoke(); 
+                OnUpdate?.Invoke();
+
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Positions)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NearPositions)));
             }
         }
 
@@ -86,6 +95,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             {
                 NearPositions.Add(pos);
                 OnUpdate?.Invoke();
+
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NearPositions)));
             }
         }
 
@@ -94,6 +105,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Spacial
             if (NearPositions.Remove(pos))
             {
                 OnUpdate?.Invoke();
+
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NearPositions)));
             }
         }
     }

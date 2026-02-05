@@ -7,7 +7,6 @@ using SCPSLBot.AI.FirstPersonControl.Mind;
 using SCPSLBot.AI.FirstPersonControl.Mind.Door;
 using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
 using SCPSLBot.AI.FirstPersonControl.Mind.Escape;
-using SCPSLBot.AI.FirstPersonControl.Mind.Goals;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions;
 using SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs;

@@ -1,8 +1,7 @@
-﻿using SCPSLBot.AI.FirstPersonControl.Mind.Escape;
-using System.Linq;
+﻿using System.Linq;
 using UnityEngine;
 
-namespace SCPSLBot.AI.FirstPersonControl.Mind.Goals
+namespace SCPSLBot.AI.FirstPersonControl.Mind.Escape
 {
     internal class EscapeTheFacility : IGoal
     {
