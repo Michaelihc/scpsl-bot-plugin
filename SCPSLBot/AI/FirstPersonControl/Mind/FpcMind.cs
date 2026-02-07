@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind
 {
-    internal class FpcMind
+    internal partial class FpcMind
     {
         public Dictionary<IAction, List<(Func<IBelief> Belief, Predicate<IBelief> Predicate)>> BeliefsEnablingActions { get; } = new();
 
@@ -41,14 +41,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             BeliefsEnablingActions[action].Add((beliefGetter, b => enablingPredicate(b as B)));
 
             return beliefGetter;
-        }
-
-        public B ActionImpacts<B>(IAction action) where B : class, IBelief
-        {
-            var beliefsOfType = Beliefs[typeof(B)];
-            var belief = beliefsOfType.Single() as B;
-
-            return ActionImpacts(action, belief, static b => true);
         }
 
         public B ActionImpacts<B>(IAction action, Predicate<B> beliefPredicate) where B : class, IBelief
@@ -104,7 +96,18 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             BeliefsEnablingActions.Add(action, new());
 
             action.SetImpactsBeliefs(this);
+            foreach (var impacts in actionImpactsBeliefs)
+            {
+                impacts.AddTo(this);
+            }
+            actionImpactsBeliefs.Clear();
+
             action.SetEnabledByBeliefs(this);
+            foreach (var enabledBy in actionEnabledByBeliefs)
+            {
+                enabledBy.AddTo(this);
+            }
+            actionEnabledByBeliefs.Clear();
 
             return this;
         }
@@ -115,10 +118,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind
             {
                 var action = actionFactory.Invoke(i);
 
-                BeliefsEnablingActions.Add(action, new());
-
-                action.SetImpactsBeliefs(this);
-                action.SetEnabledByBeliefs(this);
+                AddAction(action);
             }
 
             return this;

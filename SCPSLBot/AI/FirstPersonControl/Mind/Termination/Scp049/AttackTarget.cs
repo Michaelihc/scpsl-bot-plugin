@@ -14,7 +14,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Termination.Scp049
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
-            fpcMind.ActionEnabledBy<TargetLocation>(this, b => b.NearPositions.Contains(b.Positions[idx]));
+            fpcMind.ActionEnabledBy<TargetLocation>(this)
+                .Condition(b => b.NearPositions.Contains(b.Positions[idx]));
         }
 
         public void SetImpactsBeliefs(FpcMind fpcMind)
