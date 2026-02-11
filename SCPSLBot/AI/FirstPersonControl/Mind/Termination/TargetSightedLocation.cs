@@ -17,6 +17,21 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Termination
             var enemyPositions = enemyPlayers.Select(h => (IFpcRole)h.roleManager.CurrentRole).Select(r => r.FpcModule.Position);
 
             SetPositions(enemyPositions);
+            
+            // Evaluate nearness to positions
+            foreach (var position in Positions)
+            {
+                if (playersWithinSense.GetDistanceToPositionSqr(position) <= NearDistSqr)
+                {
+                    AddNearPosition(position);
+                }
+                else
+                {
+                    RemoveNearPosition(position);
+                }
+            }
         }
+
+        private const float NearDistSqr = 1.75f * 1.75f;
     }
 }
