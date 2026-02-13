@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Termination.Scp049
 {
-    internal class AttackTarget(int idx, FpcBotPlayer<Scp049Role> botPlayer) : IAction
+    internal class AttackTarget(int idx, FpcBotPlayer botPlayer) : IAction
     {
-        private readonly SubroutineBase attackAbility = botPlayer.FpcRole.SubroutineModule.AllSubroutines.First(sr => sr is Scp049AttackAbility);
+        private SubroutineBase attackAbility;
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
@@ -25,13 +25,15 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Termination.Scp049
 
         public float Cost => 0f;
 
-        public void Tick()
-        {
-            botPlayer.BotHub.ConnectionToServer.Send<SubroutineMessage>(new(attackAbility, false));
-        }
-
         public void Reset()
         {
+        }
+
+        public void Tick()
+        {
+            attackAbility ??= ((Scp049Role)botPlayer.CurrentRole).SubroutineModule.AllSubroutines.First(sr => sr is Scp049AttackAbility);
+
+            botPlayer.BotHub.ConnectionToServer.Send<SubroutineMessage>(new(attackAbility, false));
         }
     }
 }

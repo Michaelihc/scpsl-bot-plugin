@@ -3,6 +3,7 @@ using Interactables.Interobjects;
 using Interactables.Interobjects.DoorUtils;
 using MapGeneration;
 using MapGeneration.Distributors;
+using PlayerRoles.PlayableScps.Scp049;
 using SCPSLBot.AI.FirstPersonControl.Mind;
 using SCPSLBot.AI.FirstPersonControl.Mind.Door;
 using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
@@ -15,6 +16,8 @@ using SCPSLBot.AI.FirstPersonControl.Mind.Navigation;
 using SCPSLBot.AI.FirstPersonControl.Mind.Room;
 using SCPSLBot.AI.FirstPersonControl.Mind.Room.Beliefs;
 using SCPSLBot.AI.FirstPersonControl.Mind.Scp914;
+using SCPSLBot.AI.FirstPersonControl.Mind.Termination;
+using SCPSLBot.AI.FirstPersonControl.Mind.Termination.Scp049;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using SCPSLBot.Navigation.Mesh;
 using System;
@@ -51,6 +54,33 @@ namespace SCPSLBot.AI.FirstPersonControl
             AddScp914Operations(mind);
 
             AddFacilityEscaping(mind);
+        }
+
+        public void BuildMindScp049(FpcMind mind)
+        {
+            AddNavigation(mind);
+
+            AddTargetTermination(mind);
+            AddTargetAttacking(mind);
+            AddTargetSearching(mind);
+        }
+
+        private void AddTargetTermination(FpcMind mind)
+        {
+            mind.AddBelief(GetBelief(() => new RemainingTargets()));
+            mind.AddGoal(GetGoal(() => new TerminateTargets()));
+        }
+
+        private void AddTargetAttacking(FpcMind mind)
+        {
+            mind.AddBelief(GetBelief(() => new TargetSightedLocation(perception.GetSense<PlayersWithinSightSense>())));
+            mind.AddActions(idx => new AttackTarget(idx, botPlayer));
+            mind.AddActions(idx => new GoToTarget(idx, botPlayer));
+        }
+
+        private void AddTargetSearching(FpcMind mind)
+        {
+            mind.AddActions(idx => new GoToSearchRoom(idx, botPlayer));
         }
 
         private void AddFacilityEscaping(FpcMind mind)

@@ -1,5 +1,6 @@
 ﻿using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
+using PlayerRoles.PlayableScps.Scp049;
 using SCPSLBot.AI.FirstPersonControl;
 using SCPSLBot.LocalNetworking;
 using System;
@@ -53,16 +54,18 @@ namespace SCPSLBot.AI
             CurrentBotPlayer = null;
         }
 
-        public void OnRoleChanged(PlayerRoleBase prevRole, PlayerRoleBase newRole)
+        public void OnRoleChanged(PlayerRoleBase _, PlayerRoleBase newRole)
         {
-            if (newRole is FpcStandardRoleBase fpcRole)
+            switch (newRole)
             {
-                FpcPlayer.FpcRole = fpcRole;
-                CurrentBotPlayer = FpcPlayer;
-            }
-            else
-            {
-                CurrentBotPlayer = null;
+                case FpcStandardRoleBase fpcRole:
+                    FpcPlayer.CurrentRole = fpcRole;
+                    CurrentBotPlayer = FpcPlayer;
+
+                    break;
+                default:
+                    CurrentBotPlayer = null;
+                    break;
             }
 
             CurrentBotPlayer?.OnRoleChanged(newRole.RoleTypeId);

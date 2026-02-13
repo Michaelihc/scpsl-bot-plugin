@@ -19,18 +19,12 @@ using System.Text;
 using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Profiling;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
-    internal class FpcBotPlayer<TFpcRole>(BotHub botHub) : FpcBotPlayer(botHub) where TFpcRole : FpcStandardRoleBase
-    {
-        public new TFpcRole FpcRole => (TFpcRole)base.FpcRole;
-    }
-
     internal class FpcBotPlayer : IBotPlayer
     {
-        public FpcStandardRoleBase FpcRole { get; set; }
+        public FpcStandardRoleBase CurrentRole { get; set; }
 
         public BotHub BotHub { get; }
         public FpcBotPerception Perception { get; }
@@ -66,6 +60,10 @@ namespace SCPSLBot.AI.FirstPersonControl
             MindFactory.BuildMindScientist(mind);
             MindRunner.MindsByRoles.Add(RoleTypeId.Scientist, mind);
 
+            mind = new();
+            MindFactory.BuildMindScp049(mind);
+            MindRunner.MindsByRoles.Add(RoleTypeId.Scp049, mind);
+
             MindRunner.SubscribeToBeliefUpdates();
 
             Navigator = new(this);
@@ -75,7 +73,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public IEnumerator<JobHandle> Update()
         {
-            var playerTransform = FpcRole.transform;
+            var playerTransform = CurrentRole.transform;
             this.PlayerPosition = playerTransform.position;
             this.PlayerForward = playerTransform.forward;
 
@@ -120,18 +118,18 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void SteerToPosition(Vector3 targetPosition)
         {
-            var relativePos = targetPosition - this.FpcRole.CameraPosition;
+            var relativePos = targetPosition - this.CurrentRole.CameraPosition;
             var relativeHorizontalPos = Vector3.ProjectOnPlane(relativePos, Vector3.up);
-            var turnPosition = relativeHorizontalPos + this.FpcRole.CameraPosition;
+            var turnPosition = relativeHorizontalPos + this.CurrentRole.CameraPosition;
 
             this.Look.ToPosition(turnPosition);
 
-            var playerDirection = FpcRole.FpcModule.transform.forward;
+            var playerDirection = CurrentRole.FpcModule.transform.forward;
             var dirTowardsTarget = Vector3.Normalize(relativeHorizontalPos);
 
             if (Vector3.Dot(playerDirection, dirTowardsTarget) < 0f)
             {
-                this.Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(dirTowardsTarget);
+                this.Move.DesiredLocalDirection = CurrentRole.FpcModule.transform.InverseTransformDirection(dirTowardsTarget);
             }
             else
             {
@@ -157,7 +155,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             var playerPosition = this.PlayerPosition;
-            var moveDirection = this.FpcRole.FpcModule.transform.TransformDirection(this.Move.DesiredLocalDirection);
+            var moveDirection = this.CurrentRole.FpcModule.transform.TransformDirection(this.Move.DesiredLocalDirection);
             var playerRadius = this.BotHub.PlayerHub.GetComponent<CharacterController>().radius;
             var playerHeight = this.BotHub.PlayerHub.GetComponent<CharacterController>().height;
 
@@ -209,7 +207,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             var obstructingDepth = Mathf.Max(structureExtent + playerRadius - obstructingPlane.GetDistanceToPoint(playerPosition + moveDirection), 0f);
 
             moveDirection = Vector3.Normalize(moveDirection + obstructingForward * obstructingDepth);
-            this.Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(moveDirection);
+            this.Move.DesiredLocalDirection = CurrentRole.FpcModule.transform.InverseTransformDirection(moveDirection);
         }
 
         #endregion

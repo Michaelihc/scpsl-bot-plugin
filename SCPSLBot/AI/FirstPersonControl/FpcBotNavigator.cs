@@ -56,7 +56,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void UpdateNavigationTo(Vector3 goalPosition)
         {
-            var playerPosition = botPlayer.FpcRole.FpcModule.transform.position;
+            var playerPosition = botPlayer.CurrentRole.FpcModule.transform.position;
 
             if (!IsAtLastCell())
             {

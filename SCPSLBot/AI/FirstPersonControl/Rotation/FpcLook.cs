@@ -27,7 +27,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Looking
 
         public void ToPosition(Vector3 targetPosition)
         {
-            var playerTransform = botPlayer.FpcRole.FpcModule.transform;
+            var playerTransform = botPlayer.CurrentRole.FpcModule.transform;
             var cameraTransform = botPlayer.BotHub.PlayerHub.PlayerCameraReference;
 
             var relativePos = targetPosition - cameraTransform.position;
