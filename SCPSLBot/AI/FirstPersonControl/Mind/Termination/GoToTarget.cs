@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Termination
 {
-    internal class GoToTarget(FpcBotPlayer botPlayer) : GoTo<TargetSightedLocation>(0, botPlayer)
+    internal class GoToTarget(int idx, FpcBotPlayer botPlayer) : GoTo<TargetSightedLocation>(idx, botPlayer)
     {
         public override void SetImpactsBeliefs(FpcMind fpcMind)
         {
             fpcMind.ActionImpacts<TargetSightedLocation>(this)
-                .Condition(b => ! b.NearPositions.Contains(b.Positions[Idx]));
+                .Condition(b => b.Positions.Count > Idx && !b.NearPositions.Contains(b.Positions[Idx]));
         }
 
         public override float Weight { get; } = 1f;
