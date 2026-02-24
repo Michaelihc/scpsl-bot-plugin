@@ -7,12 +7,20 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 {
     internal class OpenNonKeycardInteractableObstacle(TransformCell transformCell, NavigationBeliefs navigationBeliefs, FpcBotPlayer botPlayer) : IAction
     {
+        public readonly Vector3 ObstaclePosition = transformCell.MeanPosition + Vector3.up * 2f;
+        private readonly TransformCell transformCell = transformCell;
         private readonly FpcBotPlayer botPlayer = botPlayer;
         private Obstacle doorObstacleBelief;
         private const float interactDistance = 2f;
 
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
+            var navBeliefs = fpcMind.ActionEnabledBy<NavigationBeliefs>(this, b => true);
+            fpcMind.ActionEnabledBy<Obstacle>(this,
+                beliefGetter: () => navBeliefs.GetReceivedObstacle(ObstaclePosition),
+                enablingPredicate: b => !(b?.HitResult.HasValue ?? false)
+            );
+
             fpcMind.ActionEnabledBy<NavigationCell>(this, navigationBeliefs.NavigationCells[transformCell], b => doorObstacleBelief.IsNear || b.IsWithin);
         }
 

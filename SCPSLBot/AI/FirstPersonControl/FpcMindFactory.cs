@@ -80,7 +80,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void AddTargetSearching(FpcMind mind)
         {
-            mind.AddActions(idx => new GoToSearchRoom(idx, botPlayer));
+            mind.AddAction(GetAction(() => new GoToSearchRoomForTarget(0, botPlayer)));
         }
 
         private void AddFacilityEscaping(FpcMind mind)

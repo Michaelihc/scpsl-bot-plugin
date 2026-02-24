@@ -1,4 +1,5 @@
-﻿using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
+﻿using SCPSLBot.AI.FirstPersonControl.Mind.Door;
+using SCPSLBot.AI.FirstPersonControl.Mind.Elevation;
 using SCPSLBot.AI.FirstPersonControl.Mind.Spacial;
 using SCPSLBot.Navigation.Mesh;
 using System;
@@ -46,6 +47,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
             Vector3? goalPosResult = action switch
             {
                 GoTo goToAction => goToAction.Location.Positions[goToAction.Idx],
+                
+                OpenNonKeycardInteractableObstacle openNonKeycardInteractableObstacle => openNonKeycardInteractableObstacle.ObstaclePosition,
+                OpenKeycardDoorObstacle openKeycardObstacle => openKeycardObstacle.ObstaclePosition,
+
                 CallAndWaitForElevator callWaitElevatorAction => callWaitElevatorAction.Level.PanelPosition,
 
                 _ => null

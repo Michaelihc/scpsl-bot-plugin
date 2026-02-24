@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Termination
 {
-    internal class GoToSearchRoom(int idx, FpcBotPlayer botPlayer) : GoTo<RoomEnterLocation>(idx, botPlayer)
+    internal class GoToSearchRoomForTarget(int idx, FpcBotPlayer botPlayer) : GoTo<RoomEnterLocation>(idx, botPlayer)
     {
+        private readonly FpcBotPlayer botPlayer = botPlayer;
+
         public override void SetImpactsBeliefs(FpcMind fpcMind)
         {
             fpcMind.ActionImpacts<TargetSightedLocation>(this)
@@ -28,6 +30,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Termination
 
         public override void Reset()
         {
+        }
+
+        public override string ToString()
+        {
+            return $"{nameof(GoToSearchRoomForTarget)}(#{Idx})";
         }
     }
 }

@@ -10,6 +10,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
     internal class OpenKeycardDoorObstacle : IAction
     {
         public readonly DoorPermissionFlags Permissions;
+        public readonly Vector3 ObstaclePosition;
         private readonly TransformCell transformCell;
         private readonly NavigationBeliefs navigationBeliefs;
         private readonly FpcBotPlayer botPlayer;
@@ -20,6 +21,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
             this.transformCell = transformCell;
             this.navigationBeliefs = navigationBeliefs;
             this.botPlayer = botPlayer;
+            this.ObstaclePosition = this.transformCell.MeanPosition + Vector3.up * 2f;
         }
 
         private Obstacle doorObstacleBelief;
@@ -29,6 +31,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
             keycardInInventory = fpcMind.ActionEnabledBy<ItemInInventory<KeycardWithPermissions>>(this, b => b.Criteria.Equals(new (Permissions)), b => b.Item);
+
+            var navBeliefs = fpcMind.ActionEnabledBy<NavigationBeliefs>(this, b => true);
+            fpcMind.ActionEnabledBy<Obstacle>(this, 
+                () => navBeliefs.GetReceivedObstacle(doorObstacleBelief.Door.transform.position), 
+                b => !(b?.HitResult.HasValue ?? false)
+            );
+
             fpcMind.ActionEnabledBy<NavigationCell>(this, navigationBeliefs.NavigationCells[transformCell], b => doorObstacleBelief.IsNear || b.IsWithin);
         }
 

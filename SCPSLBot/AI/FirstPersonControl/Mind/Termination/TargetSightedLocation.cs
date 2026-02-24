@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace SCPSLBot.AI.FirstPersonControl.Mind.Termination
 {
-    internal class TargetSightedLocation(PlayersWithinSightSense playersWithinSense) : Location
+    internal class TargetSightedLocation(PlayersWithinSightSense playersWithinSense) : Location, IBelief
     {
         public void Update()
         {
