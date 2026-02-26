@@ -129,12 +129,12 @@ namespace SCPSLBot.AI
             {
                 playersUpdates.Clear();
 
-                var playersCount = BotPlayers.Values.Count;
                 foreach (var botHub in BotPlayers.Values)
                 {
                     playersUpdates.Add(botHub.Update());
                 }
 
+                var playersCount = BotPlayers.Values.Count;
                 var jobHandlesBuffer = new NativeArray<JobHandle>(playersCount, Allocator.Temp);
                 int jobHandlesCount;
 

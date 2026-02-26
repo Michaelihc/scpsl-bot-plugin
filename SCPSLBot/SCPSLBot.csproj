@@ -5,6 +5,7 @@
     <Platforms>x64</Platforms>
     <AssemblyName>SCPSLBot</AssemblyName>
     <RootNamespace>SCPSLBot</RootNamespace>
+    <TargetName>$(AssemblyName)</TargetName>
 
     <LangVersion>preview</LangVersion>
     <Nullable>warnings</Nullable>
@@ -13,6 +14,7 @@
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
 
     <AssemblySearchPaths>$(SL_REFERENCES);$(AssemblySearchPaths)</AssemblySearchPaths>
+
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -26,12 +28,16 @@
     <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
-  
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SL_APPDATA)\LabAPI\plugins\global">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">    
+    <Move SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)$(AssemblyName)$(TargetExt)">
+      <Output TaskParameter="MovedFiles" ItemName="FilesMoved" />
+    </Move>
+    <Message Text="Files moved to @(FilesMoved)" Importance="high" />
+
+    <Copy SourceFiles="@(FilesMoved)" DestinationFolder="$(SL_APPDATA)\LabAPI\plugins\global">
       <Output TaskParameter="CopiedFiles" ItemName="FilesCopied" />
     </Copy>
-    <Message Text="Files copied @(FilesCopied)" Importance="high" />
+    <Message Text="Files copied to @(FilesCopied)" Importance="high" />
   </Target>
 
   <ItemGroup>

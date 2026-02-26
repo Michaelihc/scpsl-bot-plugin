@@ -17,15 +17,15 @@ namespace SCPSLPluginExtensions.Commands
         {
             if (arguments.Count < 1)
             {
-                response = "No plugin assembly identifier.";
+                response = "No plugin name.";
                 return false;
             }
 
-            var pluginIdentifier = arguments[0];
+            var pluginName = arguments[0];
 
-            var pluginsOfIdentifier = PluginLoader.Plugins.Where(p => p.Value.GetName().Name == pluginIdentifier);
+            var pluginsOfName = PluginLoader.Plugins.Where(p => p.Key.Name == pluginName);
 
-            foreach (var plugin in pluginsOfIdentifier.Select(p => p.Key).ToArray())
+            foreach (var plugin in pluginsOfName.Select(p => p.Key).ToArray())
             {
                 if (PluginLoader.EnabledPlugins.Contains(plugin))
                 {
@@ -35,7 +35,7 @@ namespace SCPSLPluginExtensions.Commands
                 PluginLoader.Plugins.Remove(plugin);
             }
 
-            PluginLoaderExtensions.LoadPlugins(pluginIdentifier);
+            PluginLoaderExtensions.LoadPlugins(pluginName);
 
             response = "Done.";
             return true;

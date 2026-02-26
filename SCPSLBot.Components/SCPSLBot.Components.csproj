@@ -37,6 +37,8 @@
   
   <ItemGroup>
     <InternalsVisibleTo Include="SCPSLBot"/>
+    <InternalsVisibleTo Include="SCPSLBot2"/>
+    <InternalsVisibleTo Include="SCPSLBot3"/>
   </ItemGroup>
 
   <ItemGroup>

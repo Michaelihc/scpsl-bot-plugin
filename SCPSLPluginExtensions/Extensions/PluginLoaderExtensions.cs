@@ -40,7 +40,7 @@ namespace SCPSLPluginExtensions.Extensions
             }
 
             Logger.Info($"[LOADER EXTENSIONS] Enabling {assemblyName} plugins");
-            EnablePlugins(Plugins.Where(p => p.Value.GetName().Name == assemblyName).Select(p => p.Key).OrderBy((plugin) => plugin.Priority));
+            EnablePlugins(Plugins.Where(p => p.Key.Name == assemblyName).Select(p => p.Key).OrderBy((plugin) => plugin.Priority));
         }
     }
 }
