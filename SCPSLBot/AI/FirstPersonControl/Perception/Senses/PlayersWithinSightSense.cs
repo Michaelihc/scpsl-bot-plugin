@@ -25,7 +25,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
             FriendiesWithinSight = PlayersWithinSight.Where(o => o.GetFaction() == botPlayer.BotHub.PlayerHub.GetFaction());
         }
 
-        private LayerMask playerLayerMask = LayerMask.GetMask("Player");
+        private LayerMask playerLayerMask = LayerMask.GetMask("Hitbox");
         protected override LayerMask LayerMask => playerLayerMask;
 
         public override void ProcessSightSensedItems() { }
