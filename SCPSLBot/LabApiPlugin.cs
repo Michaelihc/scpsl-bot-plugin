@@ -2,6 +2,7 @@
 using LabApi.Features;
 using LabApi.Features.Console;
 using LabApi.Loader.Features.Plugins;
+using Mirror.LiteNetLib4Mirror;
 using SCPSLBot.AI;
 using SCPSLBot.Navigation;
 using SCPSLBot.Navigation.Mesh;
@@ -40,6 +41,9 @@ namespace SCPSLBot
             BotManager.Instance.Init();
 
             Logger.Info("Enabled plugin.");
+
+            // TODO: remove for release build
+            LiteNetLib4MirrorTransport.Singleton.disconnectTimeout = 1000 * 60 * 60 * 1;
         }
 
         public override void Disable()
