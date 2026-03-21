@@ -34,7 +34,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
             var navBeliefs = fpcMind.ActionEnabledBy<NavigationBeliefs>(this, b => true);
             fpcMind.ActionEnabledBy<Obstacle>(this, 
-                () => navBeliefs.GetReceivedObstacle(doorObstacleBelief.Door.transform.position), 
+                () => navBeliefs.GetReceivedObstacle(ObstaclePosition), 
                 b => !(b?.HitResult.HasValue ?? false)
             );
 
