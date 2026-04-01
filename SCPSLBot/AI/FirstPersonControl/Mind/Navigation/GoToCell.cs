@@ -21,7 +21,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
             var cellBeliefs = fpcMind.GetBelief<NavigationBeliefs>();
-            if (cellBeliefs.Obstacles.TryGetValue(fromCell, out var obstacleBelief))
+            if (fromCell.Transform == toCell.Transform && cellBeliefs.Obstacles.TryGetValue(fromCell, out var obstacleBelief))
             {
                 fpcMind.ActionEnabledBy(this, obstacleBelief, b => true);
             }
@@ -37,7 +37,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
         }
 
         public float Cost => Vector3.Distance(toCellMeanPosition, navCellFrom.IsWithin ? botPlayer.PlayerPosition : fromCellMeanPosition);
-        public float HeuristicCost => navCellFrom.IsWithin ? 0f : DistanceToPlayerOrEntryPoint;
+        public float HeuristicCost => navCellFrom.IsWithin ? 0f : Vector3.Distance(fromCellMeanPosition, botPlayer.PlayerPosition);
 
         public void Tick()
         {
@@ -51,7 +51,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Navigation
 
         public override string ToString()
         {
-            return $"{nameof(GoToCell)}({toCell}, {fromCell})";
+            return $"{nameof(GoToCell)}({
+                (toCell.Transform == fromCell.Transform
+                ? $"{toCell.Local}, {fromCell.Local}, {toCell.Transform.gameObject.name}"
+                : $"{toCell}, {fromCell}")
+            })";
         }
 
         private float DistanceToPlayerOrEntryPoint

@@ -52,7 +52,7 @@ namespace SCPSLBot.Navigation.Mesh
 
         public override string ToString()
         {
-            return $"{nameof(Cell)}: {MeanPosition}";
+            return $"{nameof(Cell)}{MeanPosition}";
         }
     }
 }

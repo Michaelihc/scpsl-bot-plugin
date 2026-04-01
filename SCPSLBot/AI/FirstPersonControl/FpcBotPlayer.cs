@@ -310,7 +310,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private void DisplayVisitedActionsGraph()
         {
-            DumpVisitedActionsGraph();
+            DumpVisitedActionsGraph(true);
 
             debugStringBuilder.Append('\n', Mathf.Max(40 - numLines, 0));
             debugStringBuilder.Length = Mathf.Min(debugStringBuilder.Length, ushort.MaxValue-1);
