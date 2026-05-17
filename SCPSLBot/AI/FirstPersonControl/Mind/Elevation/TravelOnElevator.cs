@@ -29,7 +29,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         public void Tick()
         {
             var playerPosition = botPlayer.PlayerPosition;
-            var elevatorMiddle = elevatorObstacle.ElevatorAtOrigin.WorldspaceBounds.center with { y = playerPosition.y };
+            var elevatorMiddle = elevatorObstacle.ElevatorAtOrigin.WorldspaceBounds.Origin with { y = playerPosition.y };
 
             if (Vector3.Distance(playerPosition, elevatorMiddle) > 0.1f)
             {

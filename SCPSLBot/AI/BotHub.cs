@@ -1,7 +1,6 @@
 ﻿using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl;
-using SCPSLBot.LocalNetworking;
 using System;
 using System.Collections.Generic;
 using Unity.Jobs;
@@ -18,15 +17,9 @@ namespace SCPSLBot.AI
         public IBotPlayer CurrentBotPlayer { get; private set; }
         public ReferenceHub PlayerHub { get; }
 
-        public LocalConnectionToClient ConnectionToClient;
-        public LocalConnectionToServer ConnectionToServer;
-
-        public BotHub(LocalConnectionToClient connectionToClient, LocalConnectionToServer connectionToServer, ReferenceHub hub)
+        public BotHub(ReferenceHub hub)
         {
             PlayerHub = hub;
-
-            ConnectionToClient = connectionToClient;
-            ConnectionToServer = connectionToServer;
 
             FpcPlayer = new FpcBotPlayer(this);
         }

@@ -1,20 +1,17 @@
-﻿using CentralAuth;
 using LabApi.Events.Handlers;
 using MEC;
 using Mirror;
+using NetworkManagerUtils.Dummies;
 using PlayerRoles;
 using SCPSLBot.AI.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Components;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Profiling;
-using LocalConnectionToClient = SCPSLBot.LocalNetworking.LocalConnectionToClient;
-using LocalConnectionToServer = SCPSLBot.LocalNetworking.LocalConnectionToServer;
 
 namespace SCPSLBot.AI
 {
@@ -25,6 +22,9 @@ namespace SCPSLBot.AI
         public Dictionary<ReferenceHub, BotHub> BotPlayers { get; } = new Dictionary<ReferenceHub, BotHub>();
 
         private CoroutineHandle handle;
+        private ReferenceHub pathTarget;
+        private Vector3 pathTargetPosition;
+        private float nextPathTargetUpdateTime;
 
         public void Init()
         {
@@ -55,9 +55,7 @@ namespace SCPSLBot.AI
 
             foreach (var (referenceHub, _) in BotPlayers.ToArray())
             {
-                var player = referenceHub.gameObject;
-                ServerConsole.Disconnect(player, "BotManager terminating");
-
+                NetworkServer.Destroy(referenceHub.gameObject);
                 RemovePlayerIfBot(referenceHub);
             }
         }
@@ -72,26 +70,19 @@ namespace SCPSLBot.AI
 
         public void AddBotPlayer()
         {
-            var player = Object.Instantiate(NetworkManager.singleton.playerPrefab);
-            player.name = string.Format("{0} [bot]", NetworkManager.singleton.playerPrefab.name);
+            var referenceHub = DummyUtils.SpawnDummy("SCPSL Bot");
+            if (referenceHub == null)
+            {
+                Debug.LogError("Failed to spawn RA dummy bot.");
+                return;
+            }
 
-            var connectionToClient = new LocalConnectionToClient(--lastConnNum);
-            var connectionToServer = new LocalConnectionToServer() { connectionToClient = connectionToClient };
-            connectionToClient.connectionToServer = connectionToServer;
+            var player = referenceHub.gameObject;
+            player.name = $"{NetworkManager.singleton.playerPrefab.name} [bot dummy]";
 
-            Debug.Log($"connectionToClient = {connectionToClient}");
-            //NetworkDiagnostics.InMessageEvent += LogInMessage;
+            BotPlayers.Add(referenceHub, new BotHub(referenceHub));
 
-            NetworkServer.AddConnection(connectionToClient);
-            NetworkServer.AddPlayerForConnection(connectionToClient, player);
-            NetworkServer.OnConnectedEvent?.Invoke(connectionToClient);
-
-            var referenceHub = player.GetComponent<ReferenceHub>();
-            Debug.Log($"referenceHub = {referenceHub}");
-
-            BotPlayers.Add(referenceHub, new BotHub(connectionToClient, connectionToServer, referenceHub));
-
-            Debug.Log($"connectionToClient.identity = {connectionToClient.identity}");
+            Debug.Log($"Spawned RA dummy bot: {referenceHub}");
 
             // add perception
             var sensing = new GameObject("Bot Sensing");
@@ -108,17 +99,11 @@ namespace SCPSLBot.AI
             var sensingRigid = sensing.AddComponent<Rigidbody>();
             sensingRigid.isKinematic = true;
 
-            Timing.RunCoroutine(AssignUserIdAsync(player));
-        }
-
-        private IEnumerator<float> AssignUserIdAsync(GameObject player)
-        {
-            yield return Timing.WaitForSeconds(1f);
-
-            PlayerAuthenticationManager playerAuthManager = player.GetComponent<PlayerAuthenticationManager>();
-            playerAuthManager.UserId = $"BotUserId{this.lastConnNum}";
-
-            yield break;
+            if (referenceHub.roleManager.CurrentRole.RoleTypeId == RoleTypeId.None
+                || referenceHub.roleManager.CurrentRole.RoleTypeId == RoleTypeId.Spectator)
+            {
+                referenceHub.roleManager.ServerSetRole(RoleTypeId.ClassD, RoleChangeReason.RemoteAdmin);
+            }
         }
 
         public IEnumerator<float> RunPlayerUpdates()
@@ -180,9 +165,39 @@ namespace SCPSLBot.AI
             }
         }
 
+        public bool TogglePathToTarget(ReferenceHub target)
+        {
+            if (pathTarget == target)
+            {
+                pathTarget = null;
+                return false;
+            }
+
+            pathTarget = target;
+            pathTargetPosition = target.transform.position;
+            nextPathTargetUpdateTime = 0f;
+            return true;
+        }
+
+        public bool TryGetPathTargetPosition(out Vector3 position)
+        {
+            if (pathTarget == null)
+            {
+                position = default;
+                return false;
+            }
+
+            if (Time.time >= nextPathTargetUpdateTime)
+            {
+                pathTargetPosition = pathTarget.transform.position;
+                nextPathTargetUpdateTime = Time.time + 1f;
+            }
+
+            position = pathTargetPosition;
+            return true;
+        }
+
         private BotManager()
         { }
-
-        private int lastConnNum = 0;
     }
 }

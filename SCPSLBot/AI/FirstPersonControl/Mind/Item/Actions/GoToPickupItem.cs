@@ -81,8 +81,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
 
             Debug.Log($"Attempting to pick up item {item} by {_botPlayer}");
 
-            var searchRequestMsg = new SearchRequest { Target = item };
-            _botPlayer.BotHub.ConnectionToServer.Send(searchRequestMsg);
+            if (!BotPickup.TryComplete(_botPlayer.BotHub.PlayerHub, item))
+            {
+                Debug.LogWarning($"Pickup rejected for item {item} by {_botPlayer}.");
+                return;
+            }
 
             this.isPickingUp = true;
         }
@@ -93,5 +96,25 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
         }
 
         protected readonly FpcBotPlayer _botPlayer;
+    }
+
+    internal static class BotPickup
+    {
+        public static bool TryComplete(ReferenceHub hub, ISearchable target)
+        {
+            if (hub?.searchCoordinator == null || target == null)
+            {
+                return false;
+            }
+
+            var completor = target.GetSearchCompletor(hub.searchCoordinator, hub.searchCoordinator.ServerMaxRayDistanceSqr);
+            if (completor == null || !completor.ValidateStart())
+            {
+                return false;
+            }
+
+            completor.Complete();
+            return true;
+        }
     }
 }

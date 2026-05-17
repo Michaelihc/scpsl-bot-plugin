@@ -66,6 +66,12 @@ namespace SCPSLBot.AI.FirstPersonControl
             this.CameraPosition = cameraTransform.position;
             this.CameraForward = cameraTransform.forward;
 
+            if (BotManager.Instance.TryGetPathTargetPosition(out var pathTargetPosition))
+            {
+                MoveToPosition(pathTargetPosition);
+                yield break;
+            }
+
             var updatePerceptionHandles = Perception.Update();
             while (updatePerceptionHandles.MoveNext())
             {

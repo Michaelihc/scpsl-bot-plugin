@@ -1,11 +1,10 @@
 ﻿using CommandSystem;
-using Mirror;
 using SCPSLBot.AI;
 using System;
 
 namespace SCPSLBot.AI.Commands
 {
-    [CommandHandler(typeof(GameConsoleCommandHandler))]
+    [CommandHandler(typeof(RemoteAdminCommandHandler))]
     internal class BotAddCommand : ICommand
     {
         public string Command => "bot_add";
