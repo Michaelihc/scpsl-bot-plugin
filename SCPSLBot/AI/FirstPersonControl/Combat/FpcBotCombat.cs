@@ -9,6 +9,8 @@ using InventorySystem.Items.Firearms.Modules;
 using InventorySystem.Items.Firearms.ShotEvents;
 using NetworkManagerUtils.Dummies;
 using PlayerRoles;
+using PlayerRoles.PlayableScps.Scp173;
+using PlayerRoles.Subroutines;
 using PlayerStatsSystem;
 using System;
 using System.Collections.Generic;
@@ -26,6 +28,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private const float Scp049AttackRange = 2.4f;
         private const float Scp0492AttackRange = 2.4f;
         private const float Scp106AttackRange = 4f;
+        private const float Scp173SnapRange = 1.45f;
+        private const float Scp173BlinkRange = 8f;
+        private const float Scp173BreakneckBlinkRange = 14.4f;
+        private const float Scp173BlinkHoldSeconds = 0.28f;
+        private const float Scp173BlinkAimAngle = 12f;
+        private const float Scp173BreakneckChaseDistance = 9f;
         private const float StrictScpAttackAimAngle = 14f;
         private const float ScpAttackCooldown = 0.85f;
         private const float Scp049SenseCooldown = 4f;
@@ -52,6 +60,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private float scp096RageReleaseTime;
         private float scp096NextRageAllowedTime;
         private ReferenceHub scp096RageTarget;
+        private bool scp173BlinkHeld;
+        private bool scp173BreakneckLikelyActive;
+        private float scp173BlinkReleaseTime;
+        private float scp173BreakneckDisableAllowedTime;
         private int strafeDirection = 1;
 
         public FpcBotCombat(FpcBotPlayer botPlayer)
@@ -65,6 +77,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             var botHub = botPlayer.BotHub.PlayerHub;
             var role = botHub.roleManager.CurrentRole.RoleTypeId;
             EndScp096RageIfExpired(role);
+            ReleaseHeldScp173BlinkIfNeeded(role);
 
             var hasVisibleTarget = TrySelectVisibleTarget(out var target);
             if (hasVisibleTarget)
@@ -167,6 +180,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
             if (role == RoleTypeId.Scp173)
             {
+                RunScp173Combat(target);
                 return;
             }
 
@@ -225,6 +239,145 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             var camera = target.Hub.PlayerCameraReference;
             var head = camera != null ? camera.position : bodyBase + Vector3.up * 1.65f;
             return Vector3.Lerp(bodyBase, head, 0.55f);
+        }
+
+        private void RunScp173Combat(CombatTarget target)
+        {
+            var targetPosition = target.Hub.transform.position;
+            var observed = IsScp173Observed();
+            var breakneckActive = IsScp173BreakneckActive();
+
+            scp173BreakneckLikelyActive = breakneckActive || scp173BreakneckLikelyActive && Time.time < scp173BreakneckDisableAllowedTime + 12f;
+
+            if (scp173BlinkHeld)
+            {
+                botPlayer.LookToPosition(GetScp173BlinkAimPoint(target));
+                return;
+            }
+
+            if (target.Distance <= 3f && !observed)
+            {
+                TryClickFirstDummyAction(Scp173TantrumActions);
+            }
+
+            if (breakneckActive && target.Distance <= Scp173SnapRange + 0.4f && Time.time >= scp173BreakneckDisableAllowedTime)
+            {
+                if (TryClickFirstDummyAction(Scp173BreakneckActions))
+                {
+                    scp173BreakneckLikelyActive = false;
+                }
+
+                return;
+            }
+
+            if (target.Distance <= Scp173SnapRange)
+            {
+                botPlayer.LookToPosition(GetScpAimPoint(target));
+
+                if (!observed && !breakneckActive && Time.time >= nextShotTime && IsAimedAt(GetScpAimPoint(target), StrictScpAttackAimAngle))
+                {
+                    nextShotTime = Time.time + ScpAttackCooldown;
+                    TryClickFirstDummyAction(Scp173SnapActions);
+                }
+
+                return;
+            }
+
+            if (target.Distance > Scp173BreakneckChaseDistance && !breakneckActive && TryGetScp173Breakneck(out var breakneck) && breakneck.Cooldown.IsReady)
+            {
+                if (TryClickFirstDummyAction(Scp173BreakneckActions))
+                {
+                    scp173BreakneckLikelyActive = true;
+                    scp173BreakneckDisableAllowedTime = Time.time + 1.2f;
+                }
+            }
+
+            var blinkRange = breakneckActive || scp173BreakneckLikelyActive ? Scp173BreakneckBlinkRange : Scp173BlinkRange;
+            if (!target.HasLineOfSight || target.Distance > blinkRange || !IsScp173BlinkReady())
+            {
+                botPlayer.LookToPosition(GetScpAimPoint(target));
+                return;
+            }
+
+            var blinkAimPoint = GetScp173BlinkAimPoint(target);
+            botPlayer.LookToPosition(blinkAimPoint);
+            if (!IsAimedAt(blinkAimPoint, Scp173BlinkAimAngle))
+            {
+                return;
+            }
+
+            if (TryClickGroupedDummyAction("Scp173TeleportAbility", "Zoom->Hold"))
+            {
+                scp173BlinkHeld = true;
+                scp173BlinkReleaseTime = Time.time + Scp173BlinkHoldSeconds;
+            }
+        }
+
+        private void ReleaseHeldScp173BlinkIfNeeded(RoleTypeId role)
+        {
+            if (!scp173BlinkHeld)
+            {
+                return;
+            }
+
+            if (role != RoleTypeId.Scp173)
+            {
+                scp173BlinkHeld = false;
+                scp173BlinkReleaseTime = 0f;
+                return;
+            }
+
+            if (Time.time < scp173BlinkReleaseTime)
+            {
+                return;
+            }
+
+            TryClickGroupedDummyAction("Scp173TeleportAbility", "Zoom->Release");
+            scp173BlinkHeld = false;
+            scp173BlinkReleaseTime = 0f;
+        }
+
+        private Vector3 GetScp173BlinkAimPoint(CombatTarget target)
+        {
+            var targetPosition = target.Hub.transform.position;
+            var awayFromTarget = Vector3.ProjectOnPlane(botPlayer.PlayerPosition - targetPosition, Vector3.up);
+            if (awayFromTarget.sqrMagnitude < 0.01f)
+            {
+                awayFromTarget = -botPlayer.PlayerForward;
+            }
+
+            return targetPosition + awayFromTarget.normalized * 0.55f + Vector3.up * 0.15f;
+        }
+
+        private bool IsScp173Observed()
+        {
+            return TryGetScp173Subroutine<Scp173ObserversTracker>(out var observers) && observers.IsObserved;
+        }
+
+        private bool IsScp173BlinkReady()
+        {
+            return TryGetScp173Subroutine<Scp173BlinkTimer>(out var blinkTimer) && blinkTimer.AbilityReady;
+        }
+
+        private bool IsScp173BreakneckActive()
+        {
+            return TryGetScp173Breakneck(out var breakneck) && breakneck.IsActive;
+        }
+
+        private bool TryGetScp173Breakneck(out Scp173BreakneckSpeedsAbility breakneck)
+        {
+            return TryGetScp173Subroutine(out breakneck);
+        }
+
+        private bool TryGetScp173Subroutine<T>(out T subroutine) where T : SubroutineBase
+        {
+            if (botPlayer.BotHub.PlayerHub.roleManager.CurrentRole is Scp173Role scp173Role)
+            {
+                return scp173Role.SubroutineModule.TryGetSubroutine(out subroutine);
+            }
+
+            subroutine = null;
+            return false;
         }
 
         private void MoveToCombatPosition(Vector3 targetPosition)
@@ -1034,6 +1187,22 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         {
             "ZombieAttackAbility:Shoot->Click",
             "Shoot->Click",
+        };
+
+        private static readonly string[] Scp173SnapActions =
+        {
+            "Scp173SnapAbility:Shoot->Click",
+            "Shoot->Click",
+        };
+
+        private static readonly string[] Scp173TantrumActions =
+        {
+            "Scp173TantrumAbility:ToggleFlashlight->Click",
+        };
+
+        private static readonly string[] Scp173BreakneckActions =
+        {
+            "Scp173BreakneckSpeedsAbility:Run->Click",
         };
     }
 
