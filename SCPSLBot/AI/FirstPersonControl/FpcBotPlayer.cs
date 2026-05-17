@@ -1,6 +1,7 @@
 ﻿using Hints;
 using Interactables;
 using Interactables.Interobjects.DoorUtils;
+using MapGeneration;
 using MapGeneration.Distributors;
 using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
@@ -90,6 +91,12 @@ namespace SCPSLBot.AI.FirstPersonControl
                 yield return updatePerceptionHandles.Current;
             }
 
+            if (IsOnSurface())
+            {
+                Move.DesiredLocalDirection = Vector3.zero;
+                yield break;
+            }
+
             if (!ShouldUseEscapeGoal())
             {
                 ZoneRoam.Tick();
@@ -107,6 +114,11 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             var role = BotHub.PlayerHub.roleManager.CurrentRole.RoleTypeId;
             return role is RoleTypeId.ClassD or RoleTypeId.Scientist;
+        }
+
+        private bool IsOnSurface()
+        {
+            return RoomUtils.TryGetRoom(PlayerPosition, out var room) && room.Zone == FacilityZone.Surface;
         }
 
         public void OnRoleChanged()

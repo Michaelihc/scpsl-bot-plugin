@@ -7,6 +7,7 @@ using InventorySystem.Items;
 using InventorySystem.Items.Firearms;
 using InventorySystem.Items.Firearms.Modules;
 using InventorySystem.Items.Firearms.ShotEvents;
+using MapGeneration;
 using NetworkManagerUtils.Dummies;
 using PlayerRoles;
 using PlayerRoles.PlayableScps.Scp173;
@@ -34,6 +35,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private const float Scp173BlinkHoldSeconds = 0.28f;
         private const float Scp173BlinkAimAngle = 12f;
         private const float Scp173BreakneckChaseDistance = 9f;
+        private const float ScpDamageStrafeSeconds = 1f;
+        private const float SurfaceTargetDistance = 1000f;
         private const float StrictScpAttackAimAngle = 14f;
         private const float ScpAttackCooldown = 0.85f;
         private const float Scp049SenseCooldown = 4f;
@@ -62,6 +65,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private ReferenceHub scp096RageTarget;
         private bool scp173BlinkHeld;
         private bool scp173BreakneckLikelyActive;
+        private Vector3 scp173HeldBlinkAimPoint;
+        private float scpDamageStrafeUntil;
         private float scp173BlinkReleaseTime;
         private float scp173BreakneckDisableAllowedTime;
         private int strafeDirection = 1;
@@ -69,6 +74,20 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         public FpcBotCombat(FpcBotPlayer botPlayer)
         {
             this.botPlayer = botPlayer;
+        }
+
+        public void NotifyDamagedBy(ReferenceHub attacker)
+        {
+            var botHub = botPlayer.BotHub.PlayerHub;
+            if (botHub.roleManager.CurrentRole.Team != Team.SCPs || !AreHostile(botHub, attacker))
+            {
+                return;
+            }
+
+            currentTarget = attacker;
+            currentTargetChaseUntil = Time.time + BotCombatDifficultySettings.For(Difficulty).ChaseAfterLostLosSeconds;
+            scpDamageStrafeUntil = Time.time + ScpDamageStrafeSeconds;
+            nextStrafeFlipTime = 0f;
         }
 
         public bool Tick()
@@ -91,11 +110,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
                 currentTargetChaseUntil = Time.time + settings.ChaseAfterLostLosSeconds;
             }
-            else if (!TrySelectRememberedTarget(out target) && !TrySelectScp096RageTarget(role, out target))
+            else if (!TrySelectRememberedTarget(out target) && !TrySelectScp096RageTarget(role, out target) && !TrySelectSurfaceTarget(out target))
             {
                 currentTarget = null;
                 ClearScp096RageTarget();
                 return false;
+            }
+            else if (target != null && currentTarget != target.Hub)
+            {
+                currentTarget = target.Hub;
+                currentTargetChaseUntil = Time.time + settings.ChaseAfterLostLosSeconds;
             }
 
             UpdateStrafeDirection();
@@ -174,6 +198,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         {
             var targetPosition = target.Hub.transform.position;
             MoveToCombatPosition(targetPosition);
+            ApplyScpDamageStrafe(targetPosition);
 
             var aimPoint = GetScpAimPoint(target);
             botPlayer.LookToPosition(aimPoint);
@@ -251,7 +276,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
             if (scp173BlinkHeld)
             {
-                botPlayer.LookToPosition(GetScp173BlinkAimPoint(target));
+                botPlayer.LookToPosition(scp173HeldBlinkAimPoint);
                 return;
             }
 
@@ -293,13 +318,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             var blinkRange = breakneckActive || scp173BreakneckLikelyActive ? Scp173BreakneckBlinkRange : Scp173BlinkRange;
-            if (!target.HasLineOfSight || target.Distance > blinkRange || !IsScp173BlinkReady())
+            var shouldBlinkForward = target.Distance > blinkRange;
+            if ((!target.HasLineOfSight && !shouldBlinkForward) || !IsScp173BlinkReady())
             {
                 botPlayer.LookToPosition(GetScpAimPoint(target));
                 return;
             }
 
-            var blinkAimPoint = GetScp173BlinkAimPoint(target);
+            var blinkAimPoint = shouldBlinkForward
+                ? GetScp173ForwardBlinkAimPoint(target, blinkRange)
+                : GetScp173BlinkAimPoint(target);
             botPlayer.LookToPosition(blinkAimPoint);
             if (!IsAimedAt(blinkAimPoint, Scp173BlinkAimAngle))
             {
@@ -309,6 +337,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             if (TryClickGroupedDummyAction("Scp173TeleportAbility", "Zoom->Hold"))
             {
                 scp173BlinkHeld = true;
+                scp173HeldBlinkAimPoint = blinkAimPoint;
                 scp173BlinkReleaseTime = Time.time + Scp173BlinkHoldSeconds;
             }
         }
@@ -323,6 +352,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             if (role != RoleTypeId.Scp173)
             {
                 scp173BlinkHeld = false;
+                scp173HeldBlinkAimPoint = default;
                 scp173BlinkReleaseTime = 0f;
                 return;
             }
@@ -334,6 +364,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
             TryClickGroupedDummyAction("Scp173TeleportAbility", "Zoom->Release");
             scp173BlinkHeld = false;
+            scp173HeldBlinkAimPoint = default;
             scp173BlinkReleaseTime = 0f;
         }
 
@@ -347,6 +378,47 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             return targetPosition + awayFromTarget.normalized * 0.55f + Vector3.up * 0.15f;
+        }
+
+        private Vector3 GetScp173ForwardBlinkAimPoint(CombatTarget target, float blinkRange)
+        {
+            var direction = Vector3.ProjectOnPlane(target.Hub.transform.position - botPlayer.PlayerPosition, Vector3.up);
+            if (direction.sqrMagnitude < 0.01f)
+            {
+                direction = Vector3.ProjectOnPlane(botPlayer.PlayerForward, Vector3.up);
+            }
+
+            var forwardDistance = Mathf.Max(Scp173SnapRange + 0.5f, blinkRange + 2.25f);
+            return botPlayer.PlayerPosition + direction.normalized * forwardDistance + Vector3.up * 0.2f;
+        }
+
+        private void ApplyScpDamageStrafe(Vector3 targetPosition)
+        {
+            if (Time.time >= scpDamageStrafeUntil)
+            {
+                return;
+            }
+
+            var toTarget = Vector3.ProjectOnPlane(targetPosition - botPlayer.PlayerPosition, Vector3.up);
+            if (toTarget.sqrMagnitude < 0.01f)
+            {
+                return;
+            }
+
+            var forward = toTarget.normalized;
+            var right = Vector3.Cross(Vector3.up, forward).normalized * strafeDirection;
+            var currentWorldMove = Vector3.ProjectOnPlane(
+                botPlayer.FpcRole.FpcModule.transform.TransformDirection(botPlayer.Move.DesiredLocalDirection),
+                Vector3.up);
+
+            if (currentWorldMove.sqrMagnitude < 0.01f)
+            {
+                currentWorldMove = forward;
+            }
+
+            var settings = BotCombatDifficultySettings.For(Difficulty);
+            var worldMove = Vector3.Normalize(currentWorldMove.normalized + right * settings.StrafeSpeed);
+            botPlayer.Move.DesiredLocalDirection = botPlayer.FpcRole.FpcModule.transform.InverseTransformDirection(worldMove);
         }
 
         private bool IsScp173Observed()
@@ -642,6 +714,40 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                     continue;
                 }
 
+                if (best == null || selection.Distance < best.Distance)
+                {
+                    best = selection;
+                }
+            }
+
+            target = best;
+            return target != null;
+        }
+
+        private bool TrySelectSurfaceTarget(out CombatTarget target)
+        {
+            target = null;
+            var botHub = botPlayer.BotHub.PlayerHub;
+            if (!IsOnSurface(botPlayer.PlayerPosition))
+            {
+                return false;
+            }
+
+            CombatTarget best = null;
+            foreach (var candidate in ReferenceHub.AllHubs)
+            {
+                if (!AreHostile(botHub, candidate) || !IsOnSurface(candidate.transform.position))
+                {
+                    continue;
+                }
+
+                var distance = Vector3.Distance(botPlayer.PlayerPosition, candidate.transform.position);
+                if (distance > SurfaceTargetDistance)
+                {
+                    continue;
+                }
+
+                var selection = BuildTarget(candidate, distance, false);
                 if (best == null || selection.Distance < best.Distance)
                 {
                     best = selection;
@@ -1075,6 +1181,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                    && role.RoleTypeId != RoleTypeId.Spectator
                    && role.Team != Team.Dead
                    && hub.IsAlive();
+        }
+
+        private static bool IsOnSurface(Vector3 position)
+        {
+            return RoomUtils.TryGetRoom(position, out var room) && room.Zone == FacilityZone.Surface;
         }
 
         private static bool IsFoundationHumanRole(RoleTypeId role)

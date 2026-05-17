@@ -1,3 +1,4 @@
+using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Events.Handlers;
 using MEC;
 using Mirror;
@@ -32,6 +33,7 @@ namespace SCPSLBot.AI
 
             PlayerRoleManager.OnRoleChanged += OnRoleChanged;
             ReferenceHub.OnPlayerRemoved += RemovePlayerIfBot;
+            PlayerEvents.Hurt += OnPlayerHurt;
             ServerEvents.RoundRestarted += OnRoundRestarted;
 
             for (int i = 0; i < 32; i++)
@@ -51,6 +53,7 @@ namespace SCPSLBot.AI
 
             PlayerRoleManager.OnRoleChanged -= OnRoleChanged;
             ReferenceHub.OnPlayerRemoved -= RemovePlayerIfBot;
+            PlayerEvents.Hurt -= OnPlayerHurt;
             ServerEvents.RoundRestarted -= OnRoundRestarted;
 
             foreach (var (referenceHub, _) in BotPlayers.ToArray())
@@ -154,6 +157,19 @@ namespace SCPSLBot.AI
             if (BotPlayers.TryGetValue(userHub, out var botPlayer))
             {
                 botPlayer.OnRoleChanged(prevRole, newRole);
+            }
+        }
+
+        private void OnPlayerHurt(PlayerHurtEventArgs ev)
+        {
+            if (ev.Player == null || ev.Attacker == null)
+            {
+                return;
+            }
+
+            if (BotPlayers.TryGetValue(ev.Player.ReferenceHub, out var botPlayer))
+            {
+                botPlayer.NotifyHurt(ev.Attacker.ReferenceHub);
             }
         }
 

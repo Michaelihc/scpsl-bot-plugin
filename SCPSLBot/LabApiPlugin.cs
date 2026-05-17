@@ -5,14 +5,17 @@ using LabApi.Loader.Features.Plugins;
 using SCPSLBot.AI;
 using SCPSLBot.Navigation;
 using SCPSLBot.Navigation.Mesh;
+using SCPSLBot.Warmup;
 using System;
 using System.IO;
 using System.Reflection;
 
 namespace SCPSLBot
 {
-    public class LabApiPlugin : Plugin
+    public class LabApiPlugin : Plugin<BotPluginConfig>
     {
+        public static LabApiPlugin Instance { get; private set; }
+
         public override string Name { get; } = "SCPSLBot";
         public override string Description { get; } = "Bot players addon.";
         public override string Author { get; } = "repkins(19)";
@@ -23,6 +26,8 @@ namespace SCPSLBot
 
         public override void Enable()
         {
+            Instance = this;
+
             harmonyInstance = new Harmony($"SCPSLBot.{DateTime.Now.Ticks}");
             harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
             Logger.Info("Patching successful.");
@@ -38,12 +43,14 @@ namespace SCPSLBot
             NavigationMeshEditor.Instance.Init();
 
             BotManager.Instance.Init();
+            WarmupManager.Instance.Init(Config);
 
             Logger.Info("Enabled plugin.");
         }
 
         public override void Disable()
         {
+            WarmupManager.Instance.Terminate();
             BotManager.Instance.Terminate();
 
             NavigationMeshEditor.Instance.Terminate();
@@ -52,7 +59,13 @@ namespace SCPSLBot
             harmonyInstance.UnpatchAll();
             Logger.Info("Unpatching successful.");
 
+            Instance = null;
             Logger.Info("Disabled plugin.");
+        }
+
+        public void SaveSettings()
+        {
+            SaveConfig();
         }
     }
 }

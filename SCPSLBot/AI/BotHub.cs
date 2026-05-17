@@ -64,6 +64,11 @@ namespace SCPSLBot.AI
             Debug.Log($"Type of role: {newRole.GetType()}");
         }
 
+        public void NotifyHurt(ReferenceHub attacker)
+        {
+            FpcPlayer.Combat.NotifyDamagedBy(attacker);
+        }
+
         public override string ToString()
         {
             return $"{nameof(BotHub)}: {PlayerHub}";

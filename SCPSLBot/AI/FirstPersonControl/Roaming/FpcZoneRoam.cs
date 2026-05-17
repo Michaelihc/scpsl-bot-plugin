@@ -12,6 +12,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
     internal sealed class FpcZoneRoam
     {
         private const float TargetReachedDistance = 1.75f;
+        private const float SameRoomTargetMinDistance = 5f;
         private const float DoorInteractDistance = 2f;
 
         private readonly FpcBotPlayer botPlayer;
@@ -31,6 +32,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             var roomWithin = roomSightSense.RoomWithin;
             if (!roomWithin)
             {
+                TickWithoutRoom();
                 return;
             }
 
@@ -63,6 +65,20 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             var candidates = GetSameZoneForeignCells(roomSightSense, roomWithin).ToList();
             if (candidates.Count == 0)
             {
+                candidates = GetSameRoomCells(roomWithin)
+                    .Where(cell => Vector3.Distance(botPlayer.PlayerPosition, cell.CenterPosition) >= SameRoomTargetMinDistance)
+                    .ToList();
+            }
+
+            if (candidates.Count == 0)
+            {
+                candidates = GetZoneCells(roomWithin.Zone)
+                    .Where(cell => Vector3.Distance(botPlayer.PlayerPosition, cell.CenterPosition) >= SameRoomTargetMinDistance)
+                    .ToList();
+            }
+
+            if (candidates.Count == 0)
+            {
                 targetPosition = null;
                 targetZone = roomWithin.Zone;
                 return;
@@ -73,12 +89,110 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             targetZone = roomWithin.Zone;
         }
 
+        private void TickWithoutRoom()
+        {
+            if (!targetPosition.HasValue || Vector3.Distance(botPlayer.PlayerPosition, targetPosition.Value) <= TargetReachedDistance)
+            {
+                PickFallbackZoneTarget();
+            }
+
+            if (targetPosition.HasValue)
+            {
+                botPlayer.MoveToPosition(targetPosition.Value);
+            }
+        }
+
+        private void PickFallbackZoneTarget()
+        {
+            var nearestKnownZone = GetNearestKnownZone();
+            if (!nearestKnownZone.HasValue)
+            {
+                targetPosition = null;
+                targetZone = null;
+                return;
+            }
+
+            var candidates = GetZoneCells(nearestKnownZone.Value)
+                .Where(cell => Vector3.Distance(botPlayer.PlayerPosition, cell.CenterPosition) >= SameRoomTargetMinDistance)
+                .ToList();
+            if (candidates.Count == 0)
+            {
+                targetPosition = null;
+                targetZone = nearestKnownZone;
+                return;
+            }
+
+            var selected = candidates[random.Next(candidates.Count)];
+            targetPosition = selected.CenterPosition;
+            targetZone = nearestKnownZone;
+        }
+
         private static IEnumerable<TransformCell> GetSameZoneForeignCells(RoomSightSense roomSightSense, RoomIdentifier roomWithin)
         {
             return roomSightSense.ForeignRoomsCells
                 .Where(cell => cell.Transform.GetComponent<RoomIdentifier>() is RoomIdentifier room
                                && room.Zone == roomWithin.Zone
                                && (room.Name == RoomName.Unnamed || room.Name != roomWithin.Name));
+        }
+
+        private static IEnumerable<TransformCell> GetSameRoomCells(RoomIdentifier roomWithin)
+        {
+            if (!roomWithin || !NavigationMesh.LocalMeshesByRoom.TryGetValue(roomWithin.gameObject, out var mesh))
+            {
+                yield break;
+            }
+
+            foreach (var cell in mesh.Cells)
+            {
+                yield return new TransformCell(cell, roomWithin.transform);
+            }
+        }
+
+        private static IEnumerable<TransformCell> GetZoneCells(FacilityZone zone)
+        {
+            foreach (var (roomObject, mesh) in NavigationMesh.LocalMeshesByRoom)
+            {
+                var room = roomObject.GetComponent<RoomIdentifier>();
+                if (!room || room.Zone != zone)
+                {
+                    continue;
+                }
+
+                foreach (var cell in mesh.Cells)
+                {
+                    yield return new TransformCell(cell, room.transform);
+                }
+            }
+        }
+
+        private FacilityZone? GetNearestKnownZone()
+        {
+            TransformCell? nearest = null;
+            var nearestDistance = float.PositiveInfinity;
+
+            foreach (var (roomObject, mesh) in NavigationMesh.LocalMeshesByRoom)
+            {
+                var room = roomObject.GetComponent<RoomIdentifier>();
+                if (!room)
+                {
+                    continue;
+                }
+
+                foreach (var cell in mesh.Cells)
+                {
+                    var transformCell = new TransformCell(cell, room.transform);
+                    var distance = Vector3.SqrMagnitude(transformCell.CenterPosition - botPlayer.PlayerPosition);
+                    if (distance >= nearestDistance)
+                    {
+                        continue;
+                    }
+
+                    nearest = transformCell;
+                    nearestDistance = distance;
+                }
+            }
+
+            return nearest?.Transform.GetComponent<RoomIdentifier>()?.Zone;
         }
 
         private void OpenBlockingNonKeycardDoor()
