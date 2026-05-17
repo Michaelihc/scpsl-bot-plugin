@@ -3,6 +3,7 @@ using LabApi.Features;
 using LabApi.Features.Console;
 using LabApi.Loader.Features.Plugins;
 using SCPSLBot.AI;
+using SCPSLBot.Cleanup;
 using SCPSLBot.Navigation;
 using SCPSLBot.Navigation.Mesh;
 using SCPSLBot.Warmup;
@@ -43,6 +44,7 @@ namespace SCPSLBot
             NavigationMeshEditor.Instance.Init();
 
             BotManager.Instance.Init();
+            OverflowCleanupManager.Instance.Init(Config);
             WarmupManager.Instance.Init(Config);
 
             Logger.Info("Enabled plugin.");
@@ -51,6 +53,7 @@ namespace SCPSLBot
         public override void Disable()
         {
             WarmupManager.Instance.Terminate();
+            OverflowCleanupManager.Instance.Terminate();
             BotManager.Instance.Terminate();
 
             NavigationMeshEditor.Instance.Terminate();

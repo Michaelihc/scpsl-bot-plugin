@@ -47,6 +47,10 @@ namespace SCPSLBot.AI.FirstPersonControl
         public Vector3 CameraPosition { get; private set; }
         public Vector3 CameraForward { get; private set; }
 
+        private Vector3 stuckAnchorPosition;
+        private float stuckAnchorTime;
+        private float nextStuckJumpTime;
+
         public FpcBotPlayer(BotHub botHub)
         {
             BotHub = botHub;
@@ -76,12 +80,14 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             if (Combat.Tick())
             {
+                JumpIfForwardMovementBlocked();
                 yield break;
             }
 
             if (BotManager.Instance.TryGetPathTargetPosition(out var pathTargetPosition))
             {
                 MoveToPosition(pathTargetPosition);
+                JumpIfForwardMovementBlocked();
                 yield break;
             }
 
@@ -91,21 +97,29 @@ namespace SCPSLBot.AI.FirstPersonControl
                 yield return updatePerceptionHandles.Current;
             }
 
-            if (IsOnSurface())
+            if (ShouldIdleOnSurfaceWithoutTarget())
             {
                 Move.DesiredLocalDirection = Vector3.zero;
+                ResetStuckJumpTracking();
                 yield break;
             }
 
             if (!ShouldUseEscapeGoal())
             {
-                ZoneRoam.Tick();
+                if (!ZoneRoam.Tick())
+                {
+                    MindRunner.Tick();
+                    DisplayVisitedActionsGraph();
+                }
+
+                JumpIfForwardMovementBlocked();
                 yield break;
             }
 
             MindRunner.Tick();
 
             DisplayVisitedActionsGraph();
+            JumpIfForwardMovementBlocked();
 
             yield break;
         }
@@ -116,7 +130,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             return role is RoleTypeId.ClassD or RoleTypeId.Scientist;
         }
 
-        private bool IsOnSurface()
+        private bool ShouldIdleOnSurfaceWithoutTarget()
         {
             return RoomUtils.TryGetRoom(PlayerPosition, out var room) && room.Zone == FacilityZone.Surface;
         }
@@ -129,6 +143,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             PerceptionComponent.enabled = true;
 
             MindRunner.EvaluateGoalsToActions();
+            ResetStuckJumpTracking();
         }
 
         #region Moving
@@ -233,6 +248,46 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             moveDirection = Vector3.Normalize(moveDirection + obstructingForward * obstructingDepth);
             this.Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(moveDirection);
+        }
+
+        private void JumpIfForwardMovementBlocked()
+        {
+            var desired = Move.DesiredLocalDirection;
+            var intendedWorldMove = Vector3.ProjectOnPlane(
+                FpcRole.FpcModule.transform.TransformDirection(desired),
+                Vector3.up);
+
+            if (intendedWorldMove.sqrMagnitude < 0.1f)
+            {
+                ResetStuckJumpTracking();
+                return;
+            }
+
+            var horizontalPosition = Vector3.ProjectOnPlane(PlayerPosition, Vector3.up);
+            var horizontalAnchor = Vector3.ProjectOnPlane(stuckAnchorPosition, Vector3.up);
+            if (stuckAnchorTime <= 0f || Vector3.Distance(horizontalPosition, horizontalAnchor) > 0.35f)
+            {
+                stuckAnchorPosition = PlayerPosition;
+                stuckAnchorTime = Time.time;
+                return;
+            }
+
+            if (Time.time - stuckAnchorTime < 3f || Time.time < nextStuckJumpTime)
+            {
+                return;
+            }
+
+            Debug.Log("[SCPSLBot] Bot movement blocked for 3 seconds; forcing jump.");
+            FpcRole.FpcModule.Motor.JumpController.ForceJump(FpcRole.FpcModule.JumpSpeed);
+            nextStuckJumpTime = Time.time + 1f;
+            stuckAnchorPosition = PlayerPosition;
+            stuckAnchorTime = Time.time;
+        }
+
+        private void ResetStuckJumpTracking()
+        {
+            stuckAnchorPosition = PlayerPosition;
+            stuckAnchorTime = 0f;
         }
 
         #endregion

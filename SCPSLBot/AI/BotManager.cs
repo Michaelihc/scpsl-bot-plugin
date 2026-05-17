@@ -7,6 +7,7 @@ using PlayerRoles;
 using SCPSLBot.AI.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Components;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Collections;
@@ -73,6 +74,12 @@ namespace SCPSLBot.AI
 
         public void AddBotPlayer()
         {
+            if (!CanSpawnBot())
+            {
+                Debug.LogWarning("Cannot spawn RA dummy bot before the network server is active.");
+                return;
+            }
+
             var referenceHub = DummyUtils.SpawnDummy("SCPSL Bot");
             if (referenceHub == null)
             {
@@ -102,10 +109,52 @@ namespace SCPSLBot.AI
             var sensingRigid = sensing.AddComponent<Rigidbody>();
             sensingRigid.isKinematic = true;
 
-            if (referenceHub.roleManager.CurrentRole.RoleTypeId == RoleTypeId.None
-                || referenceHub.roleManager.CurrentRole.RoleTypeId == RoleTypeId.Spectator)
+            ScheduleDefaultRole(referenceHub, 0.5f);
+            ScheduleDefaultRole(referenceHub, 1.5f);
+        }
+
+        public bool CanSpawnBot()
+        {
+            return NetworkServer.active
+                && NetworkManager.singleton != null
+                && NetworkManager.singleton.playerPrefab != null;
+        }
+
+        private void ScheduleDefaultRole(ReferenceHub referenceHub, float delaySeconds)
+        {
+            Timing.CallDelayed(delaySeconds, () =>
             {
-                referenceHub.roleManager.ServerSetRole(RoleTypeId.ClassD, RoleChangeReason.RemoteAdmin);
+                if (!TrySetDefaultRole(referenceHub) && delaySeconds < 3f)
+                {
+                    ScheduleDefaultRole(referenceHub, delaySeconds + 1f);
+                }
+            });
+        }
+
+        private bool TrySetDefaultRole(ReferenceHub referenceHub)
+        {
+            if (referenceHub == null
+                || !BotPlayers.ContainsKey(referenceHub)
+                || referenceHub.roleManager == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var currentRole = referenceHub.roleManager.CurrentRole;
+                if (currentRole == null
+                    || currentRole.RoleTypeId == RoleTypeId.None
+                    || currentRole.RoleTypeId == RoleTypeId.Spectator)
+                {
+                    referenceHub.roleManager.ServerSetRole(RoleTypeId.ChaosRifleman, RoleChangeReason.RemoteAdmin);
+                }
+
+                return true;
+            }
+            catch (NullReferenceException)
+            {
+                return false;
             }
         }
 

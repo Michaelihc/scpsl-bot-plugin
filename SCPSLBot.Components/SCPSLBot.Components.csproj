@@ -27,7 +27,7 @@
   </PropertyGroup>
 
   
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(SL_DEPLOY_GLOBAL)' == 'true'">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SL_APPDATA)\LabAPI\plugins\global">
       <Output TaskParameter="CopiedFiles" ItemName="FilesCopied"/>
     </Copy>

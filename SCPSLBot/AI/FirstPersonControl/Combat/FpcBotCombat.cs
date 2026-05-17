@@ -11,11 +11,13 @@ using MapGeneration;
 using NetworkManagerUtils.Dummies;
 using PlayerRoles;
 using PlayerRoles.PlayableScps.Scp173;
+using PlayerRoles.PlayableScps.Scp096;
 using PlayerRoles.Subroutines;
 using PlayerStatsSystem;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace SCPSLBot.AI.FirstPersonControl.Combat
@@ -42,10 +44,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private const float Scp049SenseCooldown = 4f;
         private const float Scp096RageDelay = 6.6f;
         private const float Scp096RageHoldSeconds = 0.65f;
-        private const float Scp096PostRageCooldown = 5f;
+        private const float Scp096PostRageCooldown = 6.5f;
         private const float DoorInteractDistance = 2f;
-        private const ushort FallbackReserveAmmo = 240;
-
+        private const float TargetSwitchLockSeconds = 2f;
+        private const float TargetSwitchDistanceRatio = 0.65f;
         public static BotCombatDifficulty Difficulty { get; set; } = BotCombatDifficulty.Hardest;
 
         private readonly FpcBotPlayer botPlayer;
@@ -54,6 +56,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
         private ReferenceHub currentTarget;
         private float currentTargetChaseUntil;
+        private float currentTargetSelectedTime;
         private float nextStrafeFlipTime;
         private float nextShotTime;
         private float nextReloadAttemptTime;
@@ -62,6 +65,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private float scp096RageEndTime;
         private float scp096RageReleaseTime;
         private float scp096NextRageAllowedTime;
+        private float nextScp096DebugLogTime;
         private ReferenceHub scp096RageTarget;
         private bool scp173BlinkHeld;
         private bool scp173BreakneckLikelyActive;
@@ -85,6 +89,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             currentTarget = attacker;
+            currentTargetSelectedTime = Time.time;
             currentTargetChaseUntil = Time.time + BotCombatDifficultySettings.For(Difficulty).ChaseAfterLostLosSeconds;
             scpDamageStrafeUntil = Time.time + ScpDamageStrafeSeconds;
             nextStrafeFlipTime = 0f;
@@ -98,27 +103,30 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             EndScp096RageIfExpired(role);
             ReleaseHeldScp173BlinkIfNeeded(role);
 
-            var hasVisibleTarget = TrySelectVisibleTarget(out var target);
-            if (hasVisibleTarget)
+            if (TrySelectScp096RageTarget(role, out var target))
+            {
+                SetCurrentTarget(target.Hub, resetCombatTiming: currentTarget != target.Hub);
+                currentTargetChaseUntil = Time.time + settings.ChaseAfterLostLosSeconds;
+            }
+            else if (TrySelectVisibleTarget(out target))
             {
                 if (currentTarget != target.Hub)
                 {
-                    currentTarget = target.Hub;
-                    nextStrafeFlipTime = 0f;
-                    nextShotTime = 0f;
+                    SetCurrentTarget(target.Hub, resetCombatTiming: true);
                 }
 
                 currentTargetChaseUntil = Time.time + settings.ChaseAfterLostLosSeconds;
             }
-            else if (!TrySelectRememberedTarget(out target) && !TrySelectScp096RageTarget(role, out target) && !TrySelectSurfaceTarget(out target))
+            else if (!TrySelectRememberedTarget(out target) && !TrySelectSurfaceTarget(out target))
             {
                 currentTarget = null;
+                currentTargetSelectedTime = 0f;
                 ClearScp096RageTarget();
                 return false;
             }
             else if (target != null && currentTarget != target.Hub)
             {
-                currentTarget = target.Hub;
+                SetCurrentTarget(target.Hub, resetCombatTiming: true);
                 currentTargetChaseUntil = Time.time + settings.ChaseAfterLostLosSeconds;
             }
 
@@ -137,6 +145,20 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             return true;
+        }
+
+        private void SetCurrentTarget(ReferenceHub target, bool resetCombatTiming)
+        {
+            currentTarget = target;
+            currentTargetSelectedTime = Time.time;
+
+            if (!resetCombatTiming)
+            {
+                return;
+            }
+
+            nextStrafeFlipTime = 0f;
+            nextShotTime = 0f;
         }
 
         private void RunHumanCombat(CombatTarget target)
@@ -167,7 +189,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
             var settings = BotCombatDifficultySettings.For(Difficulty);
 
-            EnsureReserveAmmo(firearm);
             PrepareActionForShot(firearm);
 
             if (IsReloading(firearm))
@@ -216,7 +237,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 return;
             }
 
-            if (!target.HasLineOfSight)
+            var attackRange = GetScpAttackRange(role);
+            var closeScp096Target = role == RoleTypeId.Scp096 && target.Distance <= attackRange;
+            if (!target.HasLineOfSight && !closeScp096Target)
             {
                 return;
             }
@@ -226,14 +249,17 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 return;
             }
 
-            var attackRange = GetScpAttackRange(role);
-            if (target.Distance > attackRange || Time.time < nextShotTime || !IsAimedAt(aimPoint, 35f))
+            var maxAttackAimAngle = closeScp096Target ? 180f : 35f;
+            if (target.Distance > attackRange || Time.time < nextShotTime || !IsAimedAt(aimPoint, maxAttackAimAngle))
             {
                 return;
             }
 
             nextShotTime = Time.time + ScpAttackCooldown;
-            TryUseScpAttackAbility(role);
+            if (!TryUseScpAttackAbility(role, target.Hub) && role == RoleTypeId.Scp096)
+            {
+                LogScp096Debug("attack dummy action failed or was unavailable.");
+            }
         }
 
         private bool TryUseStrictScpAttackAbility(RoleTypeId role, CombatTarget target)
@@ -254,7 +280,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             nextShotTime = Time.time + ScpAttackCooldown;
-            TryUseScpAttackAbility(role);
+            TryUseScpAttackAbility(role, target.Hub);
             return true;
         }
 
@@ -529,20 +555,33 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         {
             if (Time.time < scp096NextRageAllowedTime)
             {
+                LogScp096Debug("waiting for post-rage cooldown.");
                 return false;
             }
 
             if (scp096RageTarget != target)
             {
-                scp096RageTarget = target;
-                scp096AttackAllowedTime = Time.time + Scp096RageDelay;
-                scp096RageEndTime = scp096AttackAllowedTime + BotCombatDifficultySettings.For(Difficulty).Scp096RageDurationSeconds;
-                TryEnableScp096RageInput();
-                if (TryHoldGroupedDummyAction("Scp096RageCycleAbility", "Reload"))
+                if (TryAttachScp096RageTarget(target))
                 {
-                    scp096RageReleaseTime = Time.time + Scp096RageHoldSeconds;
+                    return Time.time >= scp096AttackAllowedTime;
                 }
 
+                scp096AttackAllowedTime = Time.time + Scp096RageDelay;
+                var rageDuration = BotCombatDifficultySettings.For(Difficulty).Scp096RageDurationSeconds;
+                if (!TryStartScp096Rage(target, rageDuration))
+                {
+                    ClearScp096RageTarget();
+                    return false;
+                }
+
+                scp096RageTarget = target;
+                scp096RageEndTime = scp096AttackAllowedTime + rageDuration;
+
+                return false;
+            }
+
+            if (!TryEnsureScp096StillRaging(target))
+            {
                 return false;
             }
 
@@ -562,7 +601,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             var distance = Vector3.Distance(botPlayer.PlayerPosition, scp096RageTarget.transform.position);
-            target = BuildTarget(scp096RageTarget, distance, false);
+            target = BuildTarget(scp096RageTarget, distance) ?? BuildTarget(scp096RageTarget, distance, false);
             return true;
         }
 
@@ -573,15 +612,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 return;
             }
 
-            var releaseTime = 0f;
-            if (TryHoldGroupedDummyAction("Scp096RageCycleAbility", "Reload"))
-            {
-                releaseTime = Time.time + Scp096RageHoldSeconds;
-            }
-
+            TryEndScp096Rage();
             scp096NextRageAllowedTime = Time.time + Scp096PostRageCooldown;
             ClearScp096RageTarget();
-            scp096RageReleaseTime = releaseTime;
             currentTargetChaseUntil = 0f;
         }
 
@@ -591,6 +624,125 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             scp096AttackAllowedTime = 0f;
             scp096RageEndTime = 0f;
             scp096RageReleaseTime = 0f;
+        }
+
+        private bool TryAttachScp096RageTarget(ReferenceHub target)
+        {
+            if (botPlayer.BotHub.PlayerHub.roleManager.CurrentRole is not Scp096Role scp096Role)
+            {
+                return false;
+            }
+
+            if (scp096Role.StateController.RageState is not (Scp096RageState.Enraged or Scp096RageState.Distressed))
+            {
+                return false;
+            }
+
+            AddScp096RageTarget(scp096Role, target);
+            scp096RageTarget = target;
+
+            if (scp096Role.StateController.RageState is Scp096RageState.Enraged)
+            {
+                scp096AttackAllowedTime = Time.time;
+            }
+            else if (scp096AttackAllowedTime <= Time.time)
+            {
+                scp096AttackAllowedTime = Time.time + 0.5f;
+            }
+
+            if (scp096RageEndTime <= Time.time)
+            {
+                scp096RageEndTime = Time.time + BotCombatDifficultySettings.For(Difficulty).Scp096RageDurationSeconds;
+            }
+
+            LogScp096Debug($"attached new rage target while {scp096Role.StateController.RageState}.");
+            return true;
+        }
+
+        private bool TryEnsureScp096StillRaging(ReferenceHub target)
+        {
+            if (botPlayer.BotHub.PlayerHub.roleManager.CurrentRole is not Scp096Role scp096Role)
+            {
+                LogScp096Debug("current role is no longer Scp096.");
+                return false;
+            }
+
+            AddScp096RageTarget(scp096Role, target);
+
+            if (scp096Role.StateController.RageState is Scp096RageState.Enraged)
+            {
+                return true;
+            }
+
+            if (scp096Role.StateController.RageState is Scp096RageState.Distressed)
+            {
+                LogScp096Debug("is distressed, waiting for enraged state.");
+                return false;
+            }
+
+            var rageDuration = BotCombatDifficultySettings.For(Difficulty).Scp096RageDurationSeconds;
+            if (!TryStartScp096Rage(target, rageDuration))
+            {
+                LogScp096Debug($"could not restart rage from state {scp096Role.StateController.RageState}.");
+                return false;
+            }
+
+            scp096AttackAllowedTime = Time.time + Scp096RageDelay;
+            scp096RageEndTime = scp096AttackAllowedTime + rageDuration;
+            LogScp096Debug("restarted rage after native state returned to docile.");
+            return false;
+        }
+
+        private bool TryStartScp096Rage(ReferenceHub target, float duration)
+        {
+            if (botPlayer.BotHub.PlayerHub.roleManager.CurrentRole is not Scp096Role scp096Role)
+            {
+                LogScp096Debug("cannot rage because current role is not Scp096.");
+                return false;
+            }
+
+            if (!scp096Role.SubroutineModule.TryGetSubroutine<Scp096RageManager>(out var rageManager))
+            {
+                LogScp096Debug("cannot rage because Scp096RageManager is unavailable.");
+                return false;
+            }
+
+            if (scp096Role.StateController.RageState is not Scp096RageState.Docile)
+            {
+                LogScp096Debug($"cannot start rage from state {scp096Role.StateController.RageState}.");
+                return false;
+            }
+
+            AddScp096RageTarget(scp096Role, target);
+
+            rageManager.ServerEnrage(Mathf.Max(20f, duration));
+            LogScp096Debug("started rage.");
+
+            return true;
+        }
+
+        private static void AddScp096RageTarget(Scp096Role scp096Role, ReferenceHub target)
+        {
+            if (scp096Role.SubroutineModule.TryGetSubroutine<Scp096TargetsTracker>(out var targetsTracker))
+            {
+                targetsTracker.AddTarget(target, isLooking: true);
+            }
+        }
+
+        private bool TryEndScp096Rage()
+        {
+            if (botPlayer.BotHub.PlayerHub.roleManager.CurrentRole is not Scp096Role scp096Role
+                || !scp096Role.SubroutineModule.TryGetSubroutine<Scp096RageManager>(out var rageManager))
+            {
+                return false;
+            }
+
+            if (scp096Role.StateController.RageState is Scp096RageState.Enraged or Scp096RageState.Distressed)
+            {
+                rageManager.ServerEndEnrage();
+            }
+
+            return true;
         }
 
         private void TryEnableScp096RageInput()
@@ -621,8 +773,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             TryClickGroupedDummyAction("Scp096RageCycleAbility", "Reload->Release");
         }
 
-        private bool TryUseScpAttackAbility(RoleTypeId role)
+        private bool TryUseScpAttackAbility(RoleTypeId role, ReferenceHub target = null)
         {
+            if (role == RoleTypeId.Scp096 && TryUseNativeScp096Attack(target))
+            {
+                return true;
+            }
+
             if (role == RoleTypeId.Scp106 && TryForceScp106PocketOnCorrodingTarget())
             {
                 return true;
@@ -640,6 +797,77 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             };
 
             return TryClickFirstDummyAction(actions);
+        }
+
+        private bool TryUseNativeScp096Attack(ReferenceHub target)
+        {
+            if (botPlayer.BotHub.PlayerHub.roleManager.CurrentRole is not Scp096Role scp096Role)
+            {
+                return false;
+            }
+
+            if (scp096Role.StateController.RageState is not Scp096RageState.Enraged)
+            {
+                LogScp096Debug($"cannot attack while state is {scp096Role.StateController.RageState}.");
+                return false;
+            }
+
+            if (scp096Role.StateController.AbilityState is not Scp096AbilityState.None)
+            {
+                return true;
+            }
+
+            if (!scp096Role.SubroutineModule.TryGetSubroutine<Scp096AttackAbility>(out var attackAbility))
+            {
+                LogScp096Debug("native attack ability is unavailable.");
+                return false;
+            }
+
+            var serverAttack = typeof(Scp096AttackAbility).GetMethod("ServerAttack", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (serverAttack == null)
+            {
+                LogScp096Debug("native ServerAttack method was not found.");
+                return false;
+            }
+
+            serverAttack.Invoke(attackAbility, null);
+
+            var hitResultField = typeof(Scp096AttackAbility).GetField("_hitResult", BindingFlags.Instance | BindingFlags.NonPublic);
+            var hitResult = hitResultField?.GetValue(attackAbility);
+            if (hitResult is Scp096HitResult result && result == Scp096HitResult.None && target != null)
+            {
+                TryApplyDirectScp096CloseDamage(scp096Role, target);
+            }
+
+            return true;
+        }
+
+        private void TryApplyDirectScp096CloseDamage(Scp096Role scp096Role, ReferenceHub target)
+        {
+            if (target == null || !AreHostile(botPlayer.BotHub.PlayerHub, target))
+            {
+                return;
+            }
+
+            var distance = Vector3.Distance(botPlayer.PlayerPosition, target.transform.position);
+            if (distance > ScpAttackRange)
+            {
+                return;
+            }
+
+            target.playerStats.DealDamage(new Scp096DamageHandler(scp096Role, 60f, Scp096DamageHandler.AttackType.SlapRight));
+            LogScp096Debug("applied direct close-range 096 slap fallback.");
+        }
+
+        private void LogScp096Debug(string message)
+        {
+            if (Time.time < nextScp096DebugLogTime)
+            {
+                return;
+            }
+
+            nextScp096DebugLogTime = Time.time + 1f;
+            Debug.Log($"[SCPSLBot] 096 {message}");
         }
 
         private bool TryForceScp106PocketOnCorrodingTarget()
@@ -695,6 +923,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             var botPosition = botPlayer.PlayerPosition;
 
             CombatTarget best = null;
+            CombatTarget currentVisible = null;
             foreach (var candidate in ReferenceHub.AllHubs)
             {
                 if (!AreHostile(botHub, candidate))
@@ -714,14 +943,36 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                     continue;
                 }
 
+                if (candidate == currentTarget)
+                {
+                    currentVisible = selection;
+                }
+
                 if (best == null || selection.Distance < best.Distance)
                 {
                     best = selection;
                 }
             }
 
-            target = best;
+            target = SelectStickyVisibleTarget(best, currentVisible);
             return target != null;
+        }
+
+        private CombatTarget SelectStickyVisibleTarget(CombatTarget best, CombatTarget currentVisible)
+        {
+            if (best == null || currentVisible == null || best.Hub == currentTarget)
+            {
+                return best;
+            }
+
+            if (Time.time - currentTargetSelectedTime < TargetSwitchLockSeconds)
+            {
+                return currentVisible;
+            }
+
+            return best.Distance <= currentVisible.Distance * TargetSwitchDistanceRatio
+                ? best
+                : currentVisible;
         }
 
         private bool TrySelectSurfaceTarget(out CombatTarget target)
@@ -830,14 +1081,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             inventory.ServerSelectItem(firearm.ItemSerial);
             PrepareActionForShot(firearm);
             return firearm;
-        }
-
-        private void EnsureReserveAmmo(Firearm firearm)
-        {
-            if (firearm.TryGetModule<IPrimaryAmmoContainerModule>(out var primaryAmmo))
-            {
-                firearm.Owner.inventory.ServerSetAmmo(primaryAmmo.AmmoType, FallbackReserveAmmo);
-            }
         }
 
         private void PrepareActionForShot(Firearm firearm)

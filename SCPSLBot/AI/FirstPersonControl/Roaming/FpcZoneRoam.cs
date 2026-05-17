@@ -26,14 +26,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             this.botPlayer = botPlayer;
         }
 
-        public void Tick()
+        public bool Tick()
         {
             var roomSightSense = botPlayer.Perception.GetSense<RoomSightSense>();
             var roomWithin = roomSightSense.RoomWithin;
             if (!roomWithin)
             {
-                TickWithoutRoom();
-                return;
+                return TickWithoutRoom();
             }
 
             if (ShouldPickTarget(roomWithin))
@@ -43,11 +42,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
 
             if (!targetPosition.HasValue)
             {
-                return;
+                return false;
             }
 
             botPlayer.MoveToPosition(targetPosition.Value);
             OpenBlockingNonKeycardDoor();
+            return true;
         }
 
         private bool ShouldPickTarget(RoomIdentifier roomWithin)
@@ -79,6 +79,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
 
             if (candidates.Count == 0)
             {
+                candidates = GetAllKnownCells()
+                    .Where(cell => Vector3.Distance(botPlayer.PlayerPosition, cell.CenterPosition) >= SameRoomTargetMinDistance)
+                    .ToList();
+            }
+
+            if (candidates.Count == 0)
+            {
                 targetPosition = null;
                 targetZone = roomWithin.Zone;
                 return;
@@ -89,7 +96,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             targetZone = roomWithin.Zone;
         }
 
-        private void TickWithoutRoom()
+        private bool TickWithoutRoom()
         {
             if (!targetPosition.HasValue || Vector3.Distance(botPlayer.PlayerPosition, targetPosition.Value) <= TargetReachedDistance)
             {
@@ -99,7 +106,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             if (targetPosition.HasValue)
             {
                 botPlayer.MoveToPosition(targetPosition.Value);
+                return true;
             }
+
+            return false;
         }
 
         private void PickFallbackZoneTarget()
@@ -115,6 +125,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             var candidates = GetZoneCells(nearestKnownZone.Value)
                 .Where(cell => Vector3.Distance(botPlayer.PlayerPosition, cell.CenterPosition) >= SameRoomTargetMinDistance)
                 .ToList();
+            if (candidates.Count == 0)
+            {
+                candidates = GetAllKnownCells()
+                    .Where(cell => Vector3.Distance(botPlayer.PlayerPosition, cell.CenterPosition) >= SameRoomTargetMinDistance)
+                    .ToList();
+            }
+
             if (candidates.Count == 0)
             {
                 targetPosition = null;
@@ -161,6 +178,22 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
                 foreach (var cell in mesh.Cells)
                 {
                     yield return new TransformCell(cell, room.transform);
+                }
+            }
+        }
+
+        private static IEnumerable<TransformCell> GetAllKnownCells()
+        {
+            foreach (var (roomObject, mesh) in NavigationMesh.LocalMeshesByRoom)
+            {
+                if (!roomObject.GetComponent<RoomIdentifier>())
+                {
+                    continue;
+                }
+
+                foreach (var cell in mesh.Cells)
+                {
+                    yield return new TransformCell(cell, roomObject.transform);
                 }
             }
         }

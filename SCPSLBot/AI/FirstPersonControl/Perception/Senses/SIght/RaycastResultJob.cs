@@ -11,6 +11,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
     {
         [ReadOnly] public NativeArray<RaycastHit> RaycastsResult;
         [ReadOnly] public int RaycastsCount;
+        [ReadOnly] public int MaxHitsPerRaycast;
         [ReadOnly] public NativeArray<ColliderData> ColliderDatas;
 
         [WriteOnly] public GCHandle WithinSightHandle;
@@ -25,7 +26,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
 
             for (int i = 0; i < RaycastsCount; i++)
             {
-                var hit = RaycastsResult[i];
+                var hit = RaycastsResult[i * MaxHitsPerRaycast];
                 if (hit.colliderInstanceID == ColliderDatas[i].InstanceId)
                 {
                     withinSight.Add(ColliderDatas[i]);

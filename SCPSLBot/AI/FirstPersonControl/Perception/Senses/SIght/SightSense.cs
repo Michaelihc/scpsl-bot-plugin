@@ -96,6 +96,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
 
     internal abstract class SightSense
     {
+        private const int MaxHitsPerRaycast = 1;
+        private const int MinCommandsPerRaycastJob = 32;
+
         public event Action OnAfterSightSensing;
 
         public SightSense(FpcBotPlayer botPlayer)
@@ -150,6 +153,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
             var cameraForward = _fpcBotPlayer.CameraForward;
 
             var colliderDatas = new NativeArray<ColliderData>(values.Count, Allocator.Temp);
+            EnsureRaycastBufferCapacity(values.Count);
 
             var colliderCount = 0;
             foreach (var colliderData in values)
@@ -187,14 +191,15 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
         }
 
         private NativeArray<RaycastCommand> raycastCommandsBuffer = new(1000, Allocator.Persistent);
-        private NativeArray<RaycastHit> raycastResultsBuffer = new(1000 * 2, Allocator.Persistent);
+        private NativeArray<RaycastHit> raycastResultsBuffer = new(1000 * MaxHitsPerRaycast, Allocator.Persistent);
 
         protected JobHandle GetRaycastsResultHandle(GCHandle withinSightHandle)
         {
             var numRaycasts = this.numRaycasts[0];
 
             var raycastCommands = raycastCommandsBuffer.GetSubArray(0, numRaycasts);
-            var raycastsJobHandle = RaycastCommand.ScheduleBatch(raycastCommands, raycastResultsBuffer, 1);
+            var raycastResults = raycastResultsBuffer.GetSubArray(0, numRaycasts * MaxHitsPerRaycast);
+            var raycastsJobHandle = RaycastCommand.ScheduleBatch(raycastCommands, raycastResults, MinCommandsPerRaycastJob, MaxHitsPerRaycast, default);
 
             //foreach (var raycast in raycastCommands)
             //{
@@ -203,14 +208,39 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
              
             var raycastResultJob = new RaycastResultJob()
             {
-                RaycastsResult = raycastResultsBuffer,
+                RaycastsResult = raycastResults,
                 RaycastsCount = numRaycasts,
+                MaxHitsPerRaycast = MaxHitsPerRaycast,
                 ColliderDatas = withinFovColliderDatas,
                 WithinSightHandle = withinSightHandle,
             };
 
             return raycastResultJob.Schedule(raycastsJobHandle);
-        }        
+        }
+
+        private void EnsureRaycastBufferCapacity(int raycastCapacity)
+        {
+            if (raycastCommandsBuffer.Length >= raycastCapacity
+                && raycastResultsBuffer.Length >= raycastCapacity * MaxHitsPerRaycast)
+            {
+                return;
+            }
+
+            var newCapacity = Mathf.NextPowerOfTwo(Mathf.Max(raycastCapacity, raycastCommandsBuffer.Length));
+
+            if (raycastCommandsBuffer.IsCreated)
+            {
+                raycastCommandsBuffer.Dispose();
+            }
+
+            if (raycastResultsBuffer.IsCreated)
+            {
+                raycastResultsBuffer.Dispose();
+            }
+
+            raycastCommandsBuffer = new NativeArray<RaycastCommand>(newCapacity, Allocator.Persistent);
+            raycastResultsBuffer = new NativeArray<RaycastHit>(newCapacity * MaxHitsPerRaycast, Allocator.Persistent);
+        }
 
         protected static bool IsWithinFov(Transform transform, Transform targetTransform) =>
             IsWithinFov(transform.position, transform.forward, targetTransform.position);
