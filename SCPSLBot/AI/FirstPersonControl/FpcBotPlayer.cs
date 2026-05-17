@@ -2,13 +2,16 @@
 using Interactables;
 using Interactables.Interobjects.DoorUtils;
 using MapGeneration.Distributors;
+using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
 using PlayerRoles.Spectating;
+using SCPSLBot.AI.FirstPersonControl.Combat;
 using SCPSLBot.AI.FirstPersonControl.Looking;
 using SCPSLBot.AI.FirstPersonControl.Mind;
 using SCPSLBot.AI.FirstPersonControl.Movement;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
+using SCPSLBot.AI.FirstPersonControl.Roaming;
 using SCPSLBot.Components;
 using System;
 using System.Collections.Generic;
@@ -30,6 +33,8 @@ namespace SCPSLBot.AI.FirstPersonControl
         public PerceptionComponent PerceptionComponent { get; private set; }
         public FpcMindRunner MindRunner { get; }
 
+        public FpcBotCombat Combat { get; }
+        public FpcZoneRoam ZoneRoam { get; }
         public FpcBotNavigator Navigator { get; }
 
         public FpcLook Look { get; }
@@ -47,6 +52,8 @@ namespace SCPSLBot.AI.FirstPersonControl
             Perception = new FpcBotPerception(this);
             MindRunner = new FpcMindRunner();
 
+            Combat = new(this);
+            ZoneRoam = new(this);
             Navigator = new(this);
             Look = new(this);
             Move = new(this);
@@ -66,6 +73,11 @@ namespace SCPSLBot.AI.FirstPersonControl
             this.CameraPosition = cameraTransform.position;
             this.CameraForward = cameraTransform.forward;
 
+            if (Combat.Tick())
+            {
+                yield break;
+            }
+
             if (BotManager.Instance.TryGetPathTargetPosition(out var pathTargetPosition))
             {
                 MoveToPosition(pathTargetPosition);
@@ -78,11 +90,23 @@ namespace SCPSLBot.AI.FirstPersonControl
                 yield return updatePerceptionHandles.Current;
             }
 
+            if (!ShouldUseEscapeGoal())
+            {
+                ZoneRoam.Tick();
+                yield break;
+            }
+
             MindRunner.Tick();
 
             DisplayVisitedActionsGraph();
 
             yield break;
+        }
+
+        private bool ShouldUseEscapeGoal()
+        {
+            var role = BotHub.PlayerHub.roleManager.CurrentRole.RoleTypeId;
+            return role is RoleTypeId.ClassD or RoleTypeId.Scientist;
         }
 
         public void OnRoleChanged()
