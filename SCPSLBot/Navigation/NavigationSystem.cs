@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace SCPSLBot.Navigation
@@ -24,6 +25,8 @@ namespace SCPSLBot.Navigation
 
         public void Init()
         {
+            EnsureDefaultMeshFile();
+
             ServerEvents.MapGenerated += OnMapGenerated;
             ServerEvents.RoundRestarted += OnRoundRestarted;
 
@@ -163,6 +166,7 @@ namespace SCPSLBot.Navigation
 
             if (!File.Exists(path))
             {
+                Debug.LogWarning($"Navigation mesh file not found at {path}.");
                 return;
             }
 
@@ -180,6 +184,34 @@ namespace SCPSLBot.Navigation
             using var binaryWriter = new BinaryWriter(fileStream);
 
             NavigationMesh.WriteMeshes(binaryWriter);
+        }
+
+        private void EnsureDefaultMeshFile()
+        {
+            if (string.IsNullOrWhiteSpace(BaseDir))
+            {
+                return;
+            }
+
+            var path = Path.Combine(BaseDir, MeshFileName);
+            if (File.Exists(path))
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(BaseDir);
+
+            var assembly = Assembly.GetExecutingAssembly();
+            using var resourceStream = assembly.GetManifestResourceStream("SCPSLBot.Assets.navmesh.slnmf");
+            if (resourceStream == null)
+            {
+                Debug.LogWarning("Embedded default navigation mesh was not found.");
+                return;
+            }
+
+            using var fileStream = File.Create(path);
+            resourceStream.CopyTo(fileStream);
+            Debug.Log($"Installed default navigation mesh to {path}.");
         }
 
         #region Private constructor

@@ -75,9 +75,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Assets\navmesh.slnmf">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
+    <EmbeddedResource Include="Assets\navmesh.slnmf">
+      <LogicalName>SCPSLBot.Assets.navmesh.slnmf</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   
   <ItemGroup>
