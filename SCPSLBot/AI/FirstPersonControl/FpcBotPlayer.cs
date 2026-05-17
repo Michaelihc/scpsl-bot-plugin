@@ -351,6 +351,40 @@ namespace SCPSLBot.AI.FirstPersonControl
             return false;
         }
 
+        public bool InteractDoorDirectly(DoorVariant targetDoor, float maxInteractDistance)
+        {
+            if (targetDoor == null)
+            {
+                return false;
+            }
+
+            var hub = BotHub.PlayerHub;
+            var playerPosition = hub.PlayerCameraReference.position;
+
+            foreach (var interactableCollider in targetDoor.GetComponentsInChildren<InteractableCollider>())
+            {
+                var collider = interactableCollider.GetComponent<Collider>();
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                var closest = collider.ClosestPoint(playerPosition);
+                if (Vector3.Distance(playerPosition, closest) > maxInteractDistance)
+                {
+                    continue;
+                }
+
+                if (interactableCollider.Target is DoorVariant interactable)
+                {
+                    interactable.ServerInteract(hub, interactableCollider.ColliderId);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool OpenLockerDoor(LockerChamber targetDoor, float maxInteractDistance)
         {
             var hub = BotHub.PlayerHub;

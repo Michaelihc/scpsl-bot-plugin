@@ -28,6 +28,8 @@ namespace SCPSLBot
 
         public bool DisableDisarmingInWarmup { get; set; } = true;
 
+        public bool DisableScp207HealthDrainInWarmup { get; set; } = true;
+
         public bool EnableOverflowCleanup { get; set; } = true;
 
         public int CleanupItemThreshold { get; set; } = 80;

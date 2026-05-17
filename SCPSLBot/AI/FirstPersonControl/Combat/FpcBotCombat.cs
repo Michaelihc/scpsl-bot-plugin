@@ -66,6 +66,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private float scp096RageReleaseTime;
         private float scp096NextRageAllowedTime;
         private float nextScp096DebugLogTime;
+        private float nextSurfaceDoorDebugLogTime;
         private ReferenceHub scp096RageTarget;
         private bool scp173BlinkHeld;
         private bool scp173BreakneckLikelyActive;
@@ -165,8 +166,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         {
             var firearm = EnsureFirearmEquipped();
             var targetPosition = target.Hub.transform.position;
+            var surfaceDoorBlockingTarget = OpenSurfaceDoorTowardTarget(target.Hub);
 
-            if (target.Distance > HumanChaseDistance)
+            if (surfaceDoorBlockingTarget || target.Distance > HumanChaseDistance)
             {
                 MoveToCombatPosition(targetPosition);
             }
@@ -219,6 +221,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         {
             var targetPosition = target.Hub.transform.position;
             MoveToCombatPosition(targetPosition);
+            OpenSurfaceDoorTowardTarget(target.Hub);
             ApplyScpDamageStrafe(targetPosition);
 
             var aimPoint = GetScpAimPoint(target);
@@ -525,6 +528,74 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                    && door is not DummyDoor
                    && door is not ElevatorDoor
                    && door is not BasicNonInteractableDoor;
+        }
+
+        private bool OpenSurfaceDoorTowardTarget(ReferenceHub target)
+        {
+            if (target == null
+                || !IsOnSurface(botPlayer.PlayerPosition)
+                || !IsOnSurface(target.transform.position))
+            {
+                return false;
+            }
+
+            var origin = botPlayer.PlayerPosition + Vector3.up * 0.8f;
+            var destination = target.transform.position + Vector3.up * 0.8f;
+            var direction = destination - origin;
+            var distanceToTarget = direction.magnitude;
+            if (distanceToTarget < 0.1f)
+            {
+                return false;
+            }
+
+            var hits = Physics.RaycastAll(
+                origin,
+                direction / distanceToTarget,
+                distanceToTarget,
+                LayerMask.GetMask("Door", "Glass"),
+                QueryTriggerInteraction.Ignore);
+            Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+
+            foreach (var hit in hits)
+            {
+                var door = hit.collider.GetComponentInParent<DoorVariant>();
+                if (!CanOpenCombatDoor(door))
+                {
+                    continue;
+                }
+
+                var distanceToDoor = Vector3.Distance(botPlayer.PlayerPosition, hit.point);
+                LogSurfaceDoorDebug($"blocked by {door.name} at {distanceToDoor:F1}m.");
+
+                if (distanceToDoor <= DoorInteractDistance + 0.75f)
+                {
+                    botPlayer.LookToPosition(door.transform.position + Vector3.up);
+                    if (!botPlayer.OpenDoor(door, DoorInteractDistance + 0.75f)
+                        && !botPlayer.InteractDoorDirectly(door, DoorInteractDistance + 0.75f))
+                    {
+                        LogSurfaceDoorDebug($"interaction failed for {door.name}.");
+                    }
+                }
+                else
+                {
+                    botPlayer.MoveToPosition(hit.point);
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private void LogSurfaceDoorDebug(string message)
+        {
+            if (Time.time < nextSurfaceDoorDebugLogTime)
+            {
+                return;
+            }
+
+            nextSurfaceDoorDebugLogTime = Time.time + 1f;
+            Debug.Log($"[SCPSLBot] Surface door: {message}");
         }
 
         private static float GetScpAttackRange(RoleTypeId role)
