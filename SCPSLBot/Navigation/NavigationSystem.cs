@@ -79,29 +79,12 @@ namespace SCPSLBot.Navigation
                 if (door.Rooms.Length == 2)
                 {
                     var doorCenterPosition = door.transform.position + Vector3.up;  // assuming pivot point is located at the bottom of all doors
-
-                    var edgeInFront = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[0]);
-                    var edgeInBack = NavigationMesh.GetNearestEdge(doorCenterPosition, door.Rooms[1]);
-
-                    if (edgeInFront != null && edgeInBack != null)
-                    {
-                        // Connect
-                        var cellInFront = NavigationMesh.LocalMeshesByRoom[door.Rooms[0].gameObject].Cells
-                            .Select(lc => new TransformCell(lc, door.Rooms[0].transform))
-                            .First(c => c.Local.Edges.Any(e => e == edgeInFront.Value.Local));
-
-                        var cellInBack = NavigationMesh.LocalMeshesByRoom[door.Rooms[1].gameObject].Cells
-                            .Select(lc => new TransformCell(lc, door.Rooms[1].transform))
-                            .First(c => c.Local.Edges.Any(e => e == edgeInBack.Value.Local));
-
-                        NavigationMesh.ForeignConnectedCells[cellInFront].Add(cellInBack);
-                        NavigationMesh.ForeignConnectedCellEdges[cellInFront].Add(cellInBack, edgeInBack.Value);
-
-                        NavigationMesh.ForeignConnectedCells[cellInBack].Add(cellInFront);
-                        NavigationMesh.ForeignConnectedCellEdges[cellInBack].Add(cellInFront, edgeInFront.Value);
-                    }
+                    LinkRoomCellsAtPoint(doorCenterPosition, door.Rooms[0], door.Rooms[1]);
                 }
             }
+
+            Debug.Log($"Connecting cells across door-less connectors (open hallways / clutter).");
+            ConnectDoorlessConnectors();
 
             Debug.Log($"Connecting cells between elevator destinations.");
             var elevatorGroups = Enum.GetValues(typeof(ElevatorGroup));
@@ -125,6 +108,113 @@ namespace SCPSLBot.Navigation
                 }
             }
             Debug.Log($"Connecting cells finished.");
+        }
+
+        // Links navmesh cells across room connectors that are NOT doors (open hallways, bulk-door
+        // openings, clutter passages). Doors are already handled via DoorVariant.AllDoors; elevators
+        // separately. This is what lets bots traverse the native map when the connector->standard-door
+        // rewrite is disabled. Each connector sits on the boundary between two rooms; we resolve the
+        // room on each side from its position and link the nearest boundary cells (same scheme as
+        // doors). Runs once per map load. When ForceStandardDoorConnectors is enabled every connector
+        // is a door, so this finds nothing to link and is a no-op.
+        private static void ConnectDoorlessConnectors()
+        {
+            var connectors = UnityEngine.Object.FindObjectsByType<global::MapGeneration.RoomConnectors.SpawnableRoomConnector>(FindObjectsSortMode.None);
+            foreach (var connector in connectors)
+            {
+                if (!connector)
+                {
+                    continue;
+                }
+
+                // Doors / elevator doors are connected through their own passes.
+                if (connector.GetComponentInChildren<DoorVariant>() != null)
+                {
+                    continue;
+                }
+
+                var transform = connector.transform;
+                var center = transform.position + Vector3.up;
+                var forward = transform.forward;
+
+                if (!TryGetConnectorSideRoom(center, forward, out var roomA)
+                    || !TryGetConnectorSideRoom(center, -forward, out var roomB)
+                    || roomA == roomB)
+                {
+                    continue;
+                }
+
+                LinkRoomCellsAtPoint(center, roomA, roomB);
+            }
+        }
+
+        private static bool TryGetConnectorSideRoom(Vector3 center, Vector3 direction, out RoomIdentifier room)
+        {
+            for (var distance = 1.5f; distance <= 4.5f; distance += 1.5f)
+            {
+                if (RoomUtils.TryGetRoom(center + direction * distance, out room)
+                    && room != null
+                    && NavigationMesh.LocalMeshesByRoom.ContainsKey(room.gameObject))
+                {
+                    return true;
+                }
+            }
+
+            room = null;
+            return false;
+        }
+
+        // Connects the nearest boundary cells of two rooms at a shared passage point, in both
+        // directions. Safe against missing meshes / no matching cell / duplicate links.
+        private static void LinkRoomCellsAtPoint(Vector3 point, RoomIdentifier roomA, RoomIdentifier roomB)
+        {
+            if (roomA == null || roomB == null || roomA == roomB)
+            {
+                return;
+            }
+
+            if (!NavigationMesh.LocalMeshesByRoom.TryGetValue(roomA.gameObject, out var meshA)
+                || !NavigationMesh.LocalMeshesByRoom.TryGetValue(roomB.gameObject, out var meshB))
+            {
+                return;
+            }
+
+            var edgeA = NavigationMesh.GetNearestEdge(point, roomA);
+            var edgeB = NavigationMesh.GetNearestEdge(point, roomB);
+            if (!edgeA.HasValue || !edgeB.HasValue)
+            {
+                return;
+            }
+
+            var cellA = meshA.Cells
+                .Where(lc => lc.Edges.Any(e => e == edgeA.Value.Local))
+                .Select(lc => (TransformCell?)new TransformCell(lc, roomA.transform))
+                .FirstOrDefault();
+            var cellB = meshB.Cells
+                .Where(lc => lc.Edges.Any(e => e == edgeB.Value.Local))
+                .Select(lc => (TransformCell?)new TransformCell(lc, roomB.transform))
+                .FirstOrDefault();
+            if (!cellA.HasValue || !cellB.HasValue)
+            {
+                return;
+            }
+
+            ConnectForeignCells(cellA.Value, cellB.Value);
+            ConnectForeignCellEdge(cellA.Value, cellB.Value, edgeB.Value);
+
+            ConnectForeignCells(cellB.Value, cellA.Value);
+            ConnectForeignCellEdge(cellB.Value, cellA.Value, edgeA.Value);
+        }
+
+        private static void ConnectForeignCellEdge(TransformCell from, TransformCell to, TransformEdge edge)
+        {
+            if (!NavigationMesh.ForeignConnectedCellEdges.TryGetValue(from, out var edges))
+            {
+                edges = new Dictionary<TransformCell, TransformEdge>();
+                NavigationMesh.ForeignConnectedCellEdges[from] = edges;
+            }
+
+            edges[to] = edge;
         }
 
         // Resolves the navmesh cell at an elevator landing WITHOUT mutating native

@@ -30,11 +30,12 @@ namespace SCPSLBot
 
         public bool DisableScp207HealthDrainInWarmup { get; set; } = true;
 
-        public bool EnableOverflowCleanup { get; set; } = true;
-
-        public int CleanupItemThreshold { get; set; } = 80;
-
-        public float CleanupCheckIntervalSeconds { get; set; } = 10f;
+        // When true, every non-standard room connector (open hallways, bulk doors, clutter) is
+        // forced to an HCZ standard door at map generation so the baked navmesh (which only links
+        // rooms that have a door) has a door at every room link. This uniformizes the map and
+        // conflicts with map-layout plugins, so it is OFF by default; bots instead get navmesh
+        // links built across door-less connectors at load time (see NavigationSystem).
+        public bool ForceStandardDoorConnectors { get; set; } = false;
     }
 
     public enum WarmupMode

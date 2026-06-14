@@ -78,20 +78,22 @@ live map and is not headless-runnable. Items below marked **[live]** need that.
   per-frame `bounds.center` poll on every sensed item, server-wide). Centers are
   refreshed on demand only for colliders a live bot is sensing.
 
+### Batch E — map-gen conflict + cleanup removal (owner-directed)
+- **Map-gen connector rewrite**: now OFF by default (`force_standard_door_connectors`
+  config flag, default false), so the plugin no longer mutates the whole map's
+  connectors. To keep bots navigating without the rewrite, `NavigationSystem` now
+  links navmesh cells across door-less connectors (open hallways / bulk-door
+  openings / clutter): it enumerates `SpawnableRoomConnector` instances without a
+  `DoorVariant`, resolves the room on each side, and links the nearest boundary
+  cells — the same scheme used for doors. The door linking was refactored into a
+  shared hardened helper (`LinkRoomCellsAtPoint`, no more `First()`/bare-indexer
+  throws). **[live]**
+- **Overflow cleanup removed**: `OverflowCleanupManager` and its config fields
+  (`enable_overflow_cleanup`, `cleanup_item_threshold`, `cleanup_check_interval_seconds`)
+  deleted per owner direction — a tiered cleanup belongs in a separate plugin.
+
 ## Deferred — need owner decision and/or live verification
 
-- **Map-gen connector rewrite (`RoomConnectorSpawnpointBasePatches`)** — *the #1
-  map-gen conflict*. It rewrites EVERY non-standard connector (OpenHallway,
-  HczBulkDoor, all Clutter*) to `HczStandardDoor` server-wide so the baked navmesh
-  (which only links rooms via `DoorVariant.AllDoors`) has a door at every room
-  link. Fixing it properly means either (a) re-baking the navmesh against the real
-  connector set, or (b) gating the rewrite off + linking navmesh cells across
-  door-less connectors (open hallways) so bots still traverse them. Needs an owner
-  decision (see questions) — left untouched to avoid breaking bot navigation.
-- **Overflow cleanup (`OverflowCleanupManager`)** runs zero-arg native
-  `items/corpses/blood/bulletholes` commands that wipe ALL such objects server-wide
-  at the threshold (default on, 80) — destructive and conflict-prone. Options:
-  default off, or selective trim (oldest excess pickups only, never corpses/blood).
 - **Elevator timeout/abandon** (`CallAndWaitForElevator` / `TravelOnElevator`): no
   timeout, so a locked/contested elevator can trap a bot. A proper fix needs route
   blacklisting + live elevator testing.

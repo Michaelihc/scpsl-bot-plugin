@@ -9,7 +9,6 @@ This fork started from repkins' bot addon, but the runtime behavior is now focus
 - Maintains standard warmup mode with locked rounds, respawns, default roles, bot count control, and disabled round-ending hazards.
 - Adds faction-aware combat between players, human-role bots, and SCP-role bots, including firearm use, reloading, strafing, chase memory, surface chase behavior, item pickup support, door/gate handling, and SCP ability attacks.
 - Adds a player-facing Server Specific Settings panel through the companion `WarmupPlayerPanel` plugin.
-- Adds native item/corpse/blood/bullet-hole cleanup when item overflow is detected.
 - Disables SCP-207 health drain during standard warmup by default.
 
 ## Build
@@ -81,10 +80,14 @@ disable_warhead_in_warmup: true
 disable_lcz_decontamination_in_warmup: true
 disable_disarming_in_warmup: true
 disable_scp207_health_drain_in_warmup: true
-enable_overflow_cleanup: true
-cleanup_item_threshold: 80
-cleanup_check_interval_seconds: 10
+force_standard_door_connectors: false
 ```
+
+`force_standard_door_connectors` (default `false`): when `true`, every non-standard
+room connector (open hallways, bulk doors, clutter) is rewritten to an HCZ standard
+door at map generation so the baked navmesh has a door at every room link. This
+uniformizes the map and conflicts with map-layout plugins, so it is off by default;
+bots instead get navmesh links built across door-less connectors at load time.
 
 Notes:
 
@@ -122,7 +125,6 @@ Standard warmup:
 - Spawns bots as Chaos Rifleman by default.
 - Disables LCZ decontamination, disarming, SCP-207 health drain, and non-admin warhead use.
 - Uses SCP:SL server config to disable DMS and auto-warhead.
-- Uses native cleanup commands when item count exceeds the configured threshold.
 
 Warmup mode `None`:
 

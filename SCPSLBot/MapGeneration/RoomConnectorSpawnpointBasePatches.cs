@@ -19,6 +19,14 @@ namespace SCPSLBot.MapGeneration
         [HarmonyPrefix]
         public static void SpawnWithSupportedType(RoomConnectorSpawnpointBase __instance, ref SpawnableRoomConnectorType type)
         {
+            // Off by default: rewriting every connector to a standard door mutates the whole map and
+            // conflicts with other map plugins. With it off, bots instead get navmesh links built
+            // across door-less connectors (NavigationSystem.ConnectDoorlessConnectors).
+            if (!(LabApiPlugin.Instance?.Config?.ForceStandardDoorConnectors ?? false))
+            {
+                return;
+            }
+
             if (!SupportedConnectorTypes.Contains(type))
             {
                 type = SpawnableRoomConnectorType.HczStandardDoor;
