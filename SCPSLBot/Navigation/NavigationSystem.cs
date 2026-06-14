@@ -114,50 +114,62 @@ namespace SCPSLBot.Navigation
                     continue;
                 }
 
-                var doorTransform = elevatorDoors[0].transform;
-                var doorPosition = doorTransform.position + Vector3.up;
-                var doorForward = doorTransform.forward;
-
-                for (int i = 1; i <= 3; i++)
-                {
-                    var doorForwardX = doorForward * i;
-
-                    if (!RoomUtils.TryGetRoom(doorPosition - doorForwardX, out var room))
-                    {
-                        RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
-                        RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForwardX), room);
-                        break;
-                    }
-                }
-
-                var cellAt0InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward);
-
-                doorTransform = elevatorDoors[1].transform;
-                doorPosition = doorTransform.position + Vector3.up;
-                doorForward = doorTransform.forward;
-
-                for (int i = 1; i <= 3; i++)
-                {
-                    var doorForwardX = doorForward * i;
-
-                    if (!RoomUtils.TryGetRoom(doorPosition - doorForwardX, out var room))
-                    {
-                        RoomUtils.TryGetRoom(doorPosition + doorForward, out room);
-                        RoomIdentifier.RoomsByCoords.Add(RoomUtils.PositionToCoords(doorPosition - doorForwardX), room);
-                        break;
-                    }
-                }
-
-                var cellAt1InShaft = NavigationMesh.GetCellWithin(doorPosition - doorForward);
+                var cellAt0InShaft = ResolveElevatorShaftCell(elevatorDoors[0]);
+                var cellAt1InShaft = ResolveElevatorShaftCell(elevatorDoors[1]);
 
                 if (cellAt0InShaft != null && cellAt1InShaft != null)
                 {
                     // Connect
-                    NavigationMesh.ForeignConnectedCells[cellAt0InShaft.Value].Add(cellAt1InShaft.Value);
-                    NavigationMesh.ForeignConnectedCells[cellAt1InShaft.Value].Add(cellAt0InShaft.Value);
+                    ConnectForeignCells(cellAt0InShaft.Value, cellAt1InShaft.Value);
+                    ConnectForeignCells(cellAt1InShaft.Value, cellAt0InShaft.Value);
                 }
             }
             Debug.Log($"Connecting cells finished.");
+        }
+
+        // Resolves the navmesh cell at an elevator landing WITHOUT mutating native
+        // RoomIdentifier.RoomsByCoords. The previous probe-loop registered a fake coord->room
+        // entry there, which threw on a second nav load (duplicate key) and left a destroyed-room
+        // reference in native state across rounds. This is behavior-equivalent: if the shaft-side
+        // position maps to a room, resolve normally; otherwise resolve the landing cell against the
+        // door's far-side room mesh directly.
+        private static TransformCell? ResolveElevatorShaftCell(ElevatorDoor door)
+        {
+            if (door == null)
+            {
+                return null;
+            }
+
+            var doorTransform = door.transform;
+            var doorPosition = doorTransform.position + Vector3.up;
+            var doorForward = doorTransform.forward;
+            var probePosition = doorPosition - doorForward;
+
+            if (RoomUtils.TryGetRoom(probePosition, out _))
+            {
+                return NavigationMesh.GetCellWithin(probePosition);
+            }
+
+            if (!RoomUtils.TryGetRoom(doorPosition + doorForward, out var fallbackRoom) || fallbackRoom == null)
+            {
+                return null;
+            }
+
+            return NavigationMesh.GetRoomCellWithin(probePosition, fallbackRoom);
+        }
+
+        private static void ConnectForeignCells(TransformCell from, TransformCell to)
+        {
+            if (!NavigationMesh.ForeignConnectedCells.TryGetValue(from, out var connected))
+            {
+                connected = new List<TransformCell>();
+                NavigationMesh.ForeignConnectedCells[from] = connected;
+            }
+
+            if (!connected.Contains(to))
+            {
+                connected.Add(to);
+            }
         }
 
         public void LoadMeshes(string fileName)

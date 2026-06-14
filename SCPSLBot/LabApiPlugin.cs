@@ -59,7 +59,7 @@ namespace SCPSLBot
             NavigationMeshEditor.Instance.Terminate();
             NavigationSystem.Instance.Terminate();
 
-            harmonyInstance.UnpatchAll();
+            harmonyInstance.UnpatchAll(harmonyInstance.Id);
             Logger.Info("Unpatching successful.");
 
             Instance = null;

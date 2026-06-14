@@ -32,7 +32,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Elevation
         {
             var edgelessSegmentResult = navigator.CellPathSegments
                 .Where(s => !s.Cell.AdjacentCellEdges.ContainsKey(s.NextCell)
-                    && !NavigationMesh.ForeignConnectedCellEdges[s.Cell].ContainsKey(s.NextCell))
+                    && !NavigationMesh.TryGetForeignConnectedEdge(s.Cell, s.NextCell, out _))
                 .Select(s => new (TransformCell Cell, TransformCell NextCell)?(s))
                 .FirstOrDefault();
             if (!edgelessSegmentResult.HasValue)

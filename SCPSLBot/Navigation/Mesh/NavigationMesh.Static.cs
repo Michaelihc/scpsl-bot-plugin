@@ -17,6 +17,28 @@ namespace SCPSLBot.Navigation.Mesh
         public static Dictionary<TransformCell, List<TransformCell>> ForeignConnectedCells = new();
         public static Dictionary<TransformCell, Dictionary<TransformCell, TransformEdge>> ForeignConnectedCellEdges = new();
 
+        private static readonly List<TransformCell> EmptyForeignCells = new();
+
+        // Safe read accessors. The raw indexers throw KeyNotFoundException for any cell that was
+        // never registered (e.g. cells reached over elevator links, which register a connected cell
+        // but NOT a connecting edge). A throw here aborts the whole bot tick, so reads must be safe.
+        public static IReadOnlyList<TransformCell> GetForeignConnectedCells(TransformCell cell)
+        {
+            return ForeignConnectedCells.TryGetValue(cell, out var list) ? list : EmptyForeignCells;
+        }
+
+        public static bool TryGetForeignConnectedEdge(TransformCell cell, TransformCell nextCell, out TransformEdge edge)
+        {
+            edge = default;
+            return ForeignConnectedCellEdges.TryGetValue(cell, out var inner)
+                && inner.TryGetValue(nextCell, out edge);
+        }
+
+        public static bool HasForeignConnectedCell(TransformCell cell, TransformCell nextCell)
+        {
+            return ForeignConnectedCells.TryGetValue(cell, out var list) && list.Contains(nextCell);
+        }
+
         public static NavigationMesh CreateMesh(string form)
         {
             var mesh = new NavigationMesh();
@@ -186,7 +208,7 @@ namespace SCPSLBot.Navigation.Mesh
 
                 //Log.Debug($"Cell evaluating connections #{cellIdx} cost so far {cost}");
 
-                foreach (var connectedCell in cell.AdjacentCells.Concat(ForeignConnectedCells[cell]))
+                foreach (var connectedCell in cell.AdjacentCells.Concat(GetForeignConnectedCells(cell)))
                 {
                     var connectedCost = cost + Vector3.Magnitude(connectedCell.CenterPosition - cell.CenterPosition);
 

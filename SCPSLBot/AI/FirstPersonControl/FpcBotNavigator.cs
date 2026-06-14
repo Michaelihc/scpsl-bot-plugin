@@ -64,12 +64,20 @@ namespace SCPSLBot.AI.FirstPersonControl
                 do
                 {
                     var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
-                    if (!this.currentCell.AdjacentCellEdges.TryGetValue(nextTargetCell, out var nextTargetCellEdge))
+                    if (!this.currentCell.AdjacentCellEdges.TryGetValue(nextTargetCell, out var nextTargetCellEdge)
+                        && !NavigationMesh.TryGetForeignConnectedEdge(this.currentCell, nextTargetCell, out nextTargetCellEdge))
                     {
-                        nextTargetCellEdge = NavigationMesh.ForeignConnectedCellEdges[this.currentCell][nextTargetCell]; 
+                        // Edgeless segment (e.g. an elevator link, which registers a connected cell
+                        // but no connecting edge): advance only once the bot has actually arrived in
+                        // the next cell (elevator/obstacle handling carries it there); otherwise wait.
+                        var arrivedCell = GetCellWithin();
+                        isEdgeReached = arrivedCell.HasValue && arrivedCell.Value == nextTargetCell;
+                    }
+                    else
+                    {
+                        isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetCellEdge);
                     }
 
-                    isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetCellEdge);
                     if (isEdgeReached)
                     {
                         this.currentCell = this.CellsPath[++this.currentPathIdx];
@@ -133,7 +141,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 foreach (var (cell, nextCell) in CellPathSegments)
                 {
                     if (!cell.AdjacentCellEdges.TryGetValue(nextCell, out var e)
-                        && !NavigationMesh.ForeignConnectedCellEdges[cell].TryGetValue(nextCell, out e))
+                        && !NavigationMesh.TryGetForeignConnectedEdge(cell, nextCell, out e))
                     {
                         partialPath = true;
                         break;
@@ -163,7 +171,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
             if (!currentCell.AdjacentCellEdges.TryGetValue(nextTargetCell, out var targetCellEdge)
-                && !NavigationMesh.ForeignConnectedCellEdges[currentCell].TryGetValue(nextTargetCell, out targetCellEdge))
+                && !NavigationMesh.TryGetForeignConnectedEdge(currentCell, nextTargetCell, out targetCellEdge))
             {
                 return currentCell.CenterPosition;
             }
@@ -183,7 +191,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
                 var aheadTargetCell = this.CellsPath[aheadPathIdx];
                 if (!nextTargetCell.AdjacentCellEdges.TryGetValue(aheadTargetCell, out var aheadTargetCellEdge)
-                    && !NavigationMesh.ForeignConnectedCellEdges[currentCell].TryGetValue(nextTargetCell, out aheadTargetCellEdge))
+                    && !NavigationMesh.TryGetForeignConnectedEdge(nextTargetCell, aheadTargetCell, out aheadTargetCellEdge))
                 {
                     goalPosition = nextTargetCell.CenterPosition;
                     break;
