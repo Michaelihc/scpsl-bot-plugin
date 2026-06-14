@@ -1,5 +1,6 @@
 ﻿using Hints;
 using Interactables;
+using Interactables.Interobjects;
 using Interactables.Interobjects.DoorUtils;
 using MapGeneration;
 using MapGeneration.Distributors;
@@ -50,6 +51,10 @@ namespace SCPSLBot.AI.FirstPersonControl
         private Vector3 stuckAnchorPosition;
         private float stuckAnchorTime;
         private float nextStuckJumpTime;
+        private int stuckNudgeDirection = 1;
+        private float nextStuckNudgeFlipTime;
+        private float nextStuckDoorTime;
+        private float nextStuckReplanTime;
 
         public FpcBotPlayer(BotHub botHub)
         {
@@ -118,6 +123,13 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             MindRunner.Tick();
 
+            // If the planner has nothing to do (e.g. no reachable escape route sensed yet), roam
+            // instead of standing still for the rest of the round.
+            if (MindRunner.RunningAction == null)
+            {
+                ZoneRoam.Tick();
+            }
+
             DisplayVisitedActionsGraph();
             JumpIfForwardMovementBlocked();
 
@@ -164,16 +176,26 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             this.Look.ToPosition(turnPosition);
 
+            if (relativeHorizontalPos.sqrMagnitude < 1e-4f)
+            {
+                this.Move.DesiredLocalDirection = Vector3.zero;
+                return;
+            }
+
             var playerDirection = FpcRole.FpcModule.transform.forward;
             var dirTowardsTarget = Vector3.Normalize(relativeHorizontalPos);
 
+            // Steer straight at the target rather than walking the body's current forward while it
+            // slowly rotates (which drifts wide and oscillates around corners/doorways). When the
+            // target is behind us, hold still and let the look rotation bring it into view first
+            // instead of walking backwards into hazards. Native FpcMotor renormalizes DesiredMove.
             if (Vector3.Dot(playerDirection, dirTowardsTarget) < 0f)
             {
-                this.Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(dirTowardsTarget);
+                this.Move.DesiredLocalDirection = Vector3.zero;
             }
             else
             {
-                this.Move.DesiredLocalDirection = Vector3.forward;
+                this.Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(dirTowardsTarget);
             }
         }
 
@@ -272,16 +294,50 @@ namespace SCPSLBot.AI.FirstPersonControl
                 return;
             }
 
-            if (Time.time - stuckAnchorTime < 3f || Time.time < nextStuckJumpTime)
+            var stuckDuration = Time.time - stuckAnchorTime;
+            if (stuckDuration < 0.7f)
             {
                 return;
             }
 
-            Debug.Log("[SCPSLBot] Bot movement blocked for 3 seconds; forcing jump.");
-            FpcRole.FpcModule.Motor.JumpController.ForceJump(FpcRole.FpcModule.JumpSpeed);
-            nextStuckJumpTime = Time.time + 1f;
-            stuckAnchorPosition = PlayerPosition;
-            stuckAnchorTime = Time.time;
+            // Escalating unstick (cheap -> disruptive): open a door ahead, then a lateral nudge to
+            // slip around corners, then a hop, then force the navigator to re-plan. This recovers
+            // from the brief corner/doorway snags fast instead of standing still for 3 seconds.
+            var moveDir = intendedWorldMove.normalized;
+
+            if (Time.time >= nextStuckDoorTime
+                && Physics.Raycast(CameraPosition, CameraForward, out var doorHit, 2.5f, LayerMask.GetMask("Door"))
+                && doorHit.collider.GetComponentInParent<DoorVariant>() is DoorVariant blockingDoor
+                && blockingDoor is not ElevatorDoor
+                && !blockingDoor.IsConsideredOpen())
+            {
+                nextStuckDoorTime = Time.time + 0.6f;
+                OpenDoor(blockingDoor, 2.5f);
+            }
+
+            if (Time.time >= nextStuckNudgeFlipTime)
+            {
+                stuckNudgeDirection = -stuckNudgeDirection;
+                nextStuckNudgeFlipTime = Time.time + 0.8f;
+            }
+
+            var side = Vector3.Cross(Vector3.up, moveDir).normalized * stuckNudgeDirection;
+            var nudgedWorld = Vector3.Normalize(moveDir + side);
+            Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(nudgedWorld);
+
+            if (stuckDuration >= 1.5f && Time.time >= nextStuckJumpTime)
+            {
+                FpcRole.FpcModule.Motor.JumpController.ForceJump(FpcRole.FpcModule.JumpSpeed);
+                nextStuckJumpTime = Time.time + 1f;
+            }
+
+            if (stuckDuration >= 2.5f && Time.time >= nextStuckReplanTime)
+            {
+                Navigator.ForceReplan();
+                nextStuckReplanTime = Time.time + 2f;
+                stuckAnchorPosition = PlayerPosition;
+                stuckAnchorTime = Time.time;
+            }
         }
 
         private void ResetStuckJumpTracking()
@@ -294,11 +350,10 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public void LookToPosition(Vector3 targetPosition)
         {
-            var prevHorizontalRotation = Look.TargetHorizontalRotation;
-
+            // Only aim. The desired move direction is recomputed in world space every tick by the
+            // caller (combat strafe / navigation), so rotating it here by the full look-to-target
+            // rotation corrupted it and produced erratic combat/chase movement.
             Look.ToPosition(targetPosition);
-
-            Move.DesiredLocalDirection = prevHorizontalRotation * Move.DesiredLocalDirection;
         }
 
         #region Interaction

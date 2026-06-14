@@ -22,6 +22,7 @@ namespace SCPSLBot.AI.FirstPersonControl
         public IEnumerable<(Vector3 point, Vector3 nextPoint)> PathSegments { get; }
 
         private bool isGoalOutside;
+        private bool hasPath;
         private Vector3 targetCellClosestPositionToGoal;
 
         private readonly FpcBotPlayer botPlayer;
@@ -38,12 +39,19 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             this.UpdateNavigationTo(goalPosition);
 
+            // No navigable path: hold position rather than walking straight into walls toward an
+            // unreachable goal. Stuck recovery / target reselection takes it from here.
+            if (!hasPath)
+            {
+                return botPlayer.PlayerPosition;
+            }
+
             if (!IsAtLastCell())
             {
                 Vector3 nextTargetPosition = GetNextCorner(goalPosition);
                 return nextTargetPosition;
             }
-            else 
+            else
             {
                 if (goalCell != null && isGoalOutside)
                 {
@@ -53,6 +61,8 @@ namespace SCPSLBot.AI.FirstPersonControl
                 return goalPosition;
             }
         }
+
+        public bool HasPath => hasPath;
 
         private void UpdateNavigationTo(Vector3 goalPosition)
         {
@@ -92,21 +102,19 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             if (targetCell == null)
             {
-                RoomUtils.TryGetRoom(goalPosition, out var goalRoom);
-
-                var nearestEdge = NavigationMesh.GetNearestEdge(goalPosition, out var closestPoint, goalRoom);
-                if (nearestEdge.HasValue)
+                if (RoomUtils.TryGetRoom(goalPosition, out var goalRoom) && goalRoom != null)
                 {
-                    var nearestLocalEdge = new Edge(nearestEdge.Value.From, nearestEdge.Value.To);
-                    targetCell = NavigationMesh.LocalMeshesByRoom[goalRoom.gameObject].Cells
-                        .Where(a => a.Edges.Any(e => e == nearestLocalEdge))
-                        .Select(a => new TransformCell?(new (a, goalRoom.transform)))
-                        .FirstOrDefault();
-                    targetCellClosestPositionToGoal = closestPoint;
-                }
-                else
-                {
-                    Debug.LogWarning($"Could not find path to goal position.");
+                    var nearestEdge = NavigationMesh.GetNearestEdge(goalPosition, out var closestPoint, goalRoom);
+                    if (nearestEdge.HasValue
+                        && NavigationMesh.LocalMeshesByRoom.TryGetValue(goalRoom.gameObject, out var goalRoomMesh))
+                    {
+                        var nearestLocalEdge = new Edge(nearestEdge.Value.From, nearestEdge.Value.To);
+                        targetCell = goalRoomMesh.Cells
+                            .Where(a => a.Edges.Any(e => e == nearestLocalEdge))
+                            .Select(a => new TransformCell?(new (a, goalRoom.transform)))
+                            .FirstOrDefault();
+                        targetCellClosestPositionToGoal = closestPoint;
+                    }
                 }
 
                 isGoalOutside = true;
@@ -114,6 +122,11 @@ namespace SCPSLBot.AI.FirstPersonControl
             else
             {
                 isGoalOutside = false;
+            }
+
+            if (targetCell == null)
+            {
+                hasPath = false;
             }
 
             if (withinCell != null && targetCell != null && (targetCell != this.goalCell || withinCell.Value != this.currentCell))
@@ -125,6 +138,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
                 NavigationMesh.FindShortestPath(withinCell.Value, targetCell.Value, this.CellsPath);
                 this.currentPathIdx = 0;
+                this.hasPath = this.CellsPath.Count > 0;
 
                 //Log.Debug($"New path of {this.CellsPath.Count} cells:");
                 //foreach (var cellInPath in CellsPath)
@@ -257,6 +271,13 @@ namespace SCPSLBot.AI.FirstPersonControl
         private bool IsAtLastCell()
         {
             return this.currentPathIdx >= this.CellsPath.Count - 1;
+        }
+
+        // Forces UpdateNavigationTo to rebuild the cell path on the next call (used by stuck recovery).
+        public void ForceReplan()
+        {
+            goalCell = null;
+            currentPathIdx = -1;
         }
     }
 }
