@@ -15,13 +15,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
 
         protected override void AddColliderDatas(Collider triggeringCollider, TComponent component, Dictionary<ColliderData, TComponent> data)
         {
-            var colliderDataComponent = triggeringCollider.GetComponent<ColliderDataComponent>();
-            if (!colliderDataComponent)
-            {
-                colliderDataComponent = triggeringCollider.gameObject.AddComponent<ColliderDataComponent>();
-            }
-
-            var colliderData = colliderDataComponent.ColliderDatas[triggeringCollider];
+            // Track the collider center directly. Previously this attached a ColliderDataComponent
+            // MonoBehaviour to the (shared, world-owned) item GameObject that polled bounds.center
+            // every frame forever and was never removed — a per-frame cost on every sensed item and
+            // a cross-plugin leak. We instead refresh centers on demand in UpdateColliderData, only
+            // for colliders a live bot is actually sensing.
+            var colliderData = new ColliderData(triggeringCollider.GetInstanceID(), triggeringCollider.bounds.center);
             colliders.Add(triggeringCollider);
             collidersDatas[triggeringCollider] = colliderData;
 
@@ -45,10 +44,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight
                     continue;
                 }
 
-                var colliderDataComponent = collider.GetComponent<ColliderDataComponent>();
-
                 var prevData = collidersDatas[collider];
-                var data = colliderDataComponent.ColliderDatas[collider];
+                var data = new ColliderData(prevData.InstanceId, collider.bounds.center);
 
                 if (prevData.Center != data.Center)
                 {

@@ -32,7 +32,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
             if (!doorToOpen)
             {
-                Debug.LogWarning($"doorToOpen is null to open");
+                if (BotLog.Verbose) Debug.LogWarning($"doorToOpen is null to open");
                 return;
             }
 
@@ -42,7 +42,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
             if (!isTargetStateOpen && dist <= interactDistance)
             {
-                Debug.Log($"{doorToOpen} is within interactable distance");
+                if (BotLog.Verbose) Debug.Log($"{doorToOpen} is within interactable distance");
 
                 if (!botPlayer.OpenDoor(doorToOpen, interactDistance))
                 {

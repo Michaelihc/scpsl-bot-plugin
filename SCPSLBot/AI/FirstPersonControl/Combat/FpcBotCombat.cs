@@ -52,6 +52,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
         private readonly FpcBotPlayer botPlayer;
         private readonly List<DummyAction> dummyActions = new();
+        private int dummyActionsFrame = -1;
         private readonly System.Random random = new();
 
         private ReferenceHub currentTarget;
@@ -595,7 +596,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             nextSurfaceDoorDebugLogTime = Time.time + 1f;
-            Debug.Log($"[SCPSLBot] Surface door: {message}");
+            if (BotLog.Verbose) Debug.Log($"[SCPSLBot] Surface door: {message}");
         }
 
         private static float GetScpAttackRange(RoleTypeId role)
@@ -938,7 +939,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             nextScp096DebugLogTime = Time.time + 1f;
-            Debug.Log($"[SCPSLBot] 096 {message}");
+            if (BotLog.Verbose) Debug.Log($"[SCPSLBot] 096 {message}");
         }
 
         private bool TryForceScp106PocketOnCorrodingTarget()
@@ -1253,6 +1254,23 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             return TryClickGroupedDummyAction(categoryName, $"{actionName}->Click");
         }
 
+        // Rebuilds the dummy-action list at most once per frame. It was previously regenerated on
+        // every shoot/reload/ability lookup (several per tick), each call allocating via
+        // ServerGetActions + PopulateDummyActions. Invoking an action can change the available set,
+        // so callers invalidate the cache (dummyActionsFrame = -1) after a successful Invoke.
+        private void EnsureDummyActions()
+        {
+            if (dummyActionsFrame == Time.frameCount)
+            {
+                return;
+            }
+
+            dummyActionsFrame = Time.frameCount;
+            dummyActions.Clear();
+            dummyActions.AddRange(DummyActionCollector.ServerGetActions(botPlayer.BotHub.PlayerHub));
+            botPlayer.BotHub.PlayerHub.inventory.PopulateDummyActions(dummyActions.Add, _ => { });
+        }
+
         private bool TryClickDummyAction(string actionName)
         {
             if (string.IsNullOrWhiteSpace(actionName))
@@ -1260,9 +1278,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 return false;
             }
 
-            dummyActions.Clear();
-            dummyActions.AddRange(DummyActionCollector.ServerGetActions(botPlayer.BotHub.PlayerHub));
-            botPlayer.BotHub.PlayerHub.inventory.PopulateDummyActions(dummyActions.Add, _ => { });
+            EnsureDummyActions();
 
             var dummyAction = FindDummyAction(actionName);
             if (dummyAction.Action == null)
@@ -1271,6 +1287,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             dummyAction.Action.Invoke();
+            dummyActionsFrame = -1;
             return true;
         }
 
@@ -1281,9 +1298,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 return false;
             }
 
-            dummyActions.Clear();
-            dummyActions.AddRange(DummyActionCollector.ServerGetActions(botPlayer.BotHub.PlayerHub));
-            botPlayer.BotHub.PlayerHub.inventory.PopulateDummyActions(dummyActions.Add, _ => { });
+            EnsureDummyActions();
 
             var dummyAction = FindDummyAction(categoryName, actionName);
             if (dummyAction.Action == null)
@@ -1292,6 +1307,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             dummyAction.Action.Invoke();
+            dummyActionsFrame = -1;
             return true;
         }
 
@@ -1521,6 +1537,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 or RoleTypeId.ClassD;
         }
 
+        private static readonly int CombatVisionMask =
+            LayerMask.GetMask("Default", "Door", "InteractableNoPlayerCollision", "Glass");
+
         private static bool HasLineOfSight(ReferenceHub source, ReferenceHub target, Vector3 origin, Vector3 aimPoint)
         {
             var direction = aimPoint - origin;
@@ -1530,36 +1549,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 return true;
             }
 
-            var hits = Physics.RaycastAll(origin, direction.normalized, distance, ~0, QueryTriggerInteraction.Ignore);
-            Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
-
-            var sourceRoot = source.transform;
-            var targetRoot = target.transform;
-            var sawBlockingCandidate = false;
-
-            foreach (var hit in hits)
-            {
-                var hitTransform = hit.transform;
-                if (hitTransform == null)
-                {
-                    continue;
-                }
-
-                if (hitTransform == sourceRoot || hitTransform.IsChildOf(sourceRoot))
-                {
-                    continue;
-                }
-
-                sawBlockingCandidate = true;
-                if (hitTransform == targetRoot || hitTransform.IsChildOf(targetRoot))
-                {
-                    return true;
-                }
-
-                return false;
-            }
-
-            return !sawBlockingCandidate;
+            // Single environment-only linecast: the aim point is visible if no wall/door/glass is
+            // between the eye and it. Replaces a per-candidate, per-tick RaycastAll(~0)+Array.Sort
+            // (heap allocation + delegate allocation each call). Player/hitbox layers are excluded so
+            // the target's own body and bystanders never false-block.
+            return !Physics.Linecast(origin, aimPoint, CombatVisionMask, QueryTriggerInteraction.Ignore);
         }
 
         private sealed class CombatTarget

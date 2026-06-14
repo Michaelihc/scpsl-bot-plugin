@@ -56,7 +56,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             var roomWithin = this.roomSense.RoomWithin;
             if (roomWithin == null)
             {
-                Debug.Log($"RoomSightSense.RoomWithin is null");
+                if (BotLog.Verbose) Debug.Log($"RoomSightSense.RoomWithin is null");
                 return;
             }
 

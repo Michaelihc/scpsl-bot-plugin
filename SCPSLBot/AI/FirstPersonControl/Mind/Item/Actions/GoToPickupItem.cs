@@ -74,16 +74,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Actions
             var item = _botPlayer.Perception.GetSense<ItemsWithinSightSense>().ItemsWithinSight.FirstOrDefault(i => Criteria.EvaluateItem(i) && i.Position == itemPosition);
             if (!item)
             {
-                Debug.LogWarning($"No item found at known position within sight to pickup. Moving closer.");
+                if (BotLog.Verbose) Debug.LogWarning($"No item found at known position within sight to pickup. Moving closer.");
                 _botPlayer.MoveToPosition(itemPosition);
                 return;
             }
 
-            Debug.Log($"Attempting to pick up item {item} by {_botPlayer}");
+            if (BotLog.Verbose) Debug.Log($"Attempting to pick up item {item} by {_botPlayer}");
 
             if (!BotPickup.TryComplete(_botPlayer.BotHub.PlayerHub, item))
             {
-                Debug.LogWarning($"Pickup rejected for item {item} by {_botPlayer}.");
+                if (BotLog.Verbose) Debug.LogWarning($"Pickup rejected for item {item} by {_botPlayer}.");
                 return;
             }
 

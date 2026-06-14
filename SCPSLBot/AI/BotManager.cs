@@ -66,6 +66,8 @@ namespace SCPSLBot.AI
 
         private void OnRoundRestarted()
         {
+            FirstPersonControl.FpcBotPlayer.ResetSpectatorHintState();
+
             foreach (var (referenceHub, _) in BotPlayers.ToArray())
             {
                 RemovePlayerIfBot(referenceHub);

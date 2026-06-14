@@ -47,7 +47,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 
             if (!RoomUtils.TryGetRoom(playerPosition, out var newRoomWithin))
             {
-                Debug.LogWarning($"Could not determine room bot currently in");
+                if (BotLog.Verbose) Debug.LogWarning($"Could not determine room bot currently in");
                 return;
             }
 

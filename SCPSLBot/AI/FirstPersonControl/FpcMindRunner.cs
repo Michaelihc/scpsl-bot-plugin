@@ -49,12 +49,12 @@ namespace SCPSLBot.AI.FirstPersonControl
         {
             if (!RelevantBeliefs.Contains(updatedBelief))
             {
-                Debug.Log($"[I] Belief updated: {updatedBelief}");
+                if (BotLog.Verbose) Debug.Log($"[I] Belief updated: {updatedBelief}");
                 return;
             }
 
             isBeliefsUpdated = true;
-            Debug.Log($"[R] Belief updated: {updatedBelief}");
+            if (BotLog.Verbose) Debug.Log($"[R] Belief updated: {updatedBelief}");
         }
 
         #region Action Finding
@@ -247,7 +247,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             RunningAction = selectedAction ?? null;
             RunningActionCost = selectedAction?.Cost ?? 0f;
 
-            Debug.Log($"New Action for bot: {RunningAction} (Cost: {RunningActionCost})");
+            if (BotLog.Verbose) Debug.Log($"New Action for bot: {RunningAction} (Cost: {RunningActionCost})");
 
             if (RunningAction != prevAction)
             {

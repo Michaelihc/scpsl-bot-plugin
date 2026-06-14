@@ -149,7 +149,7 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public void OnRoleChanged()
         {
-            Debug.Log($"Bot got FPC role assigned.");
+            if (BotLog.Verbose) Debug.Log($"Bot got FPC role assigned.");
 
             PerceptionComponent = BotHub.PlayerHub.GetComponentInChildren<PerceptionComponent>();
             PerceptionComponent.enabled = true;
@@ -476,9 +476,25 @@ namespace SCPSLBot.AI.FirstPersonControl
         private readonly StringBuilder debugStringBuilder = new();
         private int numLines;
         private int level;
+        private float nextGraphDisplayTime;
 
         private void DisplayVisitedActionsGraph()
         {
+            // This overlay only matters to players spectating this bot. Building the whole
+            // belief/action graph string and sending hints every tick for every bot is pure waste
+            // when nobody is watching, so skip it entirely and throttle when someone is.
+            if (Spectators.Count == 0)
+            {
+                return;
+            }
+
+            if (Time.time < nextGraphDisplayTime)
+            {
+                return;
+            }
+
+            nextGraphDisplayTime = Time.time + 0.2f;
+
             debugStringBuilder.Clear();
             debugStringBuilder.AppendLine("<size=14><align=left>");
             numLines = 0;
@@ -578,17 +594,43 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
         }
 
-        private IEnumerable<ReferenceHub> spectators;
-        public IEnumerable<ReferenceHub> Spectators
+        private readonly List<ReferenceHub> spectatorsCache = new();
+        private float nextSpectatorsRefreshTime;
+
+        // Materialized + time-sliced: the previous deferred LINQ re-scanned ReferenceHub.AllHubs on
+        // every enumeration (and was consumed multiple times per tick). Refresh at most ~2 Hz.
+        public IReadOnlyList<ReferenceHub> Spectators
         {
             get
             {
-                spectators ??= ReferenceHub.AllHubs.Where(p => p.roleManager.CurrentRole is OverwatchRole s && s.SyncedSpectatedNetId == this.BotHub.PlayerHub.netId);
-                return spectators;
+                if (Time.time >= nextSpectatorsRefreshTime)
+                {
+                    nextSpectatorsRefreshTime = Time.time + 0.5f;
+                    spectatorsCache.Clear();
+                    var botNetId = this.BotHub.PlayerHub.netId;
+                    foreach (var hub in ReferenceHub.AllHubs)
+                    {
+                        if (hub != null
+                            && hub.roleManager.CurrentRole is OverwatchRole s
+                            && s.SyncedSpectatedNetId == botNetId)
+                        {
+                            spectatorsCache.Add(hub);
+                        }
+                    }
+                }
+
+                return spectatorsCache;
             }
         }
 
         private static readonly Dictionary<ReferenceHub, string> playersHintTexts = new();
+
+        // Clears cross-bot spectator hint dedupe state (called on round restart to avoid retaining
+        // disconnected spectators across rounds).
+        public static void ResetSpectatorHintState()
+        {
+            playersHintTexts.Clear();
+        }
 
         public void SendTextHintToSpectators(string message, float duration)
         {
