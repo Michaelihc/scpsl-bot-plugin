@@ -21,6 +21,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
         private Vector3? targetPosition;
         private FacilityZone? targetZone;
 
+        private Vector3 progressAnchor;
+        private float progressAnchorTime;
+
         public FpcZoneRoam(FpcBotPlayer botPlayer)
         {
             this.botPlayer = botPlayer;
@@ -35,9 +38,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
                 return TickWithoutRoom();
             }
 
-            if (ShouldPickTarget(roomWithin))
+            if (ShouldPickTarget(roomWithin) || IsRoamStuck())
             {
                 PickTarget(roomSightSense, roomWithin);
+                ResetProgress();
             }
 
             if (!targetPosition.HasValue)
@@ -48,6 +52,30 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             botPlayer.MoveToPosition(targetPosition.Value);
             OpenBlockingNonKeycardDoor();
             return true;
+        }
+
+        // Detects a roam target the bot cannot reach (e.g. blocked by an unopenable keycard door)
+        // so it abandons that target and wanders elsewhere instead of grinding into the obstacle.
+        private bool IsRoamStuck()
+        {
+            var position = botPlayer.PlayerPosition;
+            if (progressAnchorTime <= 0f
+                || Vector3.Distance(
+                    Vector3.ProjectOnPlane(position, Vector3.up),
+                    Vector3.ProjectOnPlane(progressAnchor, Vector3.up)) > 0.5f)
+            {
+                progressAnchor = position;
+                progressAnchorTime = Time.time;
+                return false;
+            }
+
+            return Time.time - progressAnchorTime > 4f;
+        }
+
+        private void ResetProgress()
+        {
+            progressAnchor = botPlayer.PlayerPosition;
+            progressAnchorTime = Time.time;
         }
 
         private bool ShouldPickTarget(RoomIdentifier roomWithin)
