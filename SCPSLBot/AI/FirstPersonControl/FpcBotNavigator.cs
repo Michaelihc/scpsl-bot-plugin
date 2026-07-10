@@ -8,6 +8,14 @@ namespace SCPSLBot.AI.FirstPersonControl
 {
     internal class FpcBotNavigator
     {
+        private const float NavigationRecomputeIntervalSeconds = 0.2f;
+        private const float FailedPathCooldownSeconds = 1f;
+        private const float PathFailureLogIntervalSeconds = 10f;
+        private const float CachedGoalReuseDistanceSqr = 1f;
+        private const float WaypointReleaseDistanceSqr = 1.4f * 1.4f;
+        private const float WaypointSnapGoalChangeDistanceSqr = 4f * 4f;
+        private const float WaypointSnapDistanceSqr = 7f * 7f;
+
         private Vector3 lastPlayerPosition;
         private TransformCell? cellWithin;
 
@@ -25,6 +33,17 @@ namespace SCPSLBot.AI.FirstPersonControl
         private Vector3 targetCellClosestPositionToGoal;
 
         private readonly FpcBotPlayer botPlayer;
+        private bool hasCachedPositionTowardsGoal;
+        private Vector3 cachedPositionTowardsGoal;
+        private Vector3 cachedGoalPosition;
+        private bool hasStableWaypoint;
+        private Vector3 stableWaypoint;
+        private Vector3 stableWaypointGoal;
+        private float nextNavigationUpdateTime;
+        private float nextPathFailureLogTime;
+        private int suppressedPathFailureLogs;
+
+        public Vector3 DebugPositionTowardsGoal => cachedPositionTowardsGoal;
 
         public FpcBotNavigator(FpcBotPlayer botPlayer)
         {
@@ -36,27 +55,38 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public Vector3 GetPositionTowards(Vector3 goalPosition)
         {
-            this.UpdateNavigationTo(goalPosition);
+            if (hasCachedPositionTowardsGoal
+                && Time.time < nextNavigationUpdateTime
+                && (goalPosition - cachedGoalPosition).sqrMagnitude <= CachedGoalReuseDistanceSqr)
+            {
+                return cachedPositionTowardsGoal;
+            }
+
+            bool pathUsable = this.UpdateNavigationTo(goalPosition);
 
             if (!IsAtLastCell())
             {
                 Vector3 nextTargetPosition = GetNextCorner(goalPosition);
+                CachePositionTowardsGoal(goalPosition, nextTargetPosition, pathUsable);
                 return nextTargetPosition;
             }
             else 
             {
                 if (goalCell != null && isGoalOutside)
                 {
+                    CachePositionTowardsGoal(goalPosition, targetCellClosestPositionToGoal, pathUsable);
                     return targetCellClosestPositionToGoal;
                 }
 
+                CachePositionTowardsGoal(goalPosition, goalPosition, pathUsable);
                 return goalPosition;
             }
         }
 
-        private void UpdateNavigationTo(Vector3 goalPosition)
+        private bool UpdateNavigationTo(Vector3 goalPosition)
         {
             var playerPosition = botPlayer.FpcRole.FpcModule.transform.position;
+            var pathUsable = true;
 
             if (!IsAtLastCell())
             {
@@ -64,9 +94,12 @@ namespace SCPSLBot.AI.FirstPersonControl
                 do
                 {
                     var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
-                    if (!this.currentCell.AdjacentCellEdges.TryGetValue(nextTargetCell, out var nextTargetCellEdge))
+                    if (!TryGetCellEdge(this.currentCell, nextTargetCell, out var nextTargetCellEdge))
                     {
-                        nextTargetCellEdge = NavigationMesh.ForeignConnectedCellEdges[this.currentCell][nextTargetCell]; 
+                        LogPathFailure(goalPosition);
+                        this.CellsPath.Clear();
+                        this.currentPathIdx = -1;
+                        return false;
                     }
 
                     isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetCellEdge);
@@ -98,7 +131,8 @@ namespace SCPSLBot.AI.FirstPersonControl
                 }
                 else
                 {
-                    Debug.LogWarning($"Could not find path to goal position.");
+                    LogPathFailure(goalPosition);
+                    pathUsable = false;
                 }
 
                 isGoalOutside = true;
@@ -132,8 +166,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 var partialPath = false;
                 foreach (var (cell, nextCell) in CellPathSegments)
                 {
-                    if (!cell.AdjacentCellEdges.TryGetValue(nextCell, out var e)
-                        && !NavigationMesh.ForeignConnectedCellEdges[cell].TryGetValue(nextCell, out e))
+                    if (!TryGetCellEdge(cell, nextCell, out var e))
                     {
                         partialPath = true;
                         break;
@@ -146,6 +179,8 @@ namespace SCPSLBot.AI.FirstPersonControl
                     this.PointsPath.Add(goalPosition);
                 }
             }
+
+            return pathUsable;
         }
 
         public TransformCell? GetCellWithin()
@@ -162,8 +197,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             var playerPosition = botPlayer.PlayerPosition;
 
             var nextTargetCell = this.CellsPath[this.currentPathIdx + 1];
-            if (!currentCell.AdjacentCellEdges.TryGetValue(nextTargetCell, out var targetCellEdge)
-                && !NavigationMesh.ForeignConnectedCellEdges[currentCell].TryGetValue(nextTargetCell, out targetCellEdge))
+            if (!TryGetCellEdge(currentCell, nextTargetCell, out var targetCellEdge))
             {
                 return currentCell.CenterPosition;
             }
@@ -182,8 +216,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                     to: targetCellEdge.To.Position - playerPosition);
 
                 var aheadTargetCell = this.CellsPath[aheadPathIdx];
-                if (!nextTargetCell.AdjacentCellEdges.TryGetValue(aheadTargetCell, out var aheadTargetCellEdge)
-                    && !NavigationMesh.ForeignConnectedCellEdges[currentCell].TryGetValue(nextTargetCell, out aheadTargetCellEdge))
+                if (!TryGetCellEdge(nextTargetCell, aheadTargetCell, out var aheadTargetCellEdge))
                 {
                     goalPosition = nextTargetCell.CenterPosition;
                     break;
@@ -246,9 +279,80 @@ namespace SCPSLBot.AI.FirstPersonControl
             return nextTargetPosition;
         }
 
+        private static bool TryGetCellEdge(TransformCell cell, TransformCell nextCell, out TransformEdge edge)
+        {
+            if (cell.AdjacentCellEdges.TryGetValue(nextCell, out edge))
+            {
+                return true;
+            }
+
+            if (NavigationMesh.ForeignConnectedCellEdges.TryGetValue(cell, out var foreignEdges)
+                && foreignEdges.TryGetValue(nextCell, out edge))
+            {
+                return true;
+            }
+
+            edge = default;
+            return false;
+        }
+
         private bool IsAtLastCell()
         {
             return this.currentPathIdx >= this.CellsPath.Count - 1;
+        }
+
+        private void CachePositionTowardsGoal(Vector3 goalPosition, Vector3 positionTowardsGoal, bool pathUsable)
+        {
+            hasCachedPositionTowardsGoal = true;
+            cachedPositionTowardsGoal = StabilizeWaypoint(goalPosition, positionTowardsGoal);
+            cachedGoalPosition = goalPosition;
+            nextNavigationUpdateTime = Time.time + (pathUsable
+                ? NavigationRecomputeIntervalSeconds
+                : FailedPathCooldownSeconds);
+        }
+
+        private Vector3 StabilizeWaypoint(Vector3 goalPosition, Vector3 proposedWaypoint)
+        {
+            var playerPosition = botPlayer.PlayerPosition;
+            var goalChanged = !hasStableWaypoint
+                || (goalPosition - stableWaypointGoal).sqrMagnitude > WaypointSnapGoalChangeDistanceSqr;
+            var waypointReached = hasStableWaypoint
+                && (playerPosition - stableWaypoint).sqrMagnitude <= WaypointReleaseDistanceSqr;
+            var waypointJumped = hasStableWaypoint
+                && (proposedWaypoint - stableWaypoint).sqrMagnitude > WaypointSnapDistanceSqr;
+
+            if (goalChanged || waypointReached || waypointJumped)
+            {
+                stableWaypoint = proposedWaypoint;
+                stableWaypointGoal = goalPosition;
+                hasStableWaypoint = true;
+                return stableWaypoint;
+            }
+
+            stableWaypointGoal = goalPosition;
+            return stableWaypoint;
+        }
+
+        private void LogPathFailure(Vector3 goalPosition)
+        {
+            if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs != true)
+            {
+                return;
+            }
+
+            if (Time.time < nextPathFailureLogTime)
+            {
+                suppressedPathFailureLogs++;
+                return;
+            }
+
+            string suppressedSuffix = suppressedPathFailureLogs > 0
+                ? $" suppressed={suppressedPathFailureLogs}"
+                : string.Empty;
+            suppressedPathFailureLogs = 0;
+            nextPathFailureLogTime = Time.time + PathFailureLogIntervalSeconds;
+            Debug.LogWarning(
+                $"Could not find path to goal position ({goalPosition.x:F1}, {goalPosition.y:F1}, {goalPosition.z:F1}); retrying at reduced rate.{suppressedSuffix}");
         }
     }
 }

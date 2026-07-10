@@ -3,6 +3,7 @@ using MapGeneration;
 using SCPSLBot.AI.FirstPersonControl.Mind.Door;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using SCPSLBot.Navigation.Mesh;
+using SCPSLBot.Warmup;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -20,6 +21,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
 
         private Vector3? targetPosition;
         private FacilityZone? targetZone;
+        private float nextRoamDiagnosticLogTime;
+
+        public Vector3? DebugTargetPosition => targetPosition;
 
         public FpcZoneRoam(FpcBotPlayer botPlayer)
         {
@@ -45,8 +49,20 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
                 return false;
             }
 
-            botPlayer.MoveToPosition(targetPosition.Value);
-            OpenBlockingNonKeycardDoor();
+            var positionTowardsGoal = botPlayer.Navigator.GetPositionTowards(targetPosition.Value);
+            if (IsCurrentPathBlockedByLockedDoor())
+            {
+                LogRoamDiagnostic("discarding roam target behind locked door");
+                targetPosition = null;
+                botPlayer.Move.DesiredLocalDirection = Vector3.zero;
+                return true;
+            }
+
+            if (!OpenBlockingNonKeycardDoor())
+            {
+                botPlayer.SteerTowardPosition(positionTowardsGoal);
+            }
+
             return true;
         }
 
@@ -62,6 +78,13 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
 
         private void PickTarget(RoomSightSense roomSightSense, RoomIdentifier roomWithin)
         {
+            if (WarmupManager.Instance.TryGetBotArena(botPlayer.BotHub.PlayerHub, out var arena)
+                && !WarmupManager.IsArenaZone(arena, roomWithin.Zone))
+            {
+                PickArenaTarget(arena);
+                return;
+            }
+
             var candidates = GetSameZoneForeignCells(roomSightSense, roomWithin).ToList();
             if (candidates.Count == 0)
             {
@@ -94,6 +117,24 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             var selected = candidates[random.Next(candidates.Count)];
             targetPosition = selected.CenterPosition;
             targetZone = roomWithin.Zone;
+        }
+
+        private void PickArenaTarget(WarmupArena arena)
+        {
+            var candidates = GetArenaCells(arena)
+                .Where(cell => Vector3.Distance(botPlayer.PlayerPosition, cell.CenterPosition) >= SameRoomTargetMinDistance)
+                .ToList();
+
+            if (candidates.Count == 0)
+            {
+                targetPosition = null;
+                targetZone = null;
+                return;
+            }
+
+            var selected = candidates[random.Next(candidates.Count)];
+            targetPosition = selected.CenterPosition;
+            targetZone = selected.Transform.GetComponent<RoomIdentifier>()?.Zone;
         }
 
         private bool TickWithoutRoom()
@@ -182,6 +223,23 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             }
         }
 
+        private static IEnumerable<TransformCell> GetArenaCells(WarmupArena arena)
+        {
+            foreach (var (roomObject, mesh) in NavigationMesh.LocalMeshesByRoom)
+            {
+                var room = roomObject.GetComponent<RoomIdentifier>();
+                if (!room || !WarmupManager.IsArenaZone(arena, room.Zone))
+                {
+                    continue;
+                }
+
+                foreach (var cell in mesh.Cells)
+                {
+                    yield return new TransformCell(cell, room.transform);
+                }
+            }
+        }
+
         private static IEnumerable<TransformCell> GetAllKnownCells()
         {
             foreach (var (roomObject, mesh) in NavigationMesh.LocalMeshesByRoom)
@@ -228,18 +286,23 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
             return nearest?.Transform.GetComponent<RoomIdentifier>()?.Zone;
         }
 
-        private void OpenBlockingNonKeycardDoor()
+        private bool OpenBlockingNonKeycardDoor()
         {
             var doorObstacle = botPlayer.MindRunner.GetBelief<DoorObstacle>();
             if (!doorObstacle.IsAny || !doorObstacle.Doors.Values.Any(entry => entry.IsInteractable(DoorPermissionFlags.None)))
             {
-                return;
+                return false;
             }
 
             var doorToOpen = doorObstacle.GetLastDoor(DoorPermissionFlags.None, out var goalPos);
             if (!doorToOpen)
             {
-                return;
+                return false;
+            }
+
+            if (doorToOpen.ActiveLocks != 0)
+            {
+                return false;
             }
 
             var doorPlane = new Plane(doorToOpen.transform.forward, doorToOpen.transform.position);
@@ -247,16 +310,49 @@ namespace SCPSLBot.AI.FirstPersonControl.Roaming
 
             if (!doorToOpen.TargetState && distance <= DoorInteractDistance)
             {
-                if (!botPlayer.OpenDoor(doorToOpen, DoorInteractDistance))
+                botPlayer.LookToPosition(doorToOpen.transform.position + Vector3.up);
+                if (!botPlayer.OpenDoor(doorToOpen, DoorInteractDistance + 0.75f)
+                    && !botPlayer.InteractDoorDirectly(doorToOpen, DoorInteractDistance + 0.75f))
                 {
-                    botPlayer.LookToPosition(doorToOpen.transform.position + Vector3.up);
+                    return true;
                 }
             }
 
             if (!doorToOpen.TargetState || distance > DoorInteractDistance)
             {
-                botPlayer.MoveToPosition(goalPos);
+                botPlayer.MoveToPositionImmediate(goalPos);
+                return true;
             }
+
+            return false;
+        }
+
+        private bool IsCurrentPathBlockedByLockedDoor()
+        {
+            var doorObstacle = botPlayer.MindRunner.GetBelief<DoorObstacle>();
+            var entry = doorObstacle.GetEntry(botPlayer.Navigator.GoalPosition);
+            return entry.HasValue && entry.Value.Door && entry.Value.Door.ActiveLocks != 0;
+        }
+
+        private void LogRoamDiagnostic(string reason)
+        {
+            if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs != true || Time.time < nextRoamDiagnosticLogTime)
+            {
+                return;
+            }
+
+            nextRoamDiagnosticLogTime = Time.time + 2f;
+            Debug.Log($"[SCPSLBot] Roam diag: {reason}; pos={FormatVector(botPlayer.PlayerPosition)} goal={FormatVector(targetPosition)} navGoal={FormatVector(botPlayer.Navigator.GoalPosition)} waypoint={FormatVector(botPlayer.Navigator.DebugPositionTowardsGoal)} room={(RoomUtils.TryGetRoom(botPlayer.PlayerPosition, out var room) ? room.Name.ToString() : "unknown")} zone={targetZone?.ToString() ?? "none"} role={botPlayer.BotHub.PlayerHub.roleManager.CurrentRole.RoleTypeId}.");
+        }
+
+        private static string FormatVector(Vector3? value)
+        {
+            return value.HasValue ? FormatVector(value.Value) : "none";
+        }
+
+        private static string FormatVector(Vector3 value)
+        {
+            return $"({value.x:F1},{value.y:F1},{value.z:F1})";
         }
     }
 }

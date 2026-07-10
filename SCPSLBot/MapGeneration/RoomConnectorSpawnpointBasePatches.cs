@@ -19,6 +19,11 @@ namespace SCPSLBot.MapGeneration
         [HarmonyPrefix]
         public static void SpawnWithSupportedType(RoomConnectorSpawnpointBase __instance, ref SpawnableRoomConnectorType type)
         {
+            if (LabApiPlugin.Instance?.Config?.EnableMapConnectorCompatibilityPatch != true)
+            {
+                return;
+            }
+
             if (!SupportedConnectorTypes.Contains(type))
             {
                 type = SpawnableRoomConnectorType.HczStandardDoor;

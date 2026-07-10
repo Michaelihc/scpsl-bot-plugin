@@ -29,7 +29,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         private static bool IsNonIteractable(DoorVariant d)
         {
-            return d is DummyDoor or ElevatorDoor or BasicNonInteractableDoor;
+            return d == null
+                || d.ActiveLocks != 0
+                || d is DummyDoor or ElevatorDoor or BasicNonInteractableDoor;
         }
     }
 

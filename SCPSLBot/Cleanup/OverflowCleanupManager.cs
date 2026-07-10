@@ -88,7 +88,11 @@ namespace SCPSLBot.Cleanup
             if (!baselineItemCount.HasValue || itemCount < baselineItemCount.Value)
             {
                 baselineItemCount = itemCount;
-                Logger.Info($"[SCPSLBot] Overflow cleanup baseline captured at {itemCount} items.");
+                if (config.EnableVerboseBotLogs)
+                {
+                    Logger.Info($"[SCPSLBot] Overflow cleanup baseline captured at {itemCount} items.");
+                }
+
                 return;
             }
 
@@ -108,7 +112,10 @@ namespace SCPSLBot.Cleanup
             ExecuteNativeCommand(new CorpsesCommand(), "corpses");
             ExecuteNativeCommand(new BloodCommand(), "blood");
             ExecuteNativeCommand(new BulletHolesCommand(), "bullet holes");
-            Logger.Info($"[SCPSLBot] Native overflow cleanup ran at {itemCount} items ({excessItemCount} above baseline {baselineCount}, threshold {threshold}).");
+            if (config.EnableVerboseBotLogs)
+            {
+                Logger.Info($"[SCPSLBot] Native overflow cleanup ran at {itemCount} items ({excessItemCount} above baseline {baselineCount}, threshold {threshold}).");
+            }
         }
 
         private void ExecuteNativeCommand(ICommand command, string label)

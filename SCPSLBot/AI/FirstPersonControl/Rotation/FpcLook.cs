@@ -17,6 +17,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Looking
         public Quaternion TargetHorizontalRotation { get; set; } = Quaternion.identity;
 
         private const float MaxSteeringForceDegrees = 640f;
+        private const float DefaultTrackingStrength = 1f;
 
         private readonly FpcBotPlayer botPlayer;
 
@@ -26,6 +27,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Looking
         }
 
         public void ToPosition(Vector3 targetPosition)
+        {
+            ToPosition(targetPosition, DefaultTrackingStrength);
+        }
+
+        public void ToPosition(Vector3 targetPosition, float trackingStrength)
         {
             var playerTransform = botPlayer.FpcRole.FpcModule.transform;
             var cameraTransform = botPlayer.BotHub.PlayerHub.PlayerCameraReference;
@@ -48,11 +54,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Looking
 
             TargetHorizontalRotation = hRotation;
 
-            hRotation = Quaternion.Slerp(Quaternion.identity, hRotation, .075f);
-            vRotation = Quaternion.Slerp(Quaternion.identity, vRotation, .075f);
+            var clampedTrackingStrength = Mathf.Clamp(trackingStrength, 0.1f, 5f);
+            hRotation = Quaternion.Slerp(Quaternion.identity, hRotation, .075f * clampedTrackingStrength);
+            vRotation = Quaternion.Slerp(Quaternion.identity, vRotation, .075f * clampedTrackingStrength);
 
-            hRotation = Quaternion.RotateTowards(Quaternion.identity, hRotation, Time.deltaTime * MaxSteeringForceDegrees);
-            vRotation = Quaternion.RotateTowards(Quaternion.identity, vRotation, Time.deltaTime * MaxSteeringForceDegrees);
+            hRotation = Quaternion.RotateTowards(Quaternion.identity, hRotation, Time.deltaTime * MaxSteeringForceDegrees * clampedTrackingStrength);
+            vRotation = Quaternion.RotateTowards(Quaternion.identity, vRotation, Time.deltaTime * MaxSteeringForceDegrees * clampedTrackingStrength);
 
             DesiredHorizontalRotation = hRotation;
             DesiredVerticalRotation = vRotation;

@@ -23,7 +23,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
 
         public void OnActivateEvent(Scp914ActivatedEventArgs args)
         {
-            if (this.roomSightSense.RoomWithin.Name != RoomName.Lcz914)
+            var roomWithin = this.roomSightSense?.RoomWithin;
+            if (roomWithin == null || roomWithin.Name != RoomName.Lcz914)
             {
                 return;
             }

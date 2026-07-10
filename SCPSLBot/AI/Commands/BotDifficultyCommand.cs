@@ -11,19 +11,19 @@ namespace SCPSLBot.AI.Commands
 
         public string[] Aliases => new[] { "bot_diff" };
 
-        public string Description => "Sets bot combat difficulty: easy, normal, hard, hardest.";
+        public string Description => "Sets bot combat difficulty: easy, normal, hard, hardest, extra1-extra5.";
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
             if (arguments.Count < 1)
             {
-                response = $"Current bot difficulty is {FpcBotCombat.Difficulty}. Use: bot_difficulty easy|normal|hard|hardest";
+                response = $"Current bot difficulty is {FpcBotCombat.Difficulty}. Use: bot_difficulty easy|normal|hard|hardest|extra1|extra2|extra3|extra4|extra5";
                 return true;
             }
 
             if (!Enum.TryParse(arguments.At(0), true, out BotCombatDifficulty difficulty))
             {
-                response = "Unknown difficulty. Use: easy, normal, hard, hardest.";
+                response = "Unknown difficulty. Use: easy, normal, hard, hardest, extra1, extra2, extra3, extra4, extra5.";
                 return false;
             }
 

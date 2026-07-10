@@ -60,8 +60,11 @@ namespace SCPSLBot.AI
 
             CurrentBotPlayer?.OnRoleChanged();
 
-            Debug.Log($"Bot got new role assigned. Role Id: {newRole.RoleTypeId}");
-            Debug.Log($"Type of role: {newRole.GetType()}");
+            if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs == true)
+            {
+                Debug.Log($"Bot got new role assigned. Role Id: {newRole.RoleTypeId}");
+                Debug.Log($"Type of role: {newRole.GetType()}");
+            }
         }
 
         public void NotifyHurt(ReferenceHub attacker)

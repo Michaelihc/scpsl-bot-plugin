@@ -13,6 +13,7 @@ using SCPSLBot.AI.FirstPersonControl.Movement;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.AI.FirstPersonControl.Roaming;
+using SCPSLBot.Warmup;
 using SCPSLBot.Components;
 using System;
 using System.Collections.Generic;
@@ -27,6 +28,13 @@ namespace SCPSLBot.AI.FirstPersonControl
 {
     internal partial class FpcBotPlayer : IBotPlayer
     {
+        private const float NonCombatGoalUpdateIntervalSeconds = 1f;
+        private const float NonCombatGoalSnapDistanceSqr = 16f;
+        private const float MaxMoveTurnDegreesPerSecond = 720f;
+        private const float StuckTeleportSeconds = 6f;
+        private const float StuckMovementProgressDistanceSqr = 2f * 2f;
+        private const float OutOfWorldY = -300f;
+
         public FpcStandardRoleBase FpcRole { get; set; }
 
         public BotHub BotHub { get; }
@@ -48,8 +56,20 @@ namespace SCPSLBot.AI.FirstPersonControl
         public Vector3 CameraForward { get; private set; }
 
         private Vector3 stuckAnchorPosition;
+        private Vector3 stuckIntendedDirection;
+        private Vector3 nonCombatMoveGoal;
+        private Vector3 smoothedMoveWorldDirection;
+        private Vector3 lastSafePosition;
+        private FacilityZone lastSafeZone;
         private float stuckAnchorTime;
         private float nextStuckJumpTime;
+        private float nextStuckTeleportTime;
+        private float nextNonCombatGoalUpdateTime;
+        private float nextMovementDiagnosticLogTime;
+        private float lastMovementIntentTime;
+        private bool hasNonCombatMoveGoal;
+        private bool hasSmoothedMoveWorldDirection;
+        private bool hasLastSafePosition;
 
         public FpcBotPlayer(BotHub botHub)
         {
@@ -77,6 +97,13 @@ namespace SCPSLBot.AI.FirstPersonControl
             var cameraTransform = BotHub.PlayerHub.PlayerCameraReference;
             this.CameraPosition = cameraTransform.position;
             this.CameraForward = cameraTransform.forward;
+
+            if (RecoverIfOutOfWorld())
+            {
+                yield break;
+            }
+
+            UpdateLastSafePosition();
 
             if (Combat.Tick())
             {
@@ -126,6 +153,11 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         private bool ShouldUseEscapeGoal()
         {
+            if (WarmupManager.Instance.IsStandardWarmup)
+            {
+                return false;
+            }
+
             var role = BotHub.PlayerHub.roleManager.CurrentRole.RoleTypeId;
             return role is RoleTypeId.ClassD or RoleTypeId.Scientist;
         }
@@ -137,13 +169,17 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public void OnRoleChanged()
         {
-            Debug.Log($"Bot got FPC role assigned.");
+            if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs == true)
+            {
+                Debug.Log($"Bot got FPC role assigned.");
+            }
 
             PerceptionComponent = BotHub.PlayerHub.GetComponentInChildren<PerceptionComponent>();
             PerceptionComponent.enabled = true;
 
             MindRunner.EvaluateGoalsToActions();
             ResetStuckJumpTracking();
+            ResetNonCombatMoveGoal();
         }
 
         #region Moving
@@ -151,9 +187,42 @@ namespace SCPSLBot.AI.FirstPersonControl
         public void MoveToPosition(Vector3 goalPosition) => MoveToPosition(goalPosition, out _);
         public void MoveToPosition(Vector3 goalPosition, out Vector3 positionTowardsGoal)
         {
+            goalPosition = GetRateLimitedNonCombatGoal(goalPosition);
             positionTowardsGoal = Navigator.GetPositionTowards(goalPosition);
+            SteerTowardPosition(positionTowardsGoal);
+        }
+
+        internal void MoveToPositionImmediate(Vector3 goalPosition)
+        {
+            var positionTowardsGoal = Navigator.GetPositionTowards(goalPosition);
+            SteerTowardPosition(positionTowardsGoal);
+        }
+
+        private Vector3 GetRateLimitedNonCombatGoal(Vector3 requestedGoal)
+        {
+            if (!hasNonCombatMoveGoal
+                || Time.time >= nextNonCombatGoalUpdateTime
+                || (requestedGoal - nonCombatMoveGoal).sqrMagnitude >= NonCombatGoalSnapDistanceSqr)
+            {
+                nonCombatMoveGoal = requestedGoal;
+                nextNonCombatGoalUpdateTime = Time.time + NonCombatGoalUpdateIntervalSeconds;
+                hasNonCombatMoveGoal = true;
+            }
+
+            return nonCombatMoveGoal;
+        }
+
+        private void ResetNonCombatMoveGoal()
+        {
+            hasNonCombatMoveGoal = false;
+            nextNonCombatGoalUpdateTime = 0f;
+        }
+
+        internal void SteerTowardPosition(Vector3 positionTowardsGoal)
+        {
             SteerToPosition(positionTowardsGoal);
             SteerAwayFromObstacles();
+            SmoothDesiredMoveDirection();
         }
 
         private void SteerToPosition(Vector3 positionTowardsGoal)
@@ -250,6 +319,38 @@ namespace SCPSLBot.AI.FirstPersonControl
             this.Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(moveDirection);
         }
 
+        private void SmoothDesiredMoveDirection()
+        {
+            var desiredWorldDirection = Vector3.ProjectOnPlane(
+                FpcRole.FpcModule.transform.TransformDirection(Move.DesiredLocalDirection),
+                Vector3.up);
+
+            if (desiredWorldDirection.sqrMagnitude < 0.01f)
+            {
+                hasSmoothedMoveWorldDirection = false;
+                Move.DesiredLocalDirection = Vector3.zero;
+                return;
+            }
+
+            desiredWorldDirection.Normalize();
+
+            if (!hasSmoothedMoveWorldDirection)
+            {
+                smoothedMoveWorldDirection = desiredWorldDirection;
+                hasSmoothedMoveWorldDirection = true;
+            }
+            else
+            {
+                smoothedMoveWorldDirection = Vector3.RotateTowards(
+                    smoothedMoveWorldDirection,
+                    desiredWorldDirection,
+                    Mathf.Deg2Rad * MaxMoveTurnDegreesPerSecond * Time.deltaTime,
+                    0f).normalized;
+            }
+
+            Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(smoothedMoveWorldDirection);
+        }
+
         private void JumpIfForwardMovementBlocked()
         {
             var desired = Move.DesiredLocalDirection;
@@ -259,44 +360,225 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             if (intendedWorldMove.sqrMagnitude < 0.1f)
             {
-                ResetStuckJumpTracking();
+                if (Time.time - lastMovementIntentTime > 0.75f)
+                {
+                    ResetStuckJumpTracking();
+                }
+
                 return;
             }
 
+            lastMovementIntentTime = Time.time;
+
             var horizontalPosition = Vector3.ProjectOnPlane(PlayerPosition, Vector3.up);
             var horizontalAnchor = Vector3.ProjectOnPlane(stuckAnchorPosition, Vector3.up);
-            if (stuckAnchorTime <= 0f || Vector3.Distance(horizontalPosition, horizontalAnchor) > 0.35f)
+            var intendedDirection = intendedWorldMove.normalized;
+            var displacement = horizontalPosition - horizontalAnchor;
+
+            if (stuckAnchorTime <= 0f || displacement.sqrMagnitude > StuckMovementProgressDistanceSqr)
             {
                 stuckAnchorPosition = PlayerPosition;
+                stuckIntendedDirection = intendedDirection;
                 stuckAnchorTime = Time.time;
                 return;
             }
 
+            stuckIntendedDirection = intendedDirection;
+
             if (Time.time - stuckAnchorTime < 3f || Time.time < nextStuckJumpTime)
             {
+                if (Time.time - stuckAnchorTime >= 1.25f)
+                {
+                    LogMovementDiagnostic("low forward progress");
+                }
+
                 return;
             }
 
-            Debug.Log("[SCPSLBot] Bot movement blocked for 3 seconds; forcing jump.");
+            if (Time.time - stuckAnchorTime >= StuckTeleportSeconds && Time.time >= nextStuckTeleportTime)
+            {
+                if (TryTeleportToRandomRoomInSameZone())
+                {
+                    LogMovementDiagnostic("blocked for 6 seconds; teleported to random same-zone room");
+                    nextStuckTeleportTime = Time.time + 3f;
+                    ResetStuckJumpTracking();
+                    ResetNonCombatMoveGoal();
+                    return;
+                }
+            }
+
+            LogMovementDiagnostic("blocked for 3 seconds; forcing jump");
             FpcRole.FpcModule.Motor.JumpController.ForceJump(FpcRole.FpcModule.JumpSpeed);
             nextStuckJumpTime = Time.time + 1f;
-            stuckAnchorPosition = PlayerPosition;
-            stuckAnchorTime = Time.time;
+            stuckIntendedDirection = intendedDirection;
         }
 
         private void ResetStuckJumpTracking()
         {
             stuckAnchorPosition = PlayerPosition;
+            stuckIntendedDirection = Vector3.zero;
             stuckAnchorTime = 0f;
+            hasSmoothedMoveWorldDirection = false;
+        }
+
+        private bool TryTeleportToRandomRoomInSameZone()
+        {
+            if (!RoomUtils.TryGetRoom(PlayerPosition, out var currentRoom))
+            {
+                return TryTeleportToRecoveryRoom();
+            }
+
+            var candidates = LabApi.Features.Wrappers.Room.List
+                .Where(room => room != null
+                               && !room.IsDestroyed
+                               && room.Zone == currentRoom.Zone
+                               && room.Name != currentRoom.Name)
+                .ToArray();
+
+            if (candidates.Length == 0)
+            {
+                candidates = LabApi.Features.Wrappers.Room.List
+                    .Where(room => room != null
+                                   && !room.IsDestroyed
+                                   && room.Zone == currentRoom.Zone)
+                    .ToArray();
+            }
+
+            if (candidates.Length == 0)
+            {
+                return false;
+            }
+
+            var selected = candidates[UnityEngine.Random.Range(0, candidates.Length)];
+            BotHub.PlayerHub.transform.position = selected.Position + Vector3.up * 1.2f;
+            return true;
+        }
+
+        private bool RecoverIfOutOfWorld()
+        {
+            if (PlayerPosition.y > OutOfWorldY)
+            {
+                return false;
+            }
+
+            if (!TryTeleportToRecoveryRoom())
+            {
+                return false;
+            }
+
+            LogMovementDiagnostic("out of world; teleported to recovery room");
+            ResetStuckJumpTracking();
+            ResetNonCombatMoveGoal();
+            return true;
+        }
+
+        private void UpdateLastSafePosition()
+        {
+            if (!RoomUtils.TryGetRoom(PlayerPosition, out var room) || PlayerPosition.y <= OutOfWorldY)
+            {
+                return;
+            }
+
+            lastSafePosition = PlayerPosition;
+            lastSafeZone = room.Zone;
+            hasLastSafePosition = true;
+        }
+
+        private bool TryTeleportToRecoveryRoom()
+        {
+            if (WarmupManager.Instance.TryGetBotArena(BotHub.PlayerHub, out var arena)
+                && TryTeleportToRandomArenaRoom(arena))
+            {
+                return true;
+            }
+
+            if (hasLastSafePosition)
+            {
+                var candidates = LabApi.Features.Wrappers.Room.List
+                    .Where(room => room != null && !room.IsDestroyed && room.Zone == lastSafeZone)
+                    .ToArray();
+
+                if (candidates.Length > 0)
+                {
+                    var selected = candidates[UnityEngine.Random.Range(0, candidates.Length)];
+                    BotHub.PlayerHub.transform.position = selected.Position + Vector3.up * 1.2f;
+                    return true;
+                }
+
+                BotHub.PlayerHub.transform.position = lastSafePosition + Vector3.up * 0.5f;
+                return true;
+            }
+
+            var fallbackRooms = LabApi.Features.Wrappers.Room.List
+                .Where(room => room != null && !room.IsDestroyed)
+                .ToArray();
+            if (fallbackRooms.Length == 0)
+            {
+                return false;
+            }
+
+            var fallback = fallbackRooms[UnityEngine.Random.Range(0, fallbackRooms.Length)];
+            BotHub.PlayerHub.transform.position = fallback.Position + Vector3.up * 1.2f;
+            return true;
+        }
+
+        private bool TryTeleportToRandomArenaRoom(WarmupArena arena)
+        {
+            var candidates = LabApi.Features.Wrappers.Room.List
+                .Where(room => room != null
+                               && !room.IsDestroyed
+                               && WarmupManager.IsArenaZone(arena, room.Zone))
+                .ToArray();
+            if (candidates.Length == 0)
+            {
+                return false;
+            }
+
+            var selected = candidates[UnityEngine.Random.Range(0, candidates.Length)];
+            BotHub.PlayerHub.transform.position = selected.Position + Vector3.up * 1.2f;
+            return true;
+        }
+
+        private void LogMovementDiagnostic(string reason)
+        {
+            if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs != true || Time.time < nextMovementDiagnosticLogTime)
+            {
+                return;
+            }
+
+            nextMovementDiagnosticLogTime = Time.time + 2f;
+            var roomName = RoomUtils.TryGetRoom(PlayerPosition, out var room) ? room.Name.ToString() : "unknown";
+            var role = BotHub.PlayerHub.roleManager.CurrentRole.RoleTypeId;
+            var combatTarget = Combat.DebugCurrentTarget;
+            var combatTargetText = combatTarget != null
+                ? $"{combatTarget.roleManager.CurrentRole.RoleTypeId}@{FormatVector(combatTarget.transform.position)}"
+                : "none";
+            Debug.Log(
+                $"[SCPSLBot] Movement diag: {reason}; id={BotHub.PlayerHub.PlayerId} role={role} room={roomName} pos={FormatVector(PlayerPosition)} navGoal={FormatVector(Navigator.GoalPosition)} waypoint={FormatVector(Navigator.DebugPositionTowardsGoal)} roamTarget={FormatVector(ZoneRoam.DebugTargetPosition)} combatTarget={combatTargetText} action={MindRunner.RunningAction?.GetType().Name ?? "none"} desired={FormatVector(Move.DesiredLocalDirection)}.");
+        }
+
+        private static string FormatVector(Vector3? value)
+        {
+            return value.HasValue ? FormatVector(value.Value) : "none";
+        }
+
+        private static string FormatVector(Vector3 value)
+        {
+            return $"({value.x:F1},{value.y:F1},{value.z:F1})";
         }
 
         #endregion
 
         public void LookToPosition(Vector3 targetPosition)
         {
+            LookToPosition(targetPosition, 1f);
+        }
+
+        public void LookToPosition(Vector3 targetPosition, float trackingStrength)
+        {
             var prevHorizontalRotation = Look.TargetHorizontalRotation;
 
-            Look.ToPosition(targetPosition);
+            Look.ToPosition(targetPosition, trackingStrength);
 
             Move.DesiredLocalDirection = prevHorizontalRotation * Move.DesiredLocalDirection;
         }

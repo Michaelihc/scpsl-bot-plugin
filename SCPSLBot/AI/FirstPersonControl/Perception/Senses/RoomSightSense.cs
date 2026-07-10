@@ -11,6 +11,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 {
     internal class RoomSightSense : SightSense, ISense
     {
+        private const float RoomLookupFailureLogIntervalSeconds = 10f;
+
         public List<TransformCell> ForeignRoomsCells { get; } = new();
         public IEnumerable<RoomIdentifier> ForeignRooms { get; }
         public RoomIdentifier RoomWithin { get; private set; }
@@ -21,6 +23,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
         public event Action<RoomIdentifier> OnSensedRoomWithin;
 
         private readonly FpcBotPlayer _fpcBotPlayer;
+        private float _nextRoomLookupFailureLogTime;
+        private int _suppressedRoomLookupFailureLogs;
 
         public RoomSightSense(FpcBotPlayer botPlayer) : base(botPlayer)
         {
@@ -47,7 +51,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
 
             if (!RoomUtils.TryGetRoom(playerPosition, out var newRoomWithin))
             {
-                Debug.LogWarning($"Could not determine room bot currently in");
+                LogRoomLookupFailure();
                 return;
             }
 
@@ -84,6 +88,22 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
         public IEnumerator<JobHandle> ProcessSensibility()
         {
             yield break;
+        }
+
+        private void LogRoomLookupFailure()
+        {
+            if (Time.time < _nextRoomLookupFailureLogTime)
+            {
+                _suppressedRoomLookupFailureLogs++;
+                return;
+            }
+
+            string suppressedSuffix = _suppressedRoomLookupFailureLogs > 0
+                ? $" suppressed={_suppressedRoomLookupFailureLogs}"
+                : string.Empty;
+            _suppressedRoomLookupFailureLogs = 0;
+            _nextRoomLookupFailureLogTime = Time.time + RoomLookupFailureLogIntervalSeconds;
+            Debug.LogWarning($"Could not determine room bot currently in; retrying at reduced log rate.{suppressedSuffix}");
         }
     }
 }

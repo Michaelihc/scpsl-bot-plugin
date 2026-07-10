@@ -186,7 +186,11 @@ namespace SCPSLBot.Navigation.Mesh
 
                 //Log.Debug($"Cell evaluating connections #{cellIdx} cost so far {cost}");
 
-                foreach (var connectedCell in cell.AdjacentCells.Concat(ForeignConnectedCells[cell]))
+                var connectedCells = ForeignConnectedCells.TryGetValue(cell, out var foreignConnectedCells)
+                    ? cell.AdjacentCells.Concat(foreignConnectedCells)
+                    : cell.AdjacentCells;
+
+                foreach (var connectedCell in connectedCells)
                 {
                     var connectedCost = cost + Vector3.Magnitude(connectedCell.CenterPosition - cell.CenterPosition);
 

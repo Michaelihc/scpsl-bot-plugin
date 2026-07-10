@@ -13,6 +13,8 @@ using PlayerRoles;
 using PlayerRoles.PlayableScps.Scp173;
 using PlayerRoles.PlayableScps.Scp096;
 using PlayerRoles.Subroutines;
+using SCPSLBot.Ammo;
+using SCPSLBot.Warmup;
 using PlayerStatsSystem;
 using System;
 using System.Collections.Generic;
@@ -48,6 +50,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private const float DoorInteractDistance = 2f;
         private const float TargetSwitchLockSeconds = 2f;
         private const float TargetSwitchDistanceRatio = 0.65f;
+        private const float ScpTargetSwitchLockSeconds = 6f;
+        private const float ScpTargetSwitchDistanceRatio = 0.45f;
         public static BotCombatDifficulty Difficulty { get; set; } = BotCombatDifficulty.Hardest;
 
         private readonly FpcBotPlayer botPlayer;
@@ -60,6 +64,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private float nextStrafeFlipTime;
         private float nextShotTime;
         private float nextReloadAttemptTime;
+        private float nextReserveAmmoTopUpTime;
         private float nextScp049SenseTime;
         private float scp096AttackAllowedTime;
         private float scp096RageEndTime;
@@ -75,6 +80,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private float scp173BlinkReleaseTime;
         private float scp173BreakneckDisableAllowedTime;
         private int strafeDirection = 1;
+
+        public ReferenceHub DebugCurrentTarget => currentTarget;
 
         public FpcBotCombat(FpcBotPlayer botPlayer)
         {
@@ -168,7 +175,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             var targetPosition = target.Hub.transform.position;
             var surfaceDoorBlockingTarget = OpenSurfaceDoorTowardTarget(target.Hub);
 
-            if (surfaceDoorBlockingTarget || target.Distance > HumanChaseDistance)
+            if (surfaceDoorBlockingTarget)
+            {
+                // OpenSurfaceDoorTowardTarget already steers to the blocking surface door.
+            }
+            else if (target.Distance > HumanChaseDistance)
             {
                 MoveToCombatPosition(targetPosition);
             }
@@ -177,7 +188,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 StrafeAroundTarget(targetPosition, target.Distance, HumanRetreatDistance, HumanChaseDistance);
             }
 
-            botPlayer.LookToPosition(target.AimPoint);
+            var settings = BotCombatDifficultySettings.For(Difficulty);
+            botPlayer.LookToPosition(target.AimPoint, settings.TrackingStrength);
 
             if (!target.HasLineOfSight)
             {
@@ -189,9 +201,8 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 return;
             }
 
-            var settings = BotCombatDifficultySettings.For(Difficulty);
-
             PrepareActionForShot(firearm);
+            MaintainReserveAmmo(firearm);
 
             if (IsReloading(firearm))
             {
@@ -220,8 +231,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         private void RunScpCombat(CombatTarget target, RoleTypeId role)
         {
             var targetPosition = target.Hub.transform.position;
-            MoveToCombatPosition(targetPosition);
-            OpenSurfaceDoorTowardTarget(target.Hub);
+            var surfaceDoorBlockingTarget = OpenSurfaceDoorTowardTarget(target.Hub);
+            if (!surfaceDoorBlockingTarget)
+            {
+                MoveToCombatPosition(targetPosition);
+            }
+
             ApplyScpDamageStrafe(targetPosition);
 
             var aimPoint = GetScpAimPoint(target);
@@ -483,11 +498,16 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
         private void MoveToCombatPosition(Vector3 targetPosition)
         {
-            botPlayer.MoveToPosition(targetPosition);
-            OpenBlockingDoorOnCombatPath();
+            var positionTowardsGoal = botPlayer.Navigator.GetPositionTowards(targetPosition);
+            if (OpenBlockingDoorOnCombatPath())
+            {
+                return;
+            }
+
+            botPlayer.SteerTowardPosition(positionTowardsGoal);
         }
 
-        private void OpenBlockingDoorOnCombatPath()
+        private bool OpenBlockingDoorOnCombatPath()
         {
             foreach (var (point, nextPoint) in botPlayer.Navigator.PathSegments)
             {
@@ -507,24 +527,29 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
                 if (distance <= DoorInteractDistance)
                 {
-                    if (!botPlayer.OpenDoor(door, DoorInteractDistance))
+                    botPlayer.LookToPosition(door.transform.position + Vector3.up);
+                    if (!botPlayer.OpenDoor(door, DoorInteractDistance + 0.75f)
+                        && !botPlayer.InteractDoorDirectly(door, DoorInteractDistance + 0.75f))
                     {
-                        botPlayer.LookToPosition(door.transform.position + Vector3.up);
+                        LogSurfaceDoorDebug($"interaction failed for {door.name}.");
                     }
                 }
                 else
                 {
-                    botPlayer.MoveToPosition(hit.point);
+                    botPlayer.MoveToPositionImmediate(hit.point);
                 }
 
-                return;
+                return true;
             }
+
+            return false;
         }
 
         private static bool CanOpenCombatDoor(DoorVariant door)
         {
             return door
                    && !door.IsConsideredOpen()
+                   && door.ActiveLocks == 0
                    && door is not DummyDoor
                    && door is not ElevatorDoor
                    && door is not BasicNonInteractableDoor;
@@ -578,7 +603,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 }
                 else
                 {
-                    botPlayer.MoveToPosition(hit.point);
+                    botPlayer.MoveToPositionImmediate(hit.point);
                 }
 
                 return true;
@@ -589,6 +614,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
         private void LogSurfaceDoorDebug(string message)
         {
+            if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs != true)
+            {
+                return;
+            }
+
             if (Time.time < nextSurfaceDoorDebugLogTime)
             {
                 return;
@@ -932,6 +962,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
         private void LogScp096Debug(string message)
         {
+            if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs != true)
+            {
+                return;
+            }
+
             if (Time.time < nextScp096DebugLogTime)
             {
                 return;
@@ -994,7 +1029,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             var botPosition = botPlayer.PlayerPosition;
 
             CombatTarget best = null;
-            CombatTarget currentVisible = null;
+            CombatTarget currentCandidate = null;
             foreach (var candidate in ReferenceHub.AllHubs)
             {
                 if (!AreHostile(botHub, candidate))
@@ -1016,7 +1051,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
                 if (candidate == currentTarget)
                 {
-                    currentVisible = selection;
+                    currentCandidate = selection;
                 }
 
                 if (best == null || selection.Distance < best.Distance)
@@ -1025,25 +1060,30 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 }
             }
 
-            target = SelectStickyVisibleTarget(best, currentVisible);
+            currentCandidate ??= BuildCurrentTargetCandidate(botPosition, MaxTargetDistance * 1.5f);
+            target = SelectStickyTarget(best, currentCandidate);
             return target != null;
         }
 
-        private CombatTarget SelectStickyVisibleTarget(CombatTarget best, CombatTarget currentVisible)
+        private CombatTarget SelectStickyTarget(CombatTarget best, CombatTarget currentCandidate)
         {
-            if (best == null || currentVisible == null || best.Hub == currentTarget)
+            if (best == null || currentCandidate == null || best.Hub == currentTarget)
             {
                 return best;
             }
 
-            if (Time.time - currentTargetSelectedTime < TargetSwitchLockSeconds)
+            var botTeam = botPlayer.BotHub.PlayerHub.roleManager.CurrentRole.Team;
+            var lockSeconds = botTeam == Team.SCPs ? ScpTargetSwitchLockSeconds : TargetSwitchLockSeconds;
+            var switchDistanceRatio = botTeam == Team.SCPs ? ScpTargetSwitchDistanceRatio : TargetSwitchDistanceRatio;
+
+            if (Time.time - currentTargetSelectedTime < lockSeconds)
             {
-                return currentVisible;
+                return currentCandidate;
             }
 
-            return best.Distance <= currentVisible.Distance * TargetSwitchDistanceRatio
+            return best.Distance <= currentCandidate.Distance * switchDistanceRatio
                 ? best
-                : currentVisible;
+                : currentCandidate;
         }
 
         private bool TrySelectSurfaceTarget(out CombatTarget target)
@@ -1056,6 +1096,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             CombatTarget best = null;
+            CombatTarget currentCandidate = null;
             foreach (var candidate in ReferenceHub.AllHubs)
             {
                 if (!AreHostile(botHub, candidate) || !IsOnSurface(candidate.transform.position))
@@ -1070,14 +1111,32 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 }
 
                 var selection = BuildTarget(candidate, distance, false);
+                if (candidate == currentTarget)
+                {
+                    currentCandidate = selection;
+                }
+
                 if (best == null || selection.Distance < best.Distance)
                 {
                     best = selection;
                 }
             }
 
-            target = best;
+            target = SelectStickyTarget(best, currentCandidate);
             return target != null;
+        }
+
+        private CombatTarget BuildCurrentTargetCandidate(Vector3 botPosition, float maxDistance)
+        {
+            if (currentTarget == null || !AreHostile(botPlayer.BotHub.PlayerHub, currentTarget))
+            {
+                return null;
+            }
+
+            var distance = Vector3.Distance(botPosition, currentTarget.transform.position);
+            return distance <= maxDistance
+                ? BuildTarget(currentTarget, distance, false)
+                : null;
         }
 
         private bool TrySelectRememberedTarget(out CombatTarget target)
@@ -1151,6 +1210,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
 
             inventory.ServerSelectItem(firearm.ItemSerial);
             PrepareActionForShot(firearm);
+            MaintainReserveAmmo(firearm);
             return firearm;
         }
 
@@ -1196,6 +1256,23 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
             }
 
             return loaded;
+        }
+
+        private void MaintainReserveAmmo(Firearm firearm)
+        {
+            var config = LabApiPlugin.Instance?.Config;
+            if (config != null && !config.EnableBotInfiniteReserveAmmo)
+            {
+                return;
+            }
+
+            if (Time.time < nextReserveAmmoTopUpTime)
+            {
+                return;
+            }
+
+            nextReserveAmmoTopUpTime = Time.time + ReserveAmmoHelper.GetTopUpIntervalSeconds(config);
+            ReserveAmmoHelper.MaintainReserveAmmo(firearm, config);
         }
 
         private static bool IsReloading(Firearm firearm)
@@ -1454,6 +1531,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                 return false;
             }
 
+            if (!WarmupManager.Instance.CanHubsFightInWarmup(bot, candidate))
+            {
+                return false;
+            }
+
             var botTeam = bot.roleManager.CurrentRole.Team;
             var candidateTeam = candidate.roleManager.CurrentRole.Team;
 
@@ -1637,6 +1719,11 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         Normal,
         Hard,
         Hardest,
+        Extra1,
+        Extra2,
+        Extra3,
+        Extra4,
+        Extra5,
     }
 
     internal sealed class BotCombatDifficultySettings
@@ -1648,6 +1735,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
         public float MaxStrafeFlipSeconds { get; private init; }
         public float ChaseAfterLostLosSeconds { get; private init; }
         public float Scp096RageDurationSeconds { get; private init; }
+        public float TrackingStrength { get; private init; }
 
         public static BotCombatDifficultySettings For(BotCombatDifficulty difficulty)
         {
@@ -1662,6 +1750,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                     MaxStrafeFlipSeconds = 1.6f,
                     ChaseAfterLostLosSeconds = 1.5f,
                     Scp096RageDurationSeconds = 30f,
+                    TrackingStrength = 0.85f,
                 },
                 BotCombatDifficulty.Normal => new()
                 {
@@ -1672,6 +1761,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                     MaxStrafeFlipSeconds = 0.95f,
                     ChaseAfterLostLosSeconds = 3f,
                     Scp096RageDurationSeconds = 40f,
+                    TrackingStrength = 1f,
                 },
                 BotCombatDifficulty.Hard => new()
                 {
@@ -1682,6 +1772,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                     MaxStrafeFlipSeconds = 0.32f,
                     ChaseAfterLostLosSeconds = 5f,
                     Scp096RageDurationSeconds = 50f,
+                    TrackingStrength = 1.2f,
                 },
                 BotCombatDifficulty.Hardest => new()
                 {
@@ -1692,6 +1783,62 @@ namespace SCPSLBot.AI.FirstPersonControl.Combat
                     MaxStrafeFlipSeconds = 0.14f,
                     ChaseAfterLostLosSeconds = 8f,
                     Scp096RageDurationSeconds = 60f,
+                    TrackingStrength = 1.45f,
+                },
+                BotCombatDifficulty.Extra1 => new()
+                {
+                    ShotCooldownSeconds = 0.024f,
+                    AimAngleDegrees = 2.75f,
+                    StrafeSpeed = 2.45f,
+                    MinStrafeFlipSeconds = 0.07f,
+                    MaxStrafeFlipSeconds = 0.14f,
+                    ChaseAfterLostLosSeconds = 8f,
+                    Scp096RageDurationSeconds = 60f,
+                    TrackingStrength = 1.75f,
+                },
+                BotCombatDifficulty.Extra2 => new()
+                {
+                    ShotCooldownSeconds = 0.024f,
+                    AimAngleDegrees = 2f,
+                    StrafeSpeed = 2.45f,
+                    MinStrafeFlipSeconds = 0.07f,
+                    MaxStrafeFlipSeconds = 0.14f,
+                    ChaseAfterLostLosSeconds = 8f,
+                    Scp096RageDurationSeconds = 60f,
+                    TrackingStrength = 2.1f,
+                },
+                BotCombatDifficulty.Extra3 => new()
+                {
+                    ShotCooldownSeconds = 0.024f,
+                    AimAngleDegrees = 1.4f,
+                    StrafeSpeed = 2.45f,
+                    MinStrafeFlipSeconds = 0.07f,
+                    MaxStrafeFlipSeconds = 0.14f,
+                    ChaseAfterLostLosSeconds = 8f,
+                    Scp096RageDurationSeconds = 60f,
+                    TrackingStrength = 2.5f,
+                },
+                BotCombatDifficulty.Extra4 => new()
+                {
+                    ShotCooldownSeconds = 0.024f,
+                    AimAngleDegrees = 0.9f,
+                    StrafeSpeed = 2.45f,
+                    MinStrafeFlipSeconds = 0.07f,
+                    MaxStrafeFlipSeconds = 0.14f,
+                    ChaseAfterLostLosSeconds = 8f,
+                    Scp096RageDurationSeconds = 60f,
+                    TrackingStrength = 3.0f,
+                },
+                BotCombatDifficulty.Extra5 => new()
+                {
+                    ShotCooldownSeconds = 0.024f,
+                    AimAngleDegrees = 0.55f,
+                    StrafeSpeed = 2.45f,
+                    MinStrafeFlipSeconds = 0.07f,
+                    MaxStrafeFlipSeconds = 0.14f,
+                    ChaseAfterLostLosSeconds = 8f,
+                    Scp096RageDurationSeconds = 60f,
+                    TrackingStrength = 3.6f,
                 },
                 _ => For(BotCombatDifficulty.Normal),
             };

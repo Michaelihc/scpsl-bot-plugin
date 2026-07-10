@@ -81,9 +81,19 @@ disable_warhead_in_warmup: true
 disable_lcz_decontamination_in_warmup: true
 disable_disarming_in_warmup: true
 disable_scp207_health_drain_in_warmup: true
+enable_bot_infinite_reserve_ammo: true
+enable_human_infinite_reserve_ammo: true
+bot_reserve_ammo_target_magazines: 2
+bot_reserve_ammo_hard_cap: 200
+bot_reserve_ammo_top_up_interval_seconds: 2
 enable_overflow_cleanup: true
 cleanup_item_threshold: 80
 cleanup_check_interval_seconds: 10
+enable_verbose_bot_logs: false
+enable_empty_server_auto_restart: true
+empty_server_restart_delay_seconds: 300
+empty_server_restart_check_interval_seconds: 30
+empty_server_restart_cooldown_seconds: 900
 ```
 
 Notes:
@@ -94,6 +104,7 @@ Notes:
 - Bots default to `warmup_bot_role`, currently `ChaosRifleman`.
 - LCZ decontamination and disarming are disabled only in standard warmup and restored when warmup mode is `None`.
 - Role changes made by admins should not be reverted once a bot already has a valid role.
+- Empty-server auto restart watches for real human players only. It ignores RA dummy bots, waits for a human to have connected at least once, then restarts after the configured empty delay.
 
 ## Commands
 
@@ -118,6 +129,7 @@ Standard warmup:
 - Starts/keeps the round running and blocks normal round end.
 - Respawns dead players and spectators.
 - Maintains configured bot count instead of allowing infinite bot spawning.
+- Enables bots only in warmup arenas that currently have connected human players assigned there.
 - Spawns players as NTF Private by default.
 - Spawns bots as Chaos Rifleman by default.
 - Disables LCZ decontamination, disarming, SCP-207 health drain, and non-admin warhead use.

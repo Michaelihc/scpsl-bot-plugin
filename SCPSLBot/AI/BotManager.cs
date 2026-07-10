@@ -7,6 +7,7 @@ using PlayerRoles;
 using SCPSLBot.AI.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Components;
+using SCPSLBot.Warmup;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,19 +73,19 @@ namespace SCPSLBot.AI
             }
         }
 
-        public void AddBotPlayer()
+        public ReferenceHub AddBotPlayer()
         {
             if (!CanSpawnBot())
             {
                 Debug.LogWarning("Cannot spawn RA dummy bot before the network server is active.");
-                return;
+                return null;
             }
 
             var referenceHub = DummyUtils.SpawnDummy("SCPSL Bot");
             if (referenceHub == null)
             {
                 Debug.LogError("Failed to spawn RA dummy bot.");
-                return;
+                return null;
             }
 
             var player = referenceHub.gameObject;
@@ -92,7 +93,10 @@ namespace SCPSLBot.AI
 
             BotPlayers.Add(referenceHub, new BotHub(referenceHub));
 
-            Debug.Log($"Spawned RA dummy bot: {referenceHub}");
+            if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs == true)
+            {
+                Debug.Log($"Spawned RA dummy bot: {referenceHub}");
+            }
 
             // add perception
             var sensing = new GameObject("Bot Sensing");
@@ -111,6 +115,7 @@ namespace SCPSLBot.AI
 
             ScheduleDefaultRole(referenceHub, 0.5f);
             ScheduleDefaultRole(referenceHub, 1.5f);
+            return referenceHub;
         }
 
         public bool CanSpawnBot()
@@ -133,6 +138,11 @@ namespace SCPSLBot.AI
 
         private bool TrySetDefaultRole(ReferenceHub referenceHub)
         {
+            if (WarmupManager.Instance.IsStandardWarmup)
+            {
+                return true;
+            }
+
             if (referenceHub == null
                 || !BotPlayers.ContainsKey(referenceHub)
                 || referenceHub.roleManager == null)
@@ -226,7 +236,10 @@ namespace SCPSLBot.AI
         {
             if (BotPlayers.Remove(userHub))
             {
-                Debug.Log($"Bot player removed: {userHub}");
+                if (LabApiPlugin.Instance?.Config?.EnableVerboseBotLogs == true)
+                {
+                    Debug.Log($"Bot player removed: {userHub}");
+                }
             }
         }
 
