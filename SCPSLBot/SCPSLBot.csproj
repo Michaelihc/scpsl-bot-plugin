@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
@@ -95,4 +95,10 @@
     <ProjectCapability Remove="ReferenceManagerAssemblies" />
   </ItemGroup>
 
+
+  <!-- Auto-deploy the built DLL over its existing copies on the local LabAPI server (see Deploy.targets). -->
+  <PropertyGroup>
+    <_DeployTargetsFile>$([MSBuild]::GetPathOfFileAbove('Deploy.targets', '$(MSBuildProjectDirectory)'))</_DeployTargetsFile>
+  </PropertyGroup>
+  <Import Project="$(_DeployTargetsFile)" Condition="'$(_DeployTargetsFile)' != ''" />
 </Project>
