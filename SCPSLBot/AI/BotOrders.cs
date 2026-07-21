@@ -32,6 +32,8 @@ namespace SCPSLBot.AI
         public int DoorsTraversed { get; internal set; }
         public float MaxTickDistance { get; internal set; }
         public bool TeleportDetected { get; internal set; }
+        public int GroundProbeMisses { get; internal set; }
+        public float MaxGroundDistance { get; internal set; }
         public string FailureReason { get; internal set; }
         public string Room { get; internal set; }
     }
@@ -82,6 +84,8 @@ namespace SCPSLBot.AI
         public int DoorsTraversed;
         public float MaxTickDistance;
         public bool TeleportDetected;
+        public int GroundProbeMisses;
+        public float MaxGroundDistance;
         public string FailureReason;
         public RoomIdentifier LastRoom;
         public bool SampledPosition;

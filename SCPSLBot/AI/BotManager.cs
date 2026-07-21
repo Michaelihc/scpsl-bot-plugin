@@ -1,6 +1,7 @@
 using Interactables.Interobjects.DoorUtils;
 using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Events.Handlers;
+using LabLogger = LabApi.Features.Console.Logger;
 using MapGeneration;
 using MEC;
 using Mirror;
@@ -229,7 +230,7 @@ namespace SCPSLBot.AI
             if (BotPlayers.TryGetValue(userHub, out var botPlayer))
             {
                 botPlayer.OnRoleChanged(prevRole, newRole);
-                Debug.Log($"[BotOrders] ROLE bot={BotName(userHub)} previous={prevRole?.RoleTypeId} current={newRole?.RoleTypeId}");
+                LabLogger.Info($"[BotOrders] ROLE bot={BotName(userHub)} previous={prevRole?.RoleTypeId} current={newRole?.RoleTypeId}");
             }
         }
 
@@ -278,7 +279,7 @@ namespace SCPSLBot.AI
             var room = RoomIdentifier.AllRoomIdentifiers.FirstOrDefault(candidate => candidate.Name == roomName);
             if (room == null || !NavigationMesh.LocalMeshesByRoom.TryGetValue(room.gameObject, out var mesh) || mesh.Cells.Count == 0)
             {
-                Debug.LogError($"[BotOrders] ROOM_UNAVAILABLE bot={BotName(hub)} room={roomName}");
+                LabLogger.Error($"[BotOrders] ROOM_UNAVAILABLE bot={BotName(hub)} room={roomName}");
                 return false;
             }
 
@@ -323,12 +324,12 @@ namespace SCPSLBot.AI
                 state.Active = false;
                 state.FailureReason = "goal is outside the navigation mesh";
                 state.HasPath = false;
-                Debug.LogError($"[BotOrders] OFF_MESH bot={BotName(hub)} goal={Format(goal)} nearest={Format(nearest)} nearestDistance={nearestDistance:F2}");
+                LabLogger.Error($"[BotOrders] OFF_MESH bot={BotName(hub)} goal={Format(goal)} nearest={Format(nearest)} nearestDistance={nearestDistance:F2}");
                 LogSummary(hub, state, "FAIL");
                 return false;
             }
 
-            Debug.Log($"[BotOrders] ORDER bot={BotName(hub)} kind={kind} description={description} goal={Format(goal)} role={hub.roleManager?.CurrentRole?.RoleTypeId}");
+            LabLogger.Info($"[BotOrders] ORDER bot={BotName(hub)} kind={kind} description={description} goal={Format(goal)} role={hub.roleManager?.CurrentRole?.RoleTypeId}");
             return true;
         }
 
@@ -361,7 +362,7 @@ namespace SCPSLBot.AI
                 botHub.FpcPlayer.Move.DesiredLocalDirection = Vector3.zero;
             }
 
-            Debug.Log($"[BotOrders] STOP bot={BotName(hub)} reason={reason} pos={Format(hub.transform.position)}");
+            LabLogger.Info($"[BotOrders] STOP bot={BotName(hub)} reason={reason} pos={Format(hub.transform.position)}");
             return true;
         }
 
@@ -401,7 +402,7 @@ namespace SCPSLBot.AI
                 if (tickDistance > TeleportThreshold)
                 {
                     state.TeleportDetected = true;
-                    Debug.LogError($"[BotOrders] TELEPORT bot={BotName(hub)} tickDistance={tickDistance:F3} from={Format(state.LastPosition)} to={Format(position)} threshold={TeleportThreshold:F2}");
+                    LabLogger.Error($"[BotOrders] TELEPORT bot={BotName(hub)} tickDistance={tickDistance:F3} from={Format(state.LastPosition)} to={Format(position)} threshold={TeleportThreshold:F2}");
                 }
             }
             else
@@ -423,7 +424,7 @@ namespace SCPSLBot.AI
                 state.Kind = BotOrderKind.FailedNoPath;
                 state.Active = false;
                 state.FailureReason = "navigator found no connected path";
-                Debug.LogError($"[BotOrders] NO_PATH bot={BotName(hub)} pos={Format(position)} room={RoomNameAt(position)} goal={Format(state.Goal)} goalRoom={RoomNameAt(state.Goal)}");
+                LabLogger.Error($"[BotOrders] NO_PATH bot={BotName(hub)} pos={Format(position)} room={RoomNameAt(position)} goal={Format(state.Goal)} goalRoom={RoomNameAt(state.Goal)}");
                 LogSummary(hub, state, "FAIL");
                 return;
             }
@@ -445,7 +446,7 @@ namespace SCPSLBot.AI
             {
                 state.StallCount++;
                 var blocker = ProbeBlockingCollider(player, waypoint);
-                Debug.LogWarning($"[BotOrders] STALL bot={BotName(hub)} seconds={now - state.LastProgressAt:F1} pos={Format(position)} room={RoomNameAt(position)} goal={Format(state.Goal)} waypoint={Format(waypoint)} blocker={blocker}");
+                LabLogger.Warn($"[BotOrders] STALL bot={BotName(hub)} seconds={now - state.LastProgressAt:F1} pos={Format(position)} room={RoomNameAt(position)} goal={Format(state.Goal)} waypoint={Format(waypoint)} blocker={blocker}");
                 MarkProgress(state, now);
                 player.Navigator.ForceReplan();
             }
@@ -453,7 +454,18 @@ namespace SCPSLBot.AI
             if (now >= state.NextBreadcrumbAt)
             {
                 state.NextBreadcrumbAt = now + 2f;
-                Debug.Log($"[BotOrders] BREADCRUMB bot={BotName(hub)} t={now - state.IssuedAt:F1} pos={Format(position)} room={RoomNameAt(position)} remaining={remaining:F2} hasPath={state.HasPath} stalls={state.StallCount} doors={state.DoorsTraversed} maxTick={state.MaxTickDistance:F3}");
+                var ground = ProbeGround(position, out var groundDistance, out var groundCollider);
+                if (ground)
+                {
+                    state.MaxGroundDistance = Mathf.Max(state.MaxGroundDistance, groundDistance);
+                }
+                else
+                {
+                    state.GroundProbeMisses++;
+                    LabLogger.Error($"[BotOrders] GROUND_MISS bot={BotName(hub)} pos={Format(position)} room={RoomNameAt(position)} misses={state.GroundProbeMisses}");
+                }
+
+                LabLogger.Info($"[BotOrders] BREADCRUMB bot={BotName(hub)} t={now - state.IssuedAt:F1} pos={Format(position)} room={RoomNameAt(position)} remaining={remaining:F2} hasPath={state.HasPath} stalls={state.StallCount} doors={state.DoorsTraversed} maxTick={state.MaxTickDistance:F3} ground={(ground ? groundCollider + ":" + groundDistance.ToString("F2") + "m" : "MISS")}");
             }
         }
 
@@ -482,6 +494,8 @@ namespace SCPSLBot.AI
                 DoorsTraversed = state.DoorsTraversed,
                 MaxTickDistance = state.MaxTickDistance,
                 TeleportDetected = state.TeleportDetected,
+                GroundProbeMisses = state.GroundProbeMisses,
+                MaxGroundDistance = state.MaxGroundDistance,
                 FailureReason = state.FailureReason ?? string.Empty,
                 Room = RoomNameAt(position),
             };
@@ -499,13 +513,27 @@ namespace SCPSLBot.AI
                 botHub.FpcPlayer.Move.DesiredLocalDirection = Vector3.zero;
             }
 
-            LogSummary(hub, state, state.TeleportDetected ? "FAIL" : "PASS");
+            LogSummary(hub, state, state.TeleportDetected || state.GroundProbeMisses > 0 ? "FAIL" : "PASS");
         }
 
         private static void MarkProgress(BotOrderState state, float now)
         {
             state.LastProgressAt = now;
             state.LastProgressUtc = DateTime.UtcNow;
+        }
+
+        private static bool ProbeGround(Vector3 position, out float distance, out string colliderName)
+        {
+            if (Physics.Raycast(position + Vector3.up * 0.25f, Vector3.down, out var hit, 4f, FpcStateProcessor.Mask, QueryTriggerInteraction.Ignore))
+            {
+                distance = hit.distance;
+                colliderName = hit.collider.name;
+                return true;
+            }
+
+            distance = float.PositiveInfinity;
+            colliderName = "none";
+            return false;
         }
 
         private static string ProbeBlockingCollider(FpcBotPlayer player, Vector3 waypoint)
@@ -542,7 +570,7 @@ namespace SCPSLBot.AI
             if (state.LastRoom != null && state.LastRoom != currentRoom && IsDoorTransition(state.LastRoom, currentRoom, out var doorName))
             {
                 state.DoorsTraversed++;
-                Debug.Log($"[BotOrders] DOOR bot={BotName(hub)} count={state.DoorsTraversed} door={doorName} from={state.LastRoom.Name} to={currentRoom.Name}");
+                LabLogger.Info($"[BotOrders] DOOR bot={BotName(hub)} count={state.DoorsTraversed} door={doorName} from={state.LastRoom.Name} to={currentRoom.Name}");
             }
 
             state.LastRoom = currentRoom;
@@ -603,7 +631,7 @@ namespace SCPSLBot.AI
 
         private static void LogSummary(ReferenceHub hub, BotOrderState state, string verdict)
         {
-            Debug.Log($"[BotOrders] SUMMARY verdict={verdict} bot={BotName(hub)} order={state.Description} elapsed={Time.time - state.IssuedAt:F2} stalls={state.StallCount} doors={state.DoorsTraversed} maxTick={state.MaxTickDistance:F3} teleport={state.TeleportDetected} remaining={state.DistanceRemaining:F2} reason={state.FailureReason ?? "none"}");
+            LabLogger.Info($"[BotOrders] SUMMARY verdict={verdict} bot={BotName(hub)} order={state.Description} elapsed={Time.time - state.IssuedAt:F2} stalls={state.StallCount} doors={state.DoorsTraversed} maxTick={state.MaxTickDistance:F3} teleport={state.TeleportDetected} groundMisses={state.GroundProbeMisses} maxGround={state.MaxGroundDistance:F2} remaining={state.DistanceRemaining:F2} reason={state.FailureReason ?? "none"}");
         }
 
         private static float HorizontalDistance(Vector3 a, Vector3 b)

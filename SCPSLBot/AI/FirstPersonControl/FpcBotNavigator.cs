@@ -46,20 +46,35 @@ namespace SCPSLBot.AI.FirstPersonControl
                 return botPlayer.PlayerPosition;
             }
 
-            if (!IsAtLastCell())
+            while (!IsAtLastCell())
             {
                 Vector3 nextTargetPosition = GetNextCorner(goalPosition);
-                return nextTargetPosition;
-            }
-            else
-            {
-                if (goalCell != null && isGoalOutside)
+                if (HorizontalDistanceToSegment(botPlayer.PlayerPosition, nextTargetPosition, nextTargetPosition) > 0.2f)
                 {
-                    return targetCellClosestPositionToGoal;
+                    return nextTargetPosition;
                 }
 
-                return goalPosition;
+                var nextCell = CellsPath[currentPathIdx + 1];
+                if (!currentCell.AdjacentCellEdges.ContainsKey(nextCell)
+                    && !NavigationMesh.TryGetForeignConnectedEdge(currentCell, nextCell, out _))
+                {
+                    // Edgeless links (elevators) require their dedicated obstacle logic; do not
+                    // claim traversal merely because their holding point was reached.
+                    return nextTargetPosition;
+                }
+
+                // Reaching the requested edge point is sufficient evidence to advance. Waiting for
+                // a strict plane-side sign can deadlock at exact zero after native collision stops
+                // the capsule on the boundary.
+                currentCell = CellsPath[++currentPathIdx];
             }
+
+            if (goalCell != null && isGoalOutside)
+            {
+                return targetCellClosestPositionToGoal;
+            }
+
+            return goalPosition;
         }
 
         public bool HasPath => hasPath;
@@ -86,6 +101,22 @@ namespace SCPSLBot.AI.FirstPersonControl
                     else
                     {
                         isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(playerPosition, nextTargetCellEdge);
+
+                        // Native role spawns can land exactly on a nav-cell boundary. The strict
+                        // positive-side test then leaves the next corner equal to the bot position,
+                        // producing zero movement forever. Treat a bot touching the edge as crossed
+                        // only when a small probe toward the next cell is on its positive side.
+                        if (!isEdgeReached
+                            && HorizontalDistanceToSegment(playerPosition, nextTargetCellEdge.From.Position, nextTargetCellEdge.To.Position) <= 0.2f)
+                        {
+                            var towardNextCell = Vector3.ProjectOnPlane(nextTargetCell.CenterPosition - currentCell.CenterPosition, Vector3.up);
+                            if (towardNextCell.sqrMagnitude > 0.001f)
+                            {
+                                isEdgeReached = NavigationMesh.IsAtPositiveEdgeSide(
+                                    playerPosition + towardNextCell.normalized * 0.2f,
+                                    nextTargetCellEdge);
+                            }
+                        }
                     }
 
                     if (isEdgeReached)
@@ -266,6 +297,22 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
 
             return nextTargetPosition;
+        }
+
+        private static float HorizontalDistanceToSegment(Vector3 point, Vector3 from, Vector3 to)
+        {
+            point = Vector3.ProjectOnPlane(point, Vector3.up);
+            from = Vector3.ProjectOnPlane(from, Vector3.up);
+            to = Vector3.ProjectOnPlane(to, Vector3.up);
+
+            var segment = to - from;
+            if (segment.sqrMagnitude < 0.0001f)
+            {
+                return Vector3.Distance(point, from);
+            }
+
+            var t = Mathf.Clamp01(Vector3.Dot(point - from, segment) / segment.sqrMagnitude);
+            return Vector3.Distance(point, from + segment * t);
         }
 
         private bool IsAtLastCell()

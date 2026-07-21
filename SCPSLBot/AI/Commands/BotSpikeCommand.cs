@@ -1,4 +1,5 @@
 using CommandSystem;
+using LabLogger = LabApi.Features.Console.Logger;
 using MapGeneration;
 using MEC;
 using PlayerRoles;
@@ -87,7 +88,7 @@ namespace SCPSLBot.AI.Commands
 
             // Hold as soon as its FPC role arrives; the role system performs the only spawn placement.
             BotOrders.Stop(bot);
-            Debug.Log($"[BotOrders] SPIKE_START bot={BotName} requestedRole={RoleTypeId.ClassD} placement=native-role-spawn");
+            LabLogger.Info($"[BotOrders] SPIKE_START bot={BotName} requestedRole={RoleTypeId.ClassD} placement=native-role-spawn");
             response = "Spawned BotOrders Spike as ClassD via native role spawn. Wait about 2 seconds, then use botspike walk preset.";
             return true;
         }
@@ -153,7 +154,7 @@ namespace SCPSLBot.AI.Commands
                 return $"bot={BotName} role={role} route={routeLabel} routeRunning={routeRunning} order=none pos={Format(bot.transform.position)}";
             }
 
-            return $"bot={BotName} role={role} room={status.Room} route={routeLabel} routeRunning={routeRunning} order={status.CurrentOrder} active={status.IsActive} hasPath={status.HasPath} remaining={status.DistanceRemaining:F2} elapsed={status.ElapsedSeconds:F1} stalls={status.StallCount} doors={status.DoorsTraversed} maxTick={status.MaxTickDistance:F3} teleport={status.TeleportDetected} failure={status.FailureReason}";
+            return $"bot={BotName} role={role} room={status.Room} route={routeLabel} routeRunning={routeRunning} order={status.CurrentOrder} active={status.IsActive} hasPath={status.HasPath} remaining={status.DistanceRemaining:F2} elapsed={status.ElapsedSeconds:F1} stalls={status.StallCount} doors={status.DoorsTraversed} maxTick={status.MaxTickDistance:F3} teleport={status.TeleportDetected} groundMisses={status.GroundProbeMisses} maxGround={status.MaxGroundDistance:F2} failure={status.FailureReason}";
         }
 
         public static bool Stop(out string response)
@@ -206,7 +207,7 @@ namespace SCPSLBot.AI.Commands
 
             if (bot == null || bot.roleManager?.CurrentRole is not PlayerRoles.FirstPersonControl.FpcStandardRoleBase)
             {
-                Debug.LogError($"[BotOrders] ROUTE verdict=FAIL label={label} reason=fpc-role-timeout waited={Time.time - waitStarted:F1}");
+                LabLogger.Error($"[BotOrders] ROUTE verdict=FAIL label={label} reason=fpc-role-timeout waited={Time.time - waitStarted:F1}");
                 routeRunning = false;
                 yield break;
             }
@@ -216,24 +217,34 @@ namespace SCPSLBot.AI.Commands
             var totalDoors = 0;
             var maxTick = 0f;
             var teleport = false;
+            var groundMisses = 0;
+            var maxGround = 0f;
 
             foreach (var room in rooms)
             {
                 if (bot == null || !BotOrders.MoveToRoom(bot, room))
                 {
-                    Debug.LogError($"[BotOrders] ROUTE verdict=FAIL label={label} room={room} reason=order-rejected");
+                    LabLogger.Error($"[BotOrders] ROUTE verdict=FAIL label={label} room={room} reason=order-rejected");
                     routeRunning = false;
                     yield break;
                 }
 
                 while (bot != null && BotOrders.TryGetStatus(bot, out var activeStatus) && activeStatus.IsActive)
                 {
+                    if (activeStatus.ElapsedSeconds >= 120f)
+                    {
+                        BotOrders.Stop(bot);
+                        LabLogger.Error($"[BotOrders] ROUTE verdict=FAIL label={label} room={room} reason=order-timeout elapsed={activeStatus.ElapsedSeconds:F1} stalls={activeStatus.StallCount}");
+                        routeRunning = false;
+                        yield break;
+                    }
+
                     yield return Timing.WaitForSeconds(0.25f);
                 }
 
                 if (bot == null || !BotOrders.TryGetStatus(bot, out var status))
                 {
-                    Debug.LogError($"[BotOrders] ROUTE verdict=FAIL label={label} room={room} reason=bot-or-status-lost");
+                    LabLogger.Error($"[BotOrders] ROUTE verdict=FAIL label={label} room={room} reason=bot-or-status-lost");
                     routeRunning = false;
                     yield break;
                 }
@@ -242,10 +253,12 @@ namespace SCPSLBot.AI.Commands
                 totalDoors += status.DoorsTraversed;
                 maxTick = Mathf.Max(maxTick, status.MaxTickDistance);
                 teleport |= status.TeleportDetected;
+                groundMisses += status.GroundProbeMisses;
+                maxGround = Mathf.Max(maxGround, status.MaxGroundDistance);
 
                 if (status.CurrentOrder != BotOrderKind.Completed)
                 {
-                    Debug.LogError($"[BotOrders] ROUTE verdict=FAIL label={label} room={room} terminal={status.CurrentOrder} reason={status.FailureReason}");
+                    LabLogger.Error($"[BotOrders] ROUTE verdict=FAIL label={label} room={room} terminal={status.CurrentOrder} reason={status.FailureReason}");
                     routeRunning = false;
                     yield break;
                 }
@@ -253,8 +266,8 @@ namespace SCPSLBot.AI.Commands
                 yield return Timing.WaitForSeconds(0.5f);
             }
 
-            var verdict = teleport || maxTick > 1.5f ? "FAIL" : "PASS";
-            Debug.Log($"[BotOrders] ROUTE verdict={verdict} label={label} rooms={rooms.Count} elapsed={Time.time - routeStarted:F2} stalls={totalStalls} doors={totalDoors} maxTick={maxTick:F3} teleport={teleport}");
+            var verdict = teleport || maxTick > 1.5f || groundMisses > 0 ? "FAIL" : "PASS";
+            LabLogger.Info($"[BotOrders] ROUTE verdict={verdict} label={label} rooms={rooms.Count} elapsed={Time.time - routeStarted:F2} stalls={totalStalls} doors={totalDoors} maxTick={maxTick:F3} teleport={teleport} groundMisses={groundMisses} maxGround={maxGround:F2}");
             routeRunning = false;
         }
 
