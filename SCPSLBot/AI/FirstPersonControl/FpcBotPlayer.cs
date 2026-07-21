@@ -83,6 +83,23 @@ namespace SCPSLBot.AI.FirstPersonControl
             this.CameraPosition = cameraTransform.position;
             this.CameraForward = cameraTransform.forward;
 
+            // Explicit per-bot orders are the control-plane override used by test harnesses.
+            // They only feed DesiredMove/Look; native FPC still owns gravity and collision.
+            if (BotManager.Instance.TryGetOrderedTarget(BotHub.PlayerHub, out var orderedTargetPosition))
+            {
+                MoveToPosition(orderedTargetPosition, out var waypoint);
+                BotManager.Instance.ObserveOrderTick(this, waypoint);
+                JumpIfForwardMovementBlocked();
+                yield break;
+            }
+
+            if (BotManager.Instance.ShouldHoldPosition(BotHub.PlayerHub))
+            {
+                Move.DesiredLocalDirection = Vector3.zero;
+                ResetStuckJumpTracking();
+                yield break;
+            }
+
             if (Combat.Tick())
             {
                 JumpIfForwardMovementBlocked();

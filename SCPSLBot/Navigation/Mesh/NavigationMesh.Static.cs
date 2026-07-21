@@ -178,6 +178,13 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static void FindShortestPath(TransformCell startingCell, TransformCell endCell, List<TransformCell> results)
         {
+            results.Clear();
+            if (startingCell == endCell)
+            {
+                results.Add(startingCell);
+                return;
+            }
+
             var cellsWithPriorityToEvaluate = new Dictionary<TransformCell, float>();
             var cameFromCells = new Dictionary<TransformCell, TransformCell>();
             var costsTill = new Dictionary<TransformCell, float>();
