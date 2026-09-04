@@ -26,14 +26,6 @@
     <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SL_APPDATA)\LabAPI\plugins\global">
-      <Output TaskParameter="CopiedFiles" ItemName="FilesCopied" />
-    </Copy>
-    <Message Text="Files copied @(FilesCopied)" Importance="high" />
-  </Target>
-
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="System" />

@@ -33,6 +33,11 @@ namespace SCPSLBot.Warmup.Commands
                 modeArgument = arguments.At(1);
             }
 
+            if (!sender.CheckPermission(PlayerPermissions.PlayersManagement, out response))
+            {
+                return false;
+            }
+
             return WarmupManager.Instance.TrySetMode(modeArgument, out response);
         }
     }
