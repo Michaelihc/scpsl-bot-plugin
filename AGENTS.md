@@ -15,8 +15,18 @@
 ## Project Snapshot
 [Concise technical overview for future agents. Overwrite stale notes instead of appending long histories.]
 
-- Plugin: `[plugin name]`
-- Active local test port: `[port]`
+- Runtime suite: `SCPSLBot` 1.0.0, `WarmupSafezone` 1.0.0, `StatsBots` 1.0.0, `XPSystem` 2.0.2, and the existing `LabAPI_InfiniteAmmo` 1.0.1 plugin; `RatingTags` remains rating/tier-only with its old XP progression disabled
+- SSS dependency: `ServerKeybinds.Compat` API 4; deploy its single `ServerKeybinds.dll` under the target port only, never `dependencies/global`
+- Player text: HSM stable-tag providers with EN/CN config and Chinese fallback
+- Dedicated local bot test port: `8888`; production bot server uses remote port `7777`
+- Player SSS is stale-input hardened and role-permissive; Surface allows Facility Guard plus all four NTF ranks, while other humans evacuate to varied native RA-door targets in HCZ/EZ and SCPs evacuate to LCZ with a localized per-player broadcast
+- Role/item/arena SSS dropdowns stage stable server-side selections; explicit Apply/Grant buttons execute them, and no loadout control is registered
+- A round-owned global scanner retries exact-`Spectator` real-player respawns; `None`, `Destroyed`, `Overwatch`, hosts, and dummies remain ignored
+- Surface PvE CI bots use exact native CI reinforcement spawnpoints; the NTF Surface anchor is player-only
+- Managed bots independently clear native `SpawnProtected` after every role assignment
+- During Standard warmup, real players retain native `SpawnProtected` only for their first playable respawn after a confirmed death; other player role/loadout changes clear it
+- WarmupSafezone restores the configured Surface axis/threshold/minimum-X protection and visible boundary with native escape-zone fallback; the SCP-914 backing is 10x while its text remains normal-size
+- Periodic native overflow cleanup is enabled by default
 - Plugin target: LabAPI `net48`
 
 ## SCP:SL Plugin-Specific Principles
