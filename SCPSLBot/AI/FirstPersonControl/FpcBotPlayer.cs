@@ -1,4 +1,3 @@
-﻿using Hints;
 using Interactables;
 using Interactables.Interobjects;
 using Interactables.Interobjects.DoorUtils;
@@ -15,19 +14,22 @@ using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.AI.FirstPersonControl.Roaming;
 using SCPSLBot.Components;
+using SCPSLBot.Presentation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.Profiling;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
-    internal partial class FpcBotPlayer : IBotPlayer
+    internal partial class FpcBotPlayer : IBotPlayer, IDisposable
     {
+        private static readonly int DoorMask = LayerMask.GetMask("Door");
+        private static readonly int DoorAndGlassMask = LayerMask.GetMask("Door", "Glass");
+        private const float PerceptionIntervalSeconds = 0.1f;
+
         public FpcStandardRoleBase FpcRole { get; set; }
 
         public BotHub BotHub { get; }
@@ -55,26 +57,58 @@ namespace SCPSLBot.AI.FirstPersonControl
         private float nextStuckNudgeFlipTime;
         private float nextStuckDoorTime;
         private float nextStuckReplanTime;
+        private float nextPerceptionUpdateTime;
 
         public FpcBotPlayer(BotHub botHub)
         {
             BotHub = botHub;
-            Perception = new FpcBotPerception(this);
-            MindRunner = new FpcMindRunner();
+            try
+            {
+                Perception = new FpcBotPerception(this);
+                MindRunner = new FpcMindRunner();
 
-            Combat = new(this);
-            ZoneRoam = new(this);
-            Navigator = new(this);
-            Look = new(this);
-            Move = new(this);
+                Combat = new(this);
+                ZoneRoam = new(this);
+                Navigator = new(this);
+                Look = new(this);
+                Move = new(this);
 
-            FpcMindFactory.BuildMind(MindRunner, this, Perception);
+                FpcMindFactory.BuildMind(MindRunner, this, Perception);
 
-            MindRunner.SubscribeToBeliefUpdates();
+                MindRunner.SubscribeToBeliefUpdates();
+                nextPerceptionUpdateTime = Time.time + Mathf.Abs(botHub.PlayerHub.PlayerId % 10) * 0.01f;
+            }
+            catch
+            {
+                try
+                {
+                    MindRunner?.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+
+                try
+                {
+                    Perception?.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+
+                throw;
+            }
         }
 
         public IEnumerator<JobHandle> Update()
         {
+            if (isDisposed)
+            {
+                yield break;
+            }
+
             var playerTransform = FpcRole.transform;
             this.PlayerPosition = playerTransform.position;
             this.PlayerForward = playerTransform.forward;
@@ -89,6 +123,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             {
                 MoveToPosition(orderedTargetPosition, out var waypoint);
                 BotManager.Instance.ObserveOrderTick(this, waypoint);
+                DisplaySpectatorDiagnostics("ordered", "order target");
                 JumpIfForwardMovementBlocked();
                 yield break;
             }
@@ -97,11 +132,13 @@ namespace SCPSLBot.AI.FirstPersonControl
             {
                 Move.DesiredLocalDirection = Vector3.zero;
                 ResetStuckJumpTracking();
+                DisplaySpectatorDiagnostics("held", "none");
                 yield break;
             }
 
             if (Combat.Tick())
             {
+                DisplaySpectatorDiagnostics();
                 JumpIfForwardMovementBlocked();
                 yield break;
             }
@@ -113,16 +150,23 @@ namespace SCPSLBot.AI.FirstPersonControl
                 yield break;
             }
 
-            var updatePerceptionHandles = Perception.Update();
-            while (updatePerceptionHandles.MoveNext())
+            if (Time.time >= nextPerceptionUpdateTime)
             {
-                yield return updatePerceptionHandles.Current;
+                nextPerceptionUpdateTime = Time.time + PerceptionIntervalSeconds;
+                using (var updatePerceptionHandles = Perception.Update())
+                {
+                    while (updatePerceptionHandles.MoveNext())
+                    {
+                        yield return updatePerceptionHandles.Current;
+                    }
+                }
             }
 
             if (ShouldIdleOnSurfaceWithoutTarget())
             {
                 Move.DesiredLocalDirection = Vector3.zero;
                 ResetStuckJumpTracking();
+                DisplaySpectatorDiagnostics("surface idle", "none");
                 yield break;
             }
 
@@ -131,7 +175,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 if (!ZoneRoam.Tick())
                 {
                     MindRunner.Tick();
-                    DisplayVisitedActionsGraph();
+                    DisplaySpectatorDiagnostics();
                 }
 
                 JumpIfForwardMovementBlocked();
@@ -147,7 +191,7 @@ namespace SCPSLBot.AI.FirstPersonControl
                 ZoneRoam.Tick();
             }
 
-            DisplayVisitedActionsGraph();
+            DisplaySpectatorDiagnostics();
             JumpIfForwardMovementBlocked();
 
             yield break;
@@ -166,11 +210,17 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public void OnRoleChanged()
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             if (BotLog.Verbose) Debug.Log($"Bot got FPC role assigned.");
 
             PerceptionComponent = BotHub.PlayerHub.GetComponentInChildren<PerceptionComponent>();
             PerceptionComponent.enabled = true;
 
+            nextPerceptionUpdateTime = Time.time;
             MindRunner.EvaluateGoalsToActions();
             ResetStuckJumpTracking();
         }
@@ -199,21 +249,14 @@ namespace SCPSLBot.AI.FirstPersonControl
                 return;
             }
 
-            var playerDirection = FpcRole.FpcModule.transform.forward;
             var dirTowardsTarget = Vector3.Normalize(relativeHorizontalPos);
 
-            // Steer straight at the target rather than walking the body's current forward while it
-            // slowly rotates (which drifts wide and oscillates around corners/doorways). When the
-            // target is behind us, hold still and let the look rotation bring it into view first
-            // instead of walking backwards into hazards. Native FpcMotor renormalizes DesiredMove.
-            if (Vector3.Dot(playerDirection, dirTowardsTarget) < 0f)
-            {
-                this.Move.DesiredLocalDirection = Vector3.zero;
-            }
-            else
-            {
-                this.Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(dirTowardsTarget);
-            }
+            // Feed the exact world direction through the motor's local-input boundary even when the
+            // first waypoint is behind the spawn facing. Waiting for mouse-look before emitting any
+            // input can deadlock native dummies whose rotation update is input-driven. Transforming
+            // this local vector back in FpcMotorPatches preserves the intended world direction while
+            // native FPC continues to own collision, gravity, and speed.
+            this.Move.DesiredLocalDirection = FpcRole.FpcModule.transform.InverseTransformDirection(dirTowardsTarget);
         }
 
         private readonly List<StructureSpawnpoint> structureSpawnpoints = new();
@@ -235,8 +278,9 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             var playerPosition = this.PlayerPosition;
             var moveDirection = this.FpcRole.FpcModule.transform.TransformDirection(this.Move.DesiredLocalDirection);
-            var playerRadius = this.BotHub.PlayerHub.GetComponent<CharacterController>().radius;
-            var playerHeight = this.BotHub.PlayerHub.GetComponent<CharacterController>().height;
+            var characterController = this.BotHub.PlayerHub.GetComponent<CharacterController>();
+            var playerRadius = characterController.radius;
+            var playerHeight = characterController.height;
 
             var playerBottomPosition = playerPosition + Vector3.down * (playerHeight / 2f);
 
@@ -264,9 +308,20 @@ namespace SCPSLBot.AI.FirstPersonControl
 
                 structure.GetComponentsInChildren(spawnableStructureColliders);
 
-                var obstructingCollider = spawnableStructureColliders
-                    .Find(c => c.Raycast(new Ray(playerBottomPosition, moveDirection), out var _, 1f) 
-                        || ((playerBottomPosition + moveDirection) - c.ClosestPointOnBounds(playerBottomPosition + moveDirection)).sqrMagnitude < playerRadius * playerRadius);
+                Collider obstructingCollider = null;
+                var movementRay = new Ray(playerBottomPosition, moveDirection);
+                var nextPosition = playerBottomPosition + moveDirection;
+                var playerRadiusSqr = playerRadius * playerRadius;
+                foreach (var collider in spawnableStructureColliders)
+                {
+                    if (collider.Raycast(movementRay, out _, 1f)
+                        || (nextPosition - collider.ClosestPointOnBounds(nextPosition)).sqrMagnitude < playerRadiusSqr)
+                    {
+                        obstructingCollider = collider;
+                        break;
+                    }
+                }
+
                 if (obstructingCollider)
                 {
                     obstructingStructure = structure;
@@ -323,7 +378,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             var moveDir = intendedWorldMove.normalized;
 
             if (Time.time >= nextStuckDoorTime
-                && Physics.Raycast(CameraPosition, CameraForward, out var doorHit, 2.5f, LayerMask.GetMask("Door"))
+                && Physics.Raycast(CameraPosition, CameraForward, out var doorHit, 2.5f, DoorMask)
                 && doorHit.collider.GetComponentInParent<DoorVariant>() is DoorVariant blockingDoor
                 && blockingDoor is not ElevatorDoor
                 && !blockingDoor.IsConsideredOpen())
@@ -408,9 +463,10 @@ namespace SCPSLBot.AI.FirstPersonControl
 
             //if (firstDoorOnPath.GetComponentsInChildren<Collider>()
             //        .Any(collider => collider.Raycast(new Ray(playerPosition, hub.PlayerCameraReference.forward), out var hit, 2f))
-            if (Physics.Raycast(playerCamera.position, playerCamera.forward, out var hit, maxInteractDistance, LayerMask.GetMask("Door", "Glass"))
+            if (Physics.Raycast(playerCamera.position, playerCamera.forward, out var hit, maxInteractDistance, DoorAndGlassMask)
                 && hit.collider.GetComponent<InteractableCollider>() is InteractableCollider interactableCollider
-                && interactableCollider.Target is DoorVariant interactable)
+                && interactableCollider.Target is DoorVariant interactable
+                && interactable == targetDoor)
             {
                 var colliderId = interactableCollider.ColliderId;
 
@@ -490,123 +546,66 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         #region Debug functions
 
-        private readonly StringBuilder debugStringBuilder = new();
-        private int numLines;
-        private int level;
-        private float nextGraphDisplayTime;
+        private float nextDiagnosticsDisplayTime;
 
-        private void DisplayVisitedActionsGraph()
+        private void DisplaySpectatorDiagnostics(string stateOverride = null, string targetOverride = null)
         {
-            // This overlay only matters to players spectating this bot. Building the whole
-            // belief/action graph string and sending hints every tick for every bot is pure waste
-            // when nobody is watching, so skip it entirely and throttle when someone is.
-            if (Spectators.Count == 0)
+            BotPresentationService presentation = LabApiPlugin.Instance?.Presentation;
+            if (presentation == null || Spectators.Count == 0)
             {
                 return;
             }
 
-            if (Time.time < nextGraphDisplayTime)
+            bool hasEnabledSpectator = false;
+            foreach (ReferenceHub spectatorHub in Spectators)
+            {
+                LabApi.Features.Wrappers.Player spectator = LabApi.Features.Wrappers.Player.Get(spectatorHub);
+                if (spectator != null && presentation.IsBotDiagnosticsEnabled(spectator))
+                {
+                    hasEnabledSpectator = true;
+                    break;
+                }
+            }
+
+            if (!hasEnabledSpectator)
             {
                 return;
             }
 
-            nextGraphDisplayTime = Time.time + 0.2f;
-
-            debugStringBuilder.Clear();
-            debugStringBuilder.AppendLine("<size=14><align=left>");
-            numLines = 0;
-
-            foreach (var (goal, goalEnablingBeliefs) in MindRunner.BeliefsEnablingGoals)
+            if (Time.time < nextDiagnosticsDisplayTime)
             {
-                level = 0;
-                debugStringBuilder.AppendLine($"Goal: {goal.GetType().Name}");
-                numLines++;
+                return;
+            }
 
-                foreach (var goalBelief in goalEnablingBeliefs)
+            nextDiagnosticsDisplayTime = Time.time + 0.5f;
+            string botName = LabApi.Features.Wrappers.Player.Get(BotHub.PlayerHub)?.DisplayName
+                ?? $"bot:{BotHub.PlayerHub.netId}";
+            string role = BotHub.PlayerHub.roleManager?.CurrentRole?.RoleTypeId.ToString() ?? "unknown";
+            string state = stateOverride
+                ?? (BotHub.IsParked
+                    ? "parked"
+                    : Combat.DiagnosticHasTarget
+                        ? Combat.DiagnosticState
+                        : MindRunner.RunningAction?.GetType().Name ?? "idle");
+            string target = targetOverride
+                ?? (Combat.DiagnosticHasTarget
+                    ? $"{Combat.DiagnosticTarget} · {Combat.DiagnosticTargetRole} · {(Combat.DiagnosticHasLineOfSight ? "visible" : "remembered")}"
+                    : "none");
+            string navigation = Navigator.HasPath
+                ? $"path {Navigator.CellsPath.Count} cells"
+                : "no path";
+            var view = new BotDiagnosticView(
+                $"{botName} · {role}",
+                $"{state} · runner {(BotManager.Instance.RunnerIsRunning ? "healthy" : "stopped")}",
+                target,
+                navigation);
+
+            foreach (ReferenceHub spectatorHub in Spectators)
+            {
+                LabApi.Features.Wrappers.Player spectator = LabApi.Features.Wrappers.Player.Get(spectatorHub);
+                if (spectator != null)
                 {
-                    if (!MindRunner.VisitedGoalsEnabledBy.ContainsKey(goalBelief))
-                    {
-                        continue;
-                    }
-
-                    ShowVisitedGoalBelief(goalBelief, goal);
-                }
-            }
-
-            debugStringBuilder.Append('\n', Mathf.Max(40 - numLines, 0));
-
-            var debugString = debugStringBuilder.ToString();
-
-            SendTextHintToSpectators(debugString, 10);
-        }
-
-        private void ShowVisitedGoalBelief(IBelief goalBelief, IGoal goal)
-        {
-            level++;
-
-            foreach (var actionImpacting in MindRunner.ActionsImpactingBeliefs[goalBelief])
-            {
-                if (!MindRunner.VisitedGoalsImpactedBy.TryGetValue(actionImpacting, out var goalImpactedBy)
-                    || goalImpactedBy != goal)
-                {
-                    continue;
-                }
-
-                ShowVisitedAction(actionImpacting);
-            }
-        }
-
-        private void ShowVisitedAction(IAction actionImpacting)
-        {
-            level++;
-            debugStringBuilder.Append(' ', level*4);
-
-            var actionTotalCost = MindRunner.VisitedActionsTotalCosts[actionImpacting];
-            if (MindRunner.RelevantActionsImpactingActions.ContainsKey(actionImpacting) || actionImpacting == MindRunner.RunningAction)
-            {
-                debugStringBuilder.AppendLine($"<color=yellow>{actionImpacting}</color> <b>[{actionTotalCost}]</b>");
-            }
-            else
-            {
-                debugStringBuilder.AppendLine($"{actionImpacting} <b>[{actionTotalCost}]</b>");
-            }
-            numLines++;
-
-            foreach (var beliefEnabling in MindRunner.BeliefsEnablingActions[actionImpacting])
-            {
-                ShowVisitedActionsOfBelief(beliefEnabling, actionImpacting);
-            }
-
-            level--;
-        }
-
-        private void ShowVisitedActionsOfBelief(IBelief belief, IAction actionToEnable)
-        {
-            foreach (var actionImpacting in MindRunner.ActionsImpactingBeliefs[belief])
-            {
-                if (!MindRunner.VisitedActionsImpactedBy.TryGetValue(actionImpacting, out var actionImpactedBy)
-                    || actionImpactedBy != actionToEnable)
-                {
-                    continue;
-                }
-
-                ShowVisitedAction(actionImpacting);
-            }
-        }
-
-        string broadcastMessage = string.Empty;
-
-        public void SendBroadcastToSpectators(string message, ushort duration)
-        {
-            if (broadcastMessage != message)
-            {
-                broadcastMessage = message;
-
-                var spectatingPlayers = ReferenceHub.AllHubs.Where(p => p.roleManager.CurrentRole is OverwatchRole s && s.SyncedSpectatedNetId == this.BotHub.PlayerHub.netId);
-                foreach (var spectatingPlayer in spectatingPlayers)
-                {
-                    Broadcast.Singleton.TargetClearElements(spectatingPlayer.connectionToClient);
-                    Broadcast.Singleton.TargetAddElement(spectatingPlayer.connectionToClient, message, duration, Broadcast.BroadcastFlags.Normal);
+                    presentation.ShowBotDiagnostics(spectator, view);
                 }
             }
         }
@@ -640,36 +639,37 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
         }
 
-        private static readonly Dictionary<ReferenceHub, string> playersHintTexts = new();
-
-        // Clears cross-bot spectator hint dedupe state (called on round restart to avoid retaining
-        // disconnected spectators across rounds).
-        public static void ResetSpectatorHintState()
+        public void Dispose()
         {
-            playersHintTexts.Clear();
-        }
-
-        public void SendTextHintToSpectators(string message, float duration)
-        {
-            var spectatingPlayers = Spectators;
-            foreach (var spectatingHub in spectatingPlayers)
+            if (isDisposed)
             {
-                if (!playersHintTexts.TryGetValue(spectatingHub, out var prevHintText))
-                {
-                    prevHintText = string.Empty;
-                    playersHintTexts.Add(spectatingHub, prevHintText);
-                }
-    
-                if (prevHintText == message)
-                {
-                    continue;
-                }
-
-                spectatingHub.hints.Show(new TextHint(message, new [] { new StringHintParameter(string.Empty) }, null, duration));
-
-                playersHintTexts[spectatingHub] = message;
+                return;
             }
+
+            isDisposed = true;
+            try
+            {
+                MindRunner.Dispose();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+
+            try
+            {
+                Perception.Dispose();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+
+            spectatorsCache.Clear();
+            PerceptionComponent = null;
         }
+
+        private bool isDisposed;
 
         #endregion
     }

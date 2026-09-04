@@ -1,9 +1,8 @@
-﻿using Interactables;
+using Interactables;
 using Interactables.Interobjects;
 using Interactables.Interobjects.DoorUtils;
 using MapGeneration.Distributors;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
-using SCPSLBot.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,24 +22,24 @@ namespace SCPSLBot.AI.FirstPersonControl.Perception.Senses
         private LayerMask interactableLayerMask = LayerMask.GetMask("InteractableNoPlayerCollision");
         protected override LayerMask LayerMask => interactableLayerMask;
 
-        protected override void AddColliderDatas(Collider triggeringCollider, Locker locker, Dictionary<ColliderData, Locker> data)
+        protected override void AddColliderDatas(Collider triggeringCollider, Locker locker)
         {
             if (TryGetColliders(triggeringCollider, locker, out var colliders))
             {
                 foreach (var collider in colliders)
                 {
-                    data[new ColliderData(collider.GetInstanceID(), collider.bounds.center)] = locker;
+                    TrackCollider(collider, locker);
                 }
             }
         }
 
-        protected override void RemoveColliderDatas(Collider triggeringCollider, Locker locker, Dictionary<ColliderData, Locker> data)
+        protected override void RemoveColliderDatas(Collider triggeringCollider, Locker locker)
         {
-            if (TryGetColliders(triggeringCollider, locker, out var colliders))
+            if (locker != null && TryGetColliders(triggeringCollider, locker, out var colliders))
             {
                 foreach (var collider in colliders)
                 {
-                    data.Remove(new ColliderData(collider.GetInstanceID(), collider.bounds.center));
+                    UntrackCollider(collider);
                 }
             }
         }

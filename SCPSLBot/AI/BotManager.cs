@@ -1,3 +1,4 @@
+using CustomPlayerEffects;
 using Interactables.Interobjects.DoorUtils;
 using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Events.Handlers;
@@ -8,6 +9,7 @@ using Mirror;
 using NetworkManagerUtils.Dummies;
 using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
+using RoundRestarting;
 using SCPSLBot.AI.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses.Sight;
 using SCPSLBot.Components;
@@ -36,18 +38,41 @@ namespace SCPSLBot.AI
         private readonly Dictionary<ReferenceHub, RoleTypeId> requestedRoles = new();
 
         private CoroutineHandle handle;
+        private NativeArray<JobHandle> jobHandlesBuffer;
+        private bool initialized;
+        private readonly bool[] previousLayer31CollisionIgnores = new bool[32];
+        private bool layer31CollisionsConfigured;
         private ReferenceHub pathTarget;
         private Vector3 pathTargetPosition;
         private float nextPathTargetUpdateTime;
 
+        public bool RunnerIsRunning => initialized && handle.IsRunning;
+        public DateTime LastRunnerHeartbeatUtc { get; private set; }
+        public string LastRunnerFault { get; private set; } = string.Empty;
+        public DateTime? LastRunnerFaultUtc { get; private set; }
+        public int ParkedBotCount => BotPlayers.Values.Count(bot => bot.IsParked);
+
         public void Init()
         {
+            if (initialized)
+            {
+                return;
+            }
+
+            initialized = true;
+            SightSense.RetryPendingDisposals(force: true);
             handle = Timing.RunCoroutine(RunPlayerUpdates());
 
             PlayerRoleManager.OnRoleChanged += OnRoleChanged;
             ReferenceHub.OnPlayerRemoved += RemovePlayerIfBot;
             PlayerEvents.Hurt += OnPlayerHurt;
             ServerEvents.RoundRestarted += OnRoundRestarted;
+
+            for (int i = 0; i < 32; i++)
+            {
+                previousLayer31CollisionIgnores[i] = Physics.GetIgnoreLayerCollision(31, i);
+            }
+            layer31CollisionsConfigured = true;
 
             for (int i = 0; i < 32; i++)
             {
@@ -62,6 +87,13 @@ namespace SCPSLBot.AI
 
         public void Terminate()
         {
+            if (!initialized && BotPlayers.Count == 0 && !jobHandlesBuffer.IsCreated)
+            {
+                SightSense.RetryPendingDisposals(force: true);
+                return;
+            }
+
+            initialized = false;
             Timing.KillCoroutines(handle);
 
             PlayerRoleManager.OnRoleChanged -= OnRoleChanged;
@@ -69,33 +101,65 @@ namespace SCPSLBot.AI
             PlayerEvents.Hurt -= OnPlayerHurt;
             ServerEvents.RoundRestarted -= OnRoundRestarted;
 
+            if (layer31CollisionsConfigured)
+            {
+                layer31CollisionsConfigured = false;
+                for (var layer = 0; layer < previousLayer31CollisionIgnores.Length; layer++)
+                {
+                    Physics.IgnoreLayerCollision(31, layer, previousLayer31CollisionIgnores[layer]);
+                }
+            }
+
             foreach (var (referenceHub, _) in BotPlayers.ToArray())
             {
-                NetworkServer.Destroy(referenceHub.gameObject);
                 RemovePlayerIfBot(referenceHub);
+                if (referenceHub != null)
+                {
+                    NetworkServer.Destroy(referenceHub.gameObject);
+                }
             }
+
+            SightSense.RetryPendingDisposals(force: true);
 
             orders.Clear();
             requestedRoles.Clear();
+            pathTarget = null;
+            nextPathTargetUpdateTime = 0f;
+            LabApiPlugin.Instance?.Presentation?.ResetSpectators();
+
+            if (jobHandlesBuffer.IsCreated)
+            {
+                jobHandlesBuffer.Dispose();
+            }
         }
 
         private void OnRoundRestarted()
         {
-            FirstPersonControl.FpcBotPlayer.ResetSpectatorHintState();
+            LabApiPlugin.Instance?.Presentation?.ResetSpectators();
 
             foreach (var (referenceHub, _) in BotPlayers.ToArray())
             {
                 RemovePlayerIfBot(referenceHub);
             }
 
+            SightSense.RetryPendingDisposals(force: true);
+
             orders.Clear();
             requestedRoles.Clear();
+            pathTarget = null;
+            nextPathTargetUpdateTime = 0f;
         }
 
         public ReferenceHub AddBotPlayer()
             => AddBotPlayer("SCPSL Bot", RoleTypeId.ChaosRifleman);
 
         public ReferenceHub AddBotPlayer(string nickname, RoleTypeId role)
+            => AddBotPlayerCore(nickname, role);
+
+        internal ReferenceHub AddUnassignedBotPlayer(string nickname)
+            => AddBotPlayerCore(nickname, null);
+
+        private ReferenceHub AddBotPlayerCore(string nickname, RoleTypeId? requestedRole)
         {
             if (!CanSpawnBot())
             {
@@ -110,38 +174,95 @@ namespace SCPSLBot.AI
                 return null;
             }
 
-            var player = referenceHub.gameObject;
-            player.name = $"{NetworkManager.singleton.playerPrefab.name} [bot dummy]";
+            BotHub botHub = null;
+            GameObject sensing = null;
+            try
+            {
+                var player = referenceHub.gameObject;
+                player.name = $"{NetworkManager.singleton.playerPrefab.name} [bot dummy]";
 
-            BotPlayers.Add(referenceHub, new BotHub(referenceHub));
-            requestedRoles[referenceHub] = role;
+                botHub = new BotHub(referenceHub);
 
-            Debug.Log($"Spawned RA dummy bot: {referenceHub}; requestedRole={role}");
+                sensing = new GameObject("Bot Sensing");
+                sensing.layer = 31;
+                sensing.transform.parent = player.transform;
 
-            var sensing = new GameObject("Bot Sensing");
-            sensing.layer = 31;
-            sensing.transform.parent = player.transform;
+                var perceptionComponent = sensing.AddComponent<PerceptionComponent>();
+                botHub.FpcPlayer.Perception.AddTriggerHandlers(perceptionComponent);
 
-            var perceptionComponent = sensing.AddComponent<PerceptionComponent>();
-            BotPlayers[referenceHub].FpcPlayer.Perception.AddTriggerHandlers(perceptionComponent);
+                var sensingTrigger = sensing.AddComponent<SphereCollider>();
+                sensingTrigger.isTrigger = true;
+                sensingTrigger.radius = 32f;
 
-            var sensingTrigger = sensing.AddComponent<SphereCollider>();
-            sensingTrigger.isTrigger = true;
-            sensingTrigger.radius = 32f;
+                var sensingRigid = sensing.AddComponent<Rigidbody>();
+                sensingRigid.isKinematic = true;
 
-            var sensingRigid = sensing.AddComponent<Rigidbody>();
-            sensingRigid.isKinematic = true;
+                // Publish only after the complete managed/native graph exists. Any fault above is
+                // rolled back without exposing a partial entry to the AI runner or reconciler.
+                BotPlayers.Add(referenceHub, botHub);
+                if (requestedRole.HasValue)
+                {
+                    requestedRoles[referenceHub] = requestedRole.Value;
+                    ScheduleRequestedRole(referenceHub, 0.5f);
+                    ScheduleRequestedRole(referenceHub, 1.5f);
+                }
 
-            ScheduleRequestedRole(referenceHub, 0.5f);
-            ScheduleRequestedRole(referenceHub, 1.5f);
-            return referenceHub;
+                Debug.Log($"Spawned RA dummy bot: {referenceHub}; requestedRole={requestedRole?.ToString() ?? "external-owner"}");
+                return referenceHub;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                orders.Remove(referenceHub);
+                requestedRoles.Remove(referenceHub);
+                BotPlayers.Remove(referenceHub);
+
+                try
+                {
+                    botHub?.Dispose();
+                }
+                catch (Exception cleanupException)
+                {
+                    Debug.LogException(cleanupException);
+                }
+
+                if (sensing != null)
+                {
+                    try
+                    {
+                        UnityEngine.Object.Destroy(sensing);
+                    }
+                    catch (Exception cleanupException)
+                    {
+                        Debug.LogException(cleanupException);
+                    }
+                }
+
+                try
+                {
+                    if (referenceHub != null)
+                    {
+                        NetworkServer.Destroy(referenceHub.gameObject);
+                    }
+                }
+                catch (Exception cleanupException)
+                {
+                    Debug.LogException(cleanupException);
+                }
+
+                return null;
+            }
         }
 
         public bool CanSpawnBot()
         {
             return NetworkServer.active
+                && !NetworkServer.isLoadingScene
+                && !RoundRestart.IsRoundRestarting
                 && NetworkManager.singleton != null
-                && NetworkManager.singleton.playerPrefab != null;
+                && NetworkManager.singleton.playerPrefab != null
+                && ReferenceHub.TryGetHostHub(out _)
+                && SeedSynchronizer.MapGenerated;
         }
 
         private void ScheduleRequestedRole(ReferenceHub referenceHub, float delaySeconds)
@@ -185,44 +306,91 @@ namespace SCPSLBot.AI
         {
             var playersUpdates = new List<IEnumerator<JobHandle>>();
 
-            while (true)
+            while (initialized)
             {
+                LastRunnerHeartbeatUtc = DateTime.UtcNow;
                 playersUpdates.Clear();
-
-                var playersCount = BotPlayers.Values.Count;
-                foreach (var botHub in BotPlayers.Values)
+                try
                 {
-                    playersUpdates.Add(botHub.Update());
+                    SightSense.RetryPendingDisposals();
+                    var botsSnapshot = BotPlayers.Values.ToArray();
+                    var playersCount = botsSnapshot.Length;
+                    foreach (var botHub in botsSnapshot)
+                    {
+                        playersUpdates.Add(botHub.Update());
+                    }
+
+                    EnsureJobHandlesBufferCapacity(playersCount);
+                    int jobHandlesCount;
+
+                    var completedCount = 0;
+                    while (completedCount < playersCount)
+                    {
+                        completedCount = 0;
+                        jobHandlesCount = 0;
+                        foreach (var playerUpdate in playersUpdates)
+                        {
+                            if (playerUpdate.MoveNext())
+                            {
+                                jobHandlesBuffer[jobHandlesCount] = playerUpdate.Current;
+                                jobHandlesCount++;
+                            }
+                            else
+                            {
+                                completedCount++;
+                            }
+                        }
+
+                        if (jobHandlesCount > 0)
+                        {
+                            var jobHandles = jobHandlesBuffer.GetSubArray(0, jobHandlesCount);
+                            JobHandle.CompleteAll(jobHandles);
+                        }
+                    }
                 }
-
-                var jobHandlesBuffer = new NativeArray<JobHandle>(playersCount, Allocator.Temp);
-                int jobHandlesCount;
-
-                var completedCount = 0;
-                while (completedCount < playersCount)
+                catch (Exception exception)
                 {
-                    completedCount = 0;
-                    jobHandlesCount = 0;
+                    LastRunnerFault = $"{exception.GetType().Name}: {exception.Message}";
+                    LastRunnerFaultUtc = DateTime.UtcNow;
+                    Debug.LogError($"SCPSLBot AI runner recovered from a frame fault: {LastRunnerFault}");
+                    Debug.LogException(exception);
+                }
+                finally
+                {
                     foreach (var playerUpdate in playersUpdates)
                     {
-                        if (playerUpdate.MoveNext())
+                        try
                         {
-                            jobHandlesBuffer[jobHandlesCount] = playerUpdate.Current;
-                            jobHandlesCount++;
+                            playerUpdate.Dispose();
                         }
-                        else
+                        catch (Exception exception)
                         {
-                            completedCount++;
+                            Debug.LogException(exception);
                         }
                     }
 
-                    var jobHandles = jobHandlesBuffer.GetSubArray(0, jobHandlesCount);
-                    JobHandle.CompleteAll(jobHandles);
+                    playersUpdates.Clear();
                 }
 
-                jobHandlesBuffer.Dispose();
                 yield return Timing.WaitForOneFrame;
             }
+        }
+
+        private void EnsureJobHandlesBufferCapacity(int requiredCapacity)
+        {
+            if (requiredCapacity <= 0
+                || jobHandlesBuffer.IsCreated && jobHandlesBuffer.Length >= requiredCapacity)
+            {
+                return;
+            }
+
+            if (jobHandlesBuffer.IsCreated)
+            {
+                jobHandlesBuffer.Dispose();
+            }
+
+            var capacity = Mathf.NextPowerOfTwo(Mathf.Max(4, requiredCapacity));
+            jobHandlesBuffer = new NativeArray<JobHandle>(capacity, Allocator.Persistent);
         }
 
         public void OnRoleChanged(ReferenceHub userHub, PlayerRoleBase prevRole, PlayerRoleBase newRole)
@@ -231,7 +399,38 @@ namespace SCPSLBot.AI
             {
                 botPlayer.OnRoleChanged(prevRole, newRole);
                 LabLogger.Info($"[BotOrders] ROLE bot={BotName(userHub)} previous={prevRole?.RoleTypeId} current={newRole?.RoleTypeId}");
+
+                // PlayerRoleManager invokes OnRoleChanged before its own synchronous
+                // SpawnProtected.TryGiveProtection call. Clear on the following MEC tick so
+                // managed dummies never inherit the server's human spawn-protection window.
+                Timing.CallDelayed(0f, () => ClearManagedBotSpawnProtection(userHub));
             }
+        }
+
+        private void ClearManagedBotSpawnProtection(ReferenceHub hub)
+        {
+            if (!initialized
+                || hub == null
+                || !BotPlayers.ContainsKey(hub)
+                || hub.playerEffectsController == null)
+            {
+                return;
+            }
+
+            SpawnProtected effect = hub.playerEffectsController.GetEffect<SpawnProtected>();
+            if (!effect.IsEnabled)
+            {
+                return;
+            }
+
+            hub.playerEffectsController.DisableEffect<SpawnProtected>();
+            if (effect.IsEnabled)
+            {
+                LabLogger.Warn($"[BotOrders] SPAWN_PROTECTION_CLEAR_FAILED bot={BotName(hub)}");
+                return;
+            }
+
+            LabLogger.Info($"[BotOrders] SPAWN_PROTECTION_CLEARED bot={BotName(hub)}");
         }
 
         private void OnPlayerHurt(PlayerHurtEventArgs ev)
@@ -249,10 +448,30 @@ namespace SCPSLBot.AI
 
         public void RemovePlayerIfBot(ReferenceHub userHub)
         {
+            LabApiPlugin.Instance?.Presentation?.ForgetSpectator(userHub);
+            if (pathTarget == userHub)
+            {
+                pathTarget = null;
+                nextPathTargetUpdateTime = 0f;
+            }
+
             orders.Remove(userHub);
             requestedRoles.Remove(userHub);
-            if (BotPlayers.Remove(userHub))
+            if (BotPlayers.TryGetValue(userHub, out var botHub))
             {
+                try
+                {
+                    botHub.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+                finally
+                {
+                    BotPlayers.Remove(userHub);
+                }
+
                 Debug.Log($"Bot player removed: {userHub}");
             }
         }
@@ -264,8 +483,8 @@ namespace SCPSLBot.AI
                 return false;
             }
 
-            NetworkServer.Destroy(hub.gameObject);
             RemovePlayerIfBot(hub);
+            NetworkServer.Destroy(hub.gameObject);
             return true;
         }
 

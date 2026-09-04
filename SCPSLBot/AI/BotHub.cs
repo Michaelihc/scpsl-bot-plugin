@@ -1,16 +1,14 @@
-﻿using PlayerRoles;
+using PlayerRoles;
 using PlayerRoles.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl;
 using System;
 using System.Collections.Generic;
 using Unity.Jobs;
-using Unity.Profiling;
 using UnityEngine;
-using UnityEngine.Profiling;
 
 namespace SCPSLBot.AI
 {
-    internal class BotHub
+    internal class BotHub : IDisposable
     {
         public readonly FpcBotPlayer FpcPlayer;
 
@@ -29,9 +27,17 @@ namespace SCPSLBot.AI
         private int recentExceptionCount;
         private float parkedUntilTime;
 
+        public bool IsDisposed => isDisposed;
+        public bool IsParked => !isDisposed && CurrentBotPlayer == null && parkedUntilTime > Time.time;
+        public float ParkedUntilTime => parkedUntilTime;
+        public string LastUpdateFault { get; private set; } = string.Empty;
+
         public IEnumerator<JobHandle> Update()
         {
-            Profiler.BeginSample($"{nameof(BotHub)}.{nameof(Update)}");
+            if (isDisposed)
+            {
+                yield break;
+            }
 
             // Auto-rearm a bot that was briefly parked after repeated faults, once its cooldown elapses.
             if (CurrentBotPlayer == null
@@ -49,13 +55,14 @@ namespace SCPSLBot.AI
             var botPlayerUpdate = CurrentBotPlayer?.Update();
             if (botPlayerUpdate != null)
             {
-                while (botPlayerUpdate.TryCatchMoveNext(HandleUpdateException))
+                using (botPlayerUpdate)
                 {
-                    yield return botPlayerUpdate.Current;
+                    while (botPlayerUpdate.TryCatchMoveNext(HandleUpdateException))
+                    {
+                        yield return botPlayerUpdate.Current;
+                    }
                 }
             }
-
-            Profiler.EndSample();
         }
 
         // A single per-tick fault must not permanently disable the bot for the whole round.
@@ -63,6 +70,7 @@ namespace SCPSLBot.AI
         // bot is faulting every tick, so we stop spamming without killing it forever.
         private void HandleUpdateException(Exception ex)
         {
+            LastUpdateFault = $"{ex.GetType().Name}: {ex.Message}";
             if (Time.realtimeSinceStartup - lastExceptionLogTime > 5f)
             {
                 Debug.LogException(ex);
@@ -95,6 +103,11 @@ namespace SCPSLBot.AI
 
         public void OnRoleChanged(PlayerRoleBase prevRole, PlayerRoleBase newRole)
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             if (newRole is FpcStandardRoleBase fpcRole)
             {
                 FpcPlayer.FpcRole = fpcRole;
@@ -116,13 +129,30 @@ namespace SCPSLBot.AI
 
         public void NotifyHurt(ReferenceHub attacker)
         {
-            FpcPlayer.Combat.NotifyDamagedBy(attacker);
+            if (!isDisposed)
+            {
+                FpcPlayer.Combat.NotifyDamagedBy(attacker);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            isDisposed = true;
+            CurrentBotPlayer = null;
+            FpcPlayer.Dispose();
         }
 
         public override string ToString()
         {
             return $"{nameof(BotHub)}: {PlayerHub}";
         }
+
+        private bool isDisposed;
     }
 
     internal static class IEnumeratorExtensions

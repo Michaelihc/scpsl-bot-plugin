@@ -25,7 +25,24 @@ namespace SCPSLBot.AI.Commands
                 return false;
             }
 
-            switch (arguments.At(0).ToLowerInvariant())
+            var action = arguments.At(0).ToLowerInvariant();
+            if (action == "status")
+            {
+                if (!sender.CheckPermission(PlayerPermissions.GameplayData, out response))
+                {
+                    return false;
+                }
+
+                response = BotSpikeDemo.Status();
+                return true;
+            }
+
+            if (!sender.CheckPermission(PlayerPermissions.PlayersManagement, out response))
+            {
+                return false;
+            }
+
+            switch (action)
             {
                 case "start":
                     return BotSpikeDemo.Start(out response);
@@ -33,9 +50,6 @@ namespace SCPSLBot.AI.Commands
                     return BotSpikeDemo.Walk(arguments.Count > 1 ? arguments.At(1) : "preset", out response);
                 case "tour":
                     return BotSpikeDemo.Tour(out response);
-                case "status":
-                    response = BotSpikeDemo.Status();
-                    return true;
                 case "stop":
                     return BotSpikeDemo.Stop(out response);
                 case "cleanup":
