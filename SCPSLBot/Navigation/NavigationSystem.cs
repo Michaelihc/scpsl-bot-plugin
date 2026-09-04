@@ -16,6 +16,8 @@ namespace SCPSLBot.Navigation
 {
     internal class NavigationSystem
     {
+        private const int MaxMeshFileBytes = 16 * 1024 * 1024;
+
         public static NavigationSystem Instance { get; } = new NavigationSystem();
 
         public string BaseDir { get; set; }
@@ -23,8 +25,25 @@ namespace SCPSLBot.Navigation
 
         public bool Initialized { get; private set; } = false;
 
+        public int MapGeneration { get; private set; }
+        public int ReadyGeneration { get; private set; } = -1;
+        public bool IsReadyForCurrentMap => Initialized
+                                            && SeedSynchronizer.MapGenerated
+                                            && ReadyGeneration == MapGeneration;
+        public string LastLoadError { get; private set; } = string.Empty;
+
+        private CoroutineHandle mapLoadHandle;
+
         public void Init()
         {
+            if (Initialized)
+            {
+                return;
+            }
+
+            Initialized = true;
+            MapGeneration = unchecked(MapGeneration + 1);
+            ReadyGeneration = -1;
             EnsureDefaultMeshFile();
 
             ServerEvents.MapGenerated += OnMapGenerated;
@@ -32,44 +51,95 @@ namespace SCPSLBot.Navigation
 
             if (SeedSynchronizer.MapGenerated)
             {
-                LoadConnectMeshes();
+                TryLoadConnectMeshes(MapGeneration);
             }
-
-            Initialized = true;
         }
 
         public void Terminate()
         {
-            ServerEvents.MapGenerated -= OnMapGenerated;
-            ServerEvents.RoundRestarted -= OnRoundRestarted;
+            if (!Initialized)
+            {
+                return;
+            }
 
             Initialized = false;
+            MapGeneration = unchecked(MapGeneration + 1);
+            ReadyGeneration = -1;
+            if (mapLoadHandle.IsRunning)
+            {
+                Timing.KillCoroutines(mapLoadHandle);
+            }
+
+            ServerEvents.MapGenerated -= OnMapGenerated;
+            ServerEvents.RoundRestarted -= OnRoundRestarted;
 
             NavigationMesh.ResetMeshes();
         }
 
         private void OnMapGenerated(MapGeneratedEventArgs args)
         {
-            Timing.RunCoroutine(LoadConnectMeshesAsync());
+            BeginMapLoad();
         }
 
         private void OnRoundRestarted()
         {
+            MapGeneration = unchecked(MapGeneration + 1);
+            ReadyGeneration = -1;
+            if (mapLoadHandle.IsRunning)
+            {
+                Timing.KillCoroutines(mapLoadHandle);
+            }
+
             NavigationMesh.ResetMeshes();
         }
 
-        private IEnumerator<float> LoadConnectMeshesAsync()
+        private void BeginMapLoad()
+        {
+            MapGeneration = unchecked(MapGeneration + 1);
+            ReadyGeneration = -1;
+            LastLoadError = string.Empty;
+            if (mapLoadHandle.IsRunning)
+            {
+                Timing.KillCoroutines(mapLoadHandle);
+            }
+
+            mapLoadHandle = Timing.RunCoroutine(LoadConnectMeshesAsync(MapGeneration));
+        }
+
+        private IEnumerator<float> LoadConnectMeshesAsync(int loadGeneration)
         {
             yield return Timing.WaitUntilTrue(() => SeedSynchronizer.MapGenerated);
 
-            LoadConnectMeshes();
+            if (!Initialized || loadGeneration != MapGeneration)
+            {
+                yield break;
+            }
+
+            TryLoadConnectMeshes(loadGeneration);
+        }
+
+        private void TryLoadConnectMeshes(int loadGeneration)
+        {
+            try
+            {
+                LoadConnectMeshes();
+                if (Initialized && loadGeneration == MapGeneration)
+                {
+                    ReadyGeneration = loadGeneration;
+                    LastLoadError = string.Empty;
+                }
+            }
+            catch (Exception exception)
+            {
+                ReadyGeneration = -1;
+                LastLoadError = $"{exception.GetType().Name}: {exception.Message}";
+                Debug.LogError($"Navigation load failed for generation {loadGeneration}: {LastLoadError}");
+                Debug.LogException(exception);
+            }
         }
 
         public void LoadConnectMeshes()
         {
-            Debug.Log($"Initializing meshes.");
-            NavigationMesh.InitMeshes();
-
             Debug.Log($"Loading meshes.");
             LoadMeshes(MeshFileName);
 
@@ -215,6 +285,7 @@ namespace SCPSLBot.Navigation
             }
 
             edges[to] = edge;
+            NavigationMesh.MarkTopologyChanged();
         }
 
         // Resolves the navmesh cell at an elevator landing WITHOUT mutating native
@@ -259,33 +330,171 @@ namespace SCPSLBot.Navigation
             if (!connected.Contains(to))
             {
                 connected.Add(to);
+                NavigationMesh.MarkTopologyChanged();
             }
         }
 
         public void LoadMeshes(string fileName)
         {
             var path = Path.Combine(BaseDir, fileName);
+            var document = LoadValidatedDocument(path);
 
-            if (!File.Exists(path))
+            // Parsing and validation happen before touching the published graph. Publishing uses a
+            // fresh graph, and any unexpected apply fault leaves a clean empty current-map graph.
+            NavigationMesh.ResetMeshes();
+            NavigationMesh.InitMeshes();
+            try
             {
-                Debug.LogWarning($"Navigation mesh file not found at {path}.");
-                return;
+                document.Publish();
             }
-
-            using var fileStream = File.OpenRead(path);
-            using var binaryReader = new BinaryReader(fileStream);
-
-            NavigationMesh.ReadMeshes(binaryReader);
+            catch
+            {
+                NavigationMesh.ResetMeshes();
+                NavigationMesh.InitMeshes();
+                throw;
+            }
         }
 
         public void SaveMeshes(string fileName)
         {
             var path = Path.Combine(BaseDir, fileName);
+            byte[] bytes;
+            using (var memoryStream = new MemoryStream())
+            {
+                using (var binaryWriter = new BinaryWriter(memoryStream, System.Text.Encoding.UTF8, leaveOpen: true))
+                {
+                    NavigationMesh.WriteMeshes(binaryWriter);
+                    binaryWriter.Flush();
+                }
 
-            using var fileStream = File.Open(path, FileMode.Create, FileAccess.Write);
-            using var binaryWriter = new BinaryWriter(fileStream);
+                bytes = memoryStream.ToArray();
+            }
 
-            NavigationMesh.WriteMeshes(binaryWriter);
+            // Prove that what we are about to publish can be read before replacing the live file.
+            NavigationMeshDocument.Parse(bytes);
+            WriteBytesAtomic(path, bytes, keepBackup: true);
+        }
+
+        private NavigationMeshDocument LoadValidatedDocument(string path)
+        {
+            Exception primaryError = null;
+            if (File.Exists(path))
+            {
+                try
+                {
+                    return NavigationMeshDocument.Parse(ReadBoundedFile(path));
+                }
+                catch (Exception exception)
+                {
+                    primaryError = exception;
+                    QuarantineCorruptFile(path, exception);
+                }
+            }
+
+            var backupPath = path + ".bak";
+            if (File.Exists(backupPath))
+            {
+                try
+                {
+                    var backupBytes = ReadBoundedFile(backupPath);
+                    var backupDocument = NavigationMeshDocument.Parse(backupBytes);
+                    WriteBytesAtomic(path, backupBytes, keepBackup: false);
+                    Debug.LogWarning($"Recovered navigation mesh from backup {backupPath}.");
+                    return backupDocument;
+                }
+                catch (Exception backupError)
+                {
+                    Debug.LogWarning($"Navigation mesh backup is unusable: {backupError.Message}");
+                }
+            }
+
+            var embeddedBytes = ReadEmbeddedDefaultMesh();
+            if (embeddedBytes != null)
+            {
+                var embeddedDocument = NavigationMeshDocument.Parse(embeddedBytes);
+                WriteBytesAtomic(path, embeddedBytes, keepBackup: false);
+                Debug.LogWarning($"Recovered navigation mesh from the embedded default after primary failure: {primaryError?.Message ?? "file missing"}");
+                return embeddedDocument;
+            }
+
+            throw new InvalidDataException(
+                $"No valid navigation mesh was available at {path}, its backup, or the embedded default.",
+                primaryError);
+        }
+
+        private static byte[] ReadBoundedFile(string path)
+        {
+            var info = new FileInfo(path);
+            if (info.Length <= 0 || info.Length > MaxMeshFileBytes)
+            {
+                throw new InvalidDataException($"Navigation mesh size {info.Length} is outside 1..{MaxMeshFileBytes} bytes.");
+            }
+
+            return File.ReadAllBytes(path);
+        }
+
+        private static void QuarantineCorruptFile(string path, Exception exception)
+        {
+            try
+            {
+                var quarantinePath = path + $".corrupt-{DateTime.UtcNow:yyyyMMddTHHmmssfffZ}";
+                File.Move(path, quarantinePath);
+                Debug.LogWarning($"Quarantined corrupt navigation mesh to {quarantinePath}: {exception.Message}");
+            }
+            catch (Exception quarantineError)
+            {
+                Debug.LogWarning($"Failed to quarantine corrupt navigation mesh {path}: {quarantineError.Message}");
+            }
+        }
+
+        private static byte[] ReadEmbeddedDefaultMesh()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            using var resourceStream = assembly.GetManifestResourceStream("SCPSLBot.Assets.navmesh.slnmf");
+            if (resourceStream == null)
+            {
+                return null;
+            }
+
+            using var memoryStream = new MemoryStream();
+            resourceStream.CopyTo(memoryStream);
+            if (memoryStream.Length <= 0 || memoryStream.Length > MaxMeshFileBytes)
+            {
+                throw new InvalidDataException($"Embedded navigation mesh size {memoryStream.Length} is invalid.");
+            }
+
+            return memoryStream.ToArray();
+        }
+
+        private static void WriteBytesAtomic(string path, byte[] bytes, bool keepBackup)
+        {
+            var directory = Path.GetDirectoryName(path);
+            Directory.CreateDirectory(directory);
+            var tempPath = path + $".tmp-{Guid.NewGuid():N}";
+            try
+            {
+                using (var stream = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(flushToDisk: true);
+                }
+
+                if (File.Exists(path))
+                {
+                    File.Replace(tempPath, path, keepBackup ? path + ".bak" : null, ignoreMetadataErrors: true);
+                }
+                else
+                {
+                    File.Move(tempPath, path);
+                }
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
         }
 
         private void EnsureDefaultMeshFile()
@@ -303,16 +512,15 @@ namespace SCPSLBot.Navigation
 
             Directory.CreateDirectory(BaseDir);
 
-            var assembly = Assembly.GetExecutingAssembly();
-            using var resourceStream = assembly.GetManifestResourceStream("SCPSLBot.Assets.navmesh.slnmf");
-            if (resourceStream == null)
+            var embeddedBytes = ReadEmbeddedDefaultMesh();
+            if (embeddedBytes == null)
             {
                 Debug.LogWarning("Embedded default navigation mesh was not found.");
                 return;
             }
 
-            using var fileStream = File.Create(path);
-            resourceStream.CopyTo(fileStream);
+            NavigationMeshDocument.Parse(embeddedBytes);
+            WriteBytesAtomic(path, embeddedBytes, keepBackup: false);
             Debug.Log($"Installed default navigation mesh to {path}.");
         }
 

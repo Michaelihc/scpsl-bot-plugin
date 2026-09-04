@@ -1,4 +1,6 @@
 ﻿using MapGeneration;
+using SCPSLBot.Collections;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,8 +18,11 @@ namespace SCPSLBot.Navigation.Mesh
 
         public static Dictionary<TransformCell, List<TransformCell>> ForeignConnectedCells = new();
         public static Dictionary<TransformCell, Dictionary<TransformCell, TransformEdge>> ForeignConnectedCellEdges = new();
+        public static int TopologyVersion { get; private set; }
 
         private static readonly List<TransformCell> EmptyForeignCells = new();
+        [ThreadStatic]
+        private static PathSearchWorkspace currentThreadPathSearch;
 
         // Safe read accessors. The raw indexers throw KeyNotFoundException for any cell that was
         // never registered (e.g. cells reached over elevator links, which register a connected cell
@@ -56,7 +61,13 @@ namespace SCPSLBot.Navigation.Mesh
                 mesh.CellDeleted += cell => RemoveForeignConnectedCellsList(cell, form);
             }
 
+            MarkTopologyChanged();
             return mesh;
+        }
+
+        internal static void MarkTopologyChanged()
+        {
+            TopologyVersion = unchecked(TopologyVersion + 1);
         }
 
         private static void AddForeignConnectedCellsList(Cell cell, string form)
@@ -185,69 +196,97 @@ namespace SCPSLBot.Navigation.Mesh
                 return;
             }
 
-            var cellsWithPriorityToEvaluate = new Dictionary<TransformCell, float>();
-            var cameFromCells = new Dictionary<TransformCell, TransformCell>();
-            var costsTill = new Dictionary<TransformCell, float>();
-
+            var workspace = currentThreadPathSearch ??= new PathSearchWorkspace();
+            workspace.Reset();
             var cost = 0f;
-            var heuristic = Vector3.Magnitude(endCell.CenterPosition - startingCell.CenterPosition);
-
-            cellsWithPriorityToEvaluate.Add(startingCell, cost + heuristic);
-            costsTill.Add(startingCell, cost);
+            var heuristic = Vector3.Distance(endCell.CenterPosition, startingCell.CenterPosition);
+            workspace.Open.Enqueue(startingCell, cost + heuristic);
+            workspace.Costs.Add(startingCell, cost);
 
             var cell = startingCell;
-
-            do
+            while (workspace.Open.TryDequeue(out cell, out _))
             {
-                cell = cellsWithPriorityToEvaluate.Aggregate((a, c) => c.Value < a.Value ? c : a).Key;
+                // Decrease-key is represented by another heap entry. Once a cell is closed, any
+                // older entry for it is stale and can be discarded in O(log V) pop time.
+                if (!workspace.Closed.Add(cell))
+                {
+                    continue;
+                }
 
                 //var cellIdx = CellsByRoom[cell.Room].IndexOf(cell);
-                //Log.Debug($"Evaluating connections for cell #{cellIdx} with priority value {cellsWithPriorityToEvaluate[cell]} {cell.FormCell.RoomForm}");
-
-                cellsWithPriorityToEvaluate.Remove(cell);
+                //Log.Debug($"Evaluating connections for cell #{cellIdx} {cell.FormCell.RoomForm}");
 
                 if (cell == endCell)
                 {
                     break;
                 }
 
-                cost = costsTill[cell];
+                cost = workspace.Costs[cell];
 
                 //Log.Debug($"Cell evaluating connections #{cellIdx} cost so far {cost}");
 
-                foreach (var connectedCell in cell.AdjacentCells.Concat(GetForeignConnectedCells(cell)))
+                foreach (var connectedCell in cell.AdjacentCells)
                 {
-                    var connectedCost = cost + Vector3.Magnitude(connectedCell.CenterPosition - cell.CenterPosition);
+                    QueueIfCheaper(cell, connectedCell, endCell, cost, workspace);
+                }
 
-                    //var connCellIdx = CellsByRoom[connectedCell.Room].IndexOf(connectedCell);
-                    //Log.Debug($"Connected cell #{connCellIdx} cost so far {connectedCost} {connectedCell.FormCell.RoomForm}");
-
-                    if (!costsTill.ContainsKey(connectedCell) || connectedCost < costsTill[connectedCell])
-                    {
-                        costsTill[connectedCell] = connectedCost;
-                        heuristic = Vector3.Magnitude(endCell.CenterPosition - connectedCell.CenterPosition);
-                        cellsWithPriorityToEvaluate[connectedCell] = connectedCost + heuristic;
-                        cameFromCells[connectedCell] = cell;
-
-                        //Log.Debug($"Connected cell #{connCellIdx} adding for evaluation with heuristic {heuristic} {connectedCell.FormCell.RoomForm}");
-                    }
+                foreach (var connectedCell in GetForeignConnectedCells(cell))
+                {
+                    QueueIfCheaper(cell, connectedCell, endCell, cost, workspace);
                 }
             }
-            while (cellsWithPriorityToEvaluate.Any());
 
             results.Clear();
-            var shortestPath = results;
-
-            if (cameFromCells.ContainsKey(endCell))
+            if (workspace.CameFrom.ContainsKey(endCell))
             {
                 cell = endCell;
                 do
                 {
-                    shortestPath.Add(cell);
+                    results.Add(cell);
                 }
-                while (cameFromCells.TryGetValue(cell, out cell));
+                while (workspace.CameFrom.TryGetValue(cell, out cell));
 
-                shortestPath.Reverse();
+                results.Reverse();
+            }
+        }
+
+        private static void QueueIfCheaper(
+            TransformCell from,
+            TransformCell connectedCell,
+            TransformCell endCell,
+            float costToFrom,
+            PathSearchWorkspace workspace)
+        {
+            if (workspace.Closed.Contains(connectedCell))
+            {
+                return;
+            }
+
+            var connectedCost = costToFrom + Vector3.Distance(connectedCell.CenterPosition, from.CenterPosition);
+            if (workspace.Costs.TryGetValue(connectedCell, out var oldCost) && connectedCost >= oldCost)
+            {
+                return;
+            }
+
+            workspace.Costs[connectedCell] = connectedCost;
+            workspace.CameFrom[connectedCell] = from;
+            var heuristic = Vector3.Distance(endCell.CenterPosition, connectedCell.CenterPosition);
+            workspace.Open.Enqueue(connectedCell, connectedCost + heuristic);
+        }
+
+        private sealed class PathSearchWorkspace
+        {
+            public ReusableMinPriorityQueue<TransformCell> Open { get; } = new();
+            public Dictionary<TransformCell, TransformCell> CameFrom { get; } = new();
+            public Dictionary<TransformCell, float> Costs { get; } = new();
+            public HashSet<TransformCell> Closed { get; } = new();
+
+            public void Reset()
+            {
+                Open.Clear();
+                CameFrom.Clear();
+                Costs.Clear();
+                Closed.Clear();
             }
         }
 
@@ -394,6 +433,7 @@ namespace SCPSLBot.Navigation.Mesh
             LocalMeshesByRoom.Clear();
             ForeignConnectedCells.Clear();
             ForeignConnectedCellEdges.Clear();
+            MarkTopologyChanged();
         }
 
         #endregion

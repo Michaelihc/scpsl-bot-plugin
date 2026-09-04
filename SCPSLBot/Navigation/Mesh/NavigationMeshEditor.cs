@@ -303,7 +303,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             SelectedVertices.Clear();
             AutoSelectModeEnabled = false;
-            PlayerEditing.SendHint($"<size=30>Vertex auto-selection is stopped on cell creation.", 3f);
+            LabApiPlugin.Instance?.Presentation?.ShowEditorStoppedOnCellCreation(PlayerEditing);
 
             return newCell;
         }
@@ -673,7 +673,7 @@ namespace SCPSLBot.Navigation.Mesh
                 else if (SelectedVertices.Count > 1 && SelectedVertices.FirstOrDefault() == Visuals.NearestVertex.Value)
                 {
                     AutoSelectModeEnabled = false;
-                    PlayerEditing.SendHint($"<size=30>Vertex auto-selection is stopped on first vertex selected.", 3f);
+                    LabApiPlugin.Instance?.Presentation?.ShowEditorStoppedOnFirstVertex(PlayerEditing);
 
                     Debug.Log($"Vertex auto-selection stopped on first vertex selected.");
                 }
