@@ -56,7 +56,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             var roomWithin = this.roomSense.RoomWithin;
             if (roomWithin == null)
             {
-                Debug.Log($"RoomSightSense.RoomWithin is null");
+                if (BotLog.Verbose) Debug.Log($"RoomSightSense.RoomWithin is null");
                 return;
             }
 
@@ -119,7 +119,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
             }
 
             var totalNumItemTypes = spawnpoint.PresetsCount();
-            return (float)numMatchingItemTypes / totalNumItemTypes;
+            return totalNumItemTypes > 0 ? (float)numMatchingItemTypes / totalNumItemTypes : 0f;
         }
 
         private IEnumerable<Transform> GetAcceptedPositions(ItemSpawnpointBase spawnpoint)
@@ -143,7 +143,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
                     .Select(p => p.Position)
                     .Distinct(),
 
-                _ => throw new NotImplementedException($"{spawnpoint}")
+                _ => UnsupportedSpawnpointDiagnostics.EmptyPositions(spawnpoint)
             };
 
             return positionVariants;
@@ -164,7 +164,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
                 PredefinedItemSpawnpoint predefinedSpawnpoint => [ predefinedSpawnpoint.TargetItem ],
                 RandomItemSpawnpoint randomSpawnpoint => randomSpawnpoint.Presets.Select(p => p.TargetItem),
                 RandomItemGroupSpawnpoint randomGroupSpawnpoint => randomGroupSpawnpoint.Presets.SelectMany(g => g.Items).Select(p => p.TargetItem),
-                _ => throw new NotImplementedException($"{spawnpoint}")
+                _ => UnsupportedSpawnpointDiagnostics.EmptyItems(spawnpoint)
             };
             
             return spawnPointAcceptedItems.Any(i => i == itemType);
@@ -181,10 +181,42 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Item.Beliefs
                     .Select(p => p.TargetItem)
                     .Distinct()
                     .Count(),
-                _ => throw new NotImplementedException($"{spawnpoint}")
+                _ => UnsupportedSpawnpointDiagnostics.ZeroPresets(spawnpoint)
             };
 
             return acceptedItemsCount;
+        }
+    }
+
+    internal static class UnsupportedSpawnpointDiagnostics
+    {
+        private static readonly HashSet<Type> WarnedTypes = new();
+
+        public static IEnumerable<Transform> EmptyPositions(ItemSpawnpointBase spawnpoint)
+        {
+            WarnOnce(spawnpoint);
+            return Enumerable.Empty<Transform>();
+        }
+
+        public static IEnumerable<ItemType> EmptyItems(ItemSpawnpointBase spawnpoint)
+        {
+            WarnOnce(spawnpoint);
+            return Enumerable.Empty<ItemType>();
+        }
+
+        public static int ZeroPresets(ItemSpawnpointBase spawnpoint)
+        {
+            WarnOnce(spawnpoint);
+            return 0;
+        }
+
+        private static void WarnOnce(ItemSpawnpointBase spawnpoint)
+        {
+            var type = spawnpoint?.GetType();
+            if (type != null && WarnedTypes.Add(type))
+            {
+                Debug.LogWarning($"SCPSLBot skipped unsupported item spawnpoint type {type.FullName}.");
+            }
         }
     }
 }

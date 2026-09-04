@@ -30,6 +30,7 @@ namespace SCPSLBot.Navigation.Mesh
             Vertices.Add(newVertex);
 
             VertexCreated?.Invoke(newVertex);
+            MarkTopologyChanged();
 
             return newVertex;
         }
@@ -42,6 +43,7 @@ namespace SCPSLBot.Navigation.Mesh
             }
 
             VertexDeleted?.Invoke(vertex);
+            MarkTopologyChanged();
 
             return true;
         }
@@ -60,6 +62,7 @@ namespace SCPSLBot.Navigation.Mesh
         public bool MoveVertex(Vertex vertex, Vector3 newPosition)
         {
             vertex.Position = newPosition;
+            MarkTopologyChanged();
 
             return true;
         }
@@ -72,6 +75,7 @@ namespace SCPSLBot.Navigation.Mesh
             AddAdjacentCells(newCell);
 
             CellCreated?.Invoke(newCell);
+            MarkTopologyChanged();
 
             return newCell;
         }
@@ -103,6 +107,7 @@ namespace SCPSLBot.Navigation.Mesh
             RemoveAdjacentCells(cell);
 
             CellDeleted?.Invoke(cell);
+            MarkTopologyChanged();
 
             return true;
         }
@@ -122,6 +127,7 @@ namespace SCPSLBot.Navigation.Mesh
 
             RemoveAdjacentCells(cell);
             AddAdjacentCells(cell);
+            MarkTopologyChanged();
         }
 
         #endregion

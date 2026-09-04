@@ -54,7 +54,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Scp914
             {
                 if (!this.itemInIntakeChamber.PositionRelative.HasValue)
                 {
-                    Debug.Log($"{this.itemInIntakeChamber} has no position value.");
+                    if (BotLog.Verbose) Debug.Log($"{this.itemInIntakeChamber} has no position value.");
                     return;
                 }
 

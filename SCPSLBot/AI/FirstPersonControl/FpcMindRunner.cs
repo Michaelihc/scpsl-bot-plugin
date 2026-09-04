@@ -1,4 +1,5 @@
-﻿using SCPSLBot.AI.FirstPersonControl.Mind;
+using SCPSLBot.AI.FirstPersonControl.Mind;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -6,55 +7,131 @@ using UnityEngine.Profiling;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
-    internal class FpcMindRunner : FpcMind
+    internal class FpcMindRunner : FpcMind, IDisposable
     {
         public IAction RunningAction { get; private set; }
         public float RunningActionCost { get; private set; }
 
         public readonly HashSet<IBelief> RelevantBeliefs = new();
+        private readonly Dictionary<IBelief, Action> beliefUpdateHandlers = new();
         private bool isBeliefsUpdated = false;
+        private bool isDisposed;
 
         public void SubscribeToBeliefUpdates()
         {
-            foreach (var belief in Beliefs.Values.SelectMany(bc => bc))
+            if (isDisposed)
             {
-                belief.OnUpdate += () => OnBeliefUpdate(belief);
+                return;
             }
+
+            foreach (var beliefs in Beliefs.Values)
+            {
+                foreach (var belief in beliefs)
+                {
+                    if (beliefUpdateHandlers.ContainsKey(belief))
+                    {
+                        continue;
+                    }
+
+                    var subscribedBelief = belief;
+                    Action handler = () => OnBeliefUpdate(subscribedBelief);
+                    beliefUpdateHandlers.Add(subscribedBelief, handler);
+                    subscribedBelief.OnUpdate += handler;
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            isDisposed = true;
+
+            foreach (var (belief, handler) in beliefUpdateHandlers)
+            {
+                try
+                {
+                    belief.OnUpdate -= handler;
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+            }
+            beliefUpdateHandlers.Clear();
+
+            foreach (var beliefs in Beliefs.Values)
+            {
+                foreach (var belief in beliefs)
+                {
+                    if (belief is not IDisposable disposableBelief)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        disposableBelief.Dispose();
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogException(exception);
+                    }
+                }
+            }
+
+            RunningAction = null;
+            RelevantBeliefs.Clear();
         }
 
         public void EvaluateGoalsToActions()
         {
-            isBeliefsUpdated = true;
+            if (!isDisposed)
+            {
+                isBeliefsUpdated = true;
+            }
         }
 
         public void Tick()
         {
-            Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(Tick)}");
-
-            if (isBeliefsUpdated)
+            if (isDisposed)
             {
-                isBeliefsUpdated = false;
-
-                IEnumerable<IAction> enabledActions = GetEnabledActionsTowardsGoals();
-
-                SelectActionAndRun(enabledActions);
+                return;
             }
 
-            RunningAction?.Tick();
+            Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(Tick)}");
+            try
+            {
+                if (isBeliefsUpdated)
+                {
+                    isBeliefsUpdated = false;
 
-            Profiler.EndSample();
+                    IEnumerable<IAction> enabledActions = GetEnabledActionsTowardsGoals();
+
+                    SelectActionAndRun(enabledActions);
+                }
+
+                RunningAction?.Tick();
+            }
+            finally
+            {
+                Profiler.EndSample();
+            }
         }
 
         private void OnBeliefUpdate(IBelief updatedBelief)
         {
             if (!RelevantBeliefs.Contains(updatedBelief))
             {
-                Debug.Log($"[I] Belief updated: {updatedBelief}");
+                if (BotLog.Verbose) Debug.Log($"[I] Belief updated: {updatedBelief}");
                 return;
             }
 
             isBeliefsUpdated = true;
-            Debug.Log($"[R] Belief updated: {updatedBelief}");
+            if (BotLog.Verbose) Debug.Log($"[R] Belief updated: {updatedBelief}");
         }
 
         #region Action Finding
@@ -74,46 +151,56 @@ namespace SCPSLBot.AI.FirstPersonControl
         private IEnumerable<IAction> GetEnabledActionsTowardsGoals()
         {
             Profiler.BeginSample($"{nameof(FpcMindRunner)}.{nameof(GetEnabledActionsTowardsGoals)}");
-            
-            RelevantBeliefs.Clear();
-
-            foreach (var goal in BeliefsEnablingGoals.Keys)
+            try
             {
-                VisitedGoalsEnabledBy.Clear();
-                VisitedActionsEnabledBy.Clear();
-                VisitedActionsImpactedBy.Clear();
-                VisitedGoalsImpactedBy.Clear();
+                RelevantBeliefs.Clear();
 
-                foreach (var enabledAction in FindEnabledActions(goal))
+                foreach (var goal in BeliefsEnablingGoals.Keys)
                 {
-                    RelevantActionsImpactingActions.Clear();
-                    RelevantActionsImpactingGoals.Clear();
+                    VisitedGoalsEnabledBy.Clear();
+                    VisitedActionsEnabledBy.Clear();
+                    VisitedActionsImpactedBy.Clear();
+                    VisitedGoalsImpactedBy.Clear();
 
-                    var actionImpacting = enabledAction;
-
-                    while (VisitedActionsImpactedBy.TryGetValue(actionImpacting, out var actionImpactedBy))
+                    foreach (var enabledAction in FindEnabledActions(goal))
                     {
-                        RelevantActionsImpactingActions[actionImpactedBy] = actionImpacting;
-                        foreach (var visitedBelief in BeliefsEnablingActions[actionImpacting].Where(VisitedActionsEnabledBy.ContainsKey))
+                        RelevantActionsImpactingActions.Clear();
+                        RelevantActionsImpactingGoals.Clear();
+
+                        var actionImpacting = enabledAction;
+
+                        while (VisitedActionsImpactedBy.TryGetValue(actionImpacting, out var actionImpactedBy))
                         {
-                            RelevantBeliefs.Add(visitedBelief);
+                            RelevantActionsImpactingActions[actionImpactedBy] = actionImpacting;
+                            foreach (var visitedBelief in BeliefsEnablingActions[actionImpacting])
+                            {
+                                if (VisitedActionsEnabledBy.ContainsKey(visitedBelief))
+                                {
+                                    RelevantBeliefs.Add(visitedBelief);
+                                }
+                            }
+
+                            actionImpacting = actionImpactedBy;
                         }
 
-                        actionImpacting = actionImpactedBy;
-                    }
+                        RelevantActionsImpactingGoals[goal] = actionImpacting;
+                        foreach (var visitedBelief in BeliefsEnablingActions[actionImpacting])
+                        {
+                            if (VisitedActionsEnabledBy.ContainsKey(visitedBelief))
+                            {
+                                RelevantBeliefs.Add(visitedBelief);
+                            }
+                        }
 
-                    RelevantActionsImpactingGoals[goal] = actionImpacting;
-                    foreach (var visitedBelief in BeliefsEnablingActions[actionImpacting].Where(VisitedActionsEnabledBy.ContainsKey))
-                    {
-                        RelevantBeliefs.Add(visitedBelief);
+                        yield return enabledAction;
+                        break;
                     }
-
-                    yield return enabledAction;
-                    break;
                 }
             }
-
-            Profiler.EndSample();
+            finally
+            {
+                Profiler.EndSample();
+            }
         }
 
         private IEnumerable<IAction> FindEnabledActions(IGoal goal)
@@ -138,9 +225,19 @@ namespace SCPSLBot.AI.FirstPersonControl
                 ProcessActionsImpacting(b, goal);
             }
 
-            while (remainingActionsToExplore.Any())
+            while (remainingActionsToExplore.Count > 0)
             {
-                var actionImpacting = remainingActionsToExplore.Aggregate((a, c) => c.Value < a.Value ? c : a).Key;
+                IAction actionImpacting = null;
+                var lowestCost = float.PositiveInfinity;
+                foreach (var candidate in remainingActionsToExplore)
+                {
+                    if (candidate.Value < lowestCost)
+                    {
+                        lowestCost = candidate.Value;
+                        actionImpacting = candidate.Key;
+                    }
+                }
+
                 remainingActionsToExplore.Remove(actionImpacting);
 
                 //Debug.Log($"      Exploring action {actionImpacting}.");
@@ -247,7 +344,7 @@ namespace SCPSLBot.AI.FirstPersonControl
             RunningAction = selectedAction ?? null;
             RunningActionCost = selectedAction?.Cost ?? 0f;
 
-            Debug.Log($"New Action for bot: {RunningAction} (Cost: {RunningActionCost})");
+            if (BotLog.Verbose) Debug.Log($"New Action for bot: {RunningAction} (Cost: {RunningActionCost})");
 
             if (RunningAction != prevAction)
             {

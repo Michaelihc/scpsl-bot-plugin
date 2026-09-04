@@ -21,6 +21,11 @@ namespace SCPSLBot.Navigation.Commands
 
         protected override bool ExecuteParent(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
+            if (!sender.CheckPermission(PlayerPermissions.GameplayData, out response))
+            {
+                return false;
+            }
+
             var subCommands = Commands.Keys.ToArray();
             response = $"Please specify a valid subcommand. ({string.Join("/", subCommands)})";
             return false;

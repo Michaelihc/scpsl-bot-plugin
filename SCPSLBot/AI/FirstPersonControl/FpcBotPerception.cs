@@ -1,4 +1,4 @@
-﻿using Interactables.Interobjects.DoorUtils;
+using Interactables.Interobjects.DoorUtils;
 using PlayerRoles.FirstPersonControl;
 using SCPSLBot.AI.FirstPersonControl.Perception;
 using SCPSLBot.AI.FirstPersonControl.Perception.Senses;
@@ -13,11 +13,13 @@ using UnityEngine.Profiling;
 
 namespace SCPSLBot.AI.FirstPersonControl
 {
-    internal class FpcBotPerception
+    internal class FpcBotPerception : IDisposable
     {
-        public List<ISense> Senses { get; } = new();
+        // Capacity must be reserved before constructing a sense. If List.Add had to grow after a
+        // SightSense constructor succeeded and that growth OOMed, the just-created disposable
+        // would never enter this ownership list and constructor rollback could not reach it.
+        public List<ISense> Senses { get; } = new(8);
         public DoorsWithinSightSense DoorsSense { get; private set; }
-        public PlayersWithinSightSense PlayersSense { get; private set; }
         public ItemsInInventorySense InventorySense { get; private set; }
 
         #region Debugging
@@ -26,32 +28,40 @@ namespace SCPSLBot.AI.FirstPersonControl
 
         public FpcBotPerception(FpcBotPlayer fpcBotPlayer)
         {
-            _fpcBotPlayer = fpcBotPlayer;
+            try
+            {
+                Senses.Add(new ItemsWithinSightSense(fpcBotPlayer));
 
-            Senses.Add(new ItemsWithinSightSense(fpcBotPlayer));
+                DoorsSense = new DoorsWithinSightSense(fpcBotPlayer);
+                Senses.Add(DoorsSense);
 
-            DoorsSense = new DoorsWithinSightSense(fpcBotPlayer);
-            Senses.Add(DoorsSense);
+                InventorySense = new ItemsInInventorySense(fpcBotPlayer);
+                Senses.Add(InventorySense);
 
-            PlayersSense = new PlayersWithinSightSense(fpcBotPlayer);
-            Senses.Add(PlayersSense);
+                Senses.Add(new GlassSightSense(fpcBotPlayer));
+                Senses.Add(new LockersWithinSightSense(fpcBotPlayer));
+                Senses.Add(new SpatialSense(fpcBotPlayer));
+                Senses.Add(new RoomSightSense(fpcBotPlayer));
+                Senses.Add(new InteractablesWithinSightSense(fpcBotPlayer));
 
-            InventorySense = new ItemsInInventorySense(fpcBotPlayer);
-            Senses.Add(InventorySense);
-
-            Senses.Add(new GlassSightSense(fpcBotPlayer));
-
-            Senses.Add(new LockersWithinSightSense(fpcBotPlayer));
-            
-            Senses.Add(new SpatialSense(fpcBotPlayer));
-
-            Senses.Add(new RoomSightSense(fpcBotPlayer));
-
-            Senses.Add(new InteractablesWithinSightSense(fpcBotPlayer));
+                jobHandlesBuffer = new NativeArray<JobHandle>(Senses.Count, Allocator.Persistent);
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public void AddTriggerHandlers(PerceptionComponent perceptionComponent)
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            RemoveTriggerHandlers();
+            this.perceptionComponent = perceptionComponent;
             perceptionComponent.TriggerEnter += OnTriggerEnter;
             perceptionComponent.TriggerExit += OnTriggerExit;
         }
@@ -72,53 +82,95 @@ namespace SCPSLBot.AI.FirstPersonControl
             }
         }
 
-        private readonly List<IEnumerator<JobHandle>> processSensesEnumerators = new();
+        private readonly List<IEnumerator<JobHandle>> processSensesEnumerators = new(8);
 
         public IEnumerator<JobHandle> Update()
         {
-            Profiler.BeginSample($"{nameof(FpcBotPerception)}.{nameof(Update)}");
-
-            var sensesCount = Senses.Count;
-
-            processSensesEnumerators.Clear();
-            foreach (var sense in Senses)
+            if (isDisposed)
             {
-                processSensesEnumerators.Add(sense.ProcessSensibility());
+                yield break;
             }
 
-            var completedCount = 0;
             var jobHandlesCount = 0;
-            var jobHandlesBuffer = new NativeArray<JobHandle>(sensesCount, Allocator.Temp);
-            while (completedCount < sensesCount)
+            try
             {
-                completedCount = 0;
-                jobHandlesCount = 0;
-                for (int i = 0; i < sensesCount; i++)
+                var sensesCount = Senses.Count;
+
+                processSensesEnumerators.Clear();
+                foreach (var sense in Senses)
                 {
-                    var processSenses = processSensesEnumerators[i];
-                    if (processSenses.MoveNext())
+                    processSensesEnumerators.Add(sense.ProcessSensibility());
+                }
+
+                var completedCount = 0;
+                while (completedCount < sensesCount)
+                {
+                    completedCount = 0;
+                    jobHandlesCount = 0;
+                    for (int i = 0; i < sensesCount; i++)
                     {
-                        jobHandlesBuffer[jobHandlesCount] = processSenses.Current;
-                        jobHandlesCount++;
+                        var processSenses = processSensesEnumerators[i];
+                        if (processSenses.MoveNext())
+                        {
+                            jobHandlesBuffer[jobHandlesCount] = processSenses.Current;
+                            jobHandlesCount++;
+                        }
+                        else
+                        {
+                            completedCount++;
+                        }
                     }
-                    else
+
+                    if (jobHandlesCount > 0)
                     {
-                        completedCount++;
+                        var jobHandles = jobHandlesBuffer.GetSubArray(0, jobHandlesCount);
+                        yield return JobHandle.CombineDependencies(jobHandles);
+                        jobHandlesCount = 0;
                     }
                 }
 
-                var jobHandles = jobHandlesBuffer.GetSubArray(0, jobHandlesCount);
-                yield return JobHandle.CombineDependencies(jobHandles);
+                Profiler.BeginSample($"{nameof(FpcBotPerception)}.ProcessSensedItems");
+                try
+                {
+                    foreach (var sense in Senses)
+                    {
+                        sense.ProcessSensedItems();
+                    }
+                }
+                finally
+                {
+                    Profiler.EndSample();
+                }
             }
-
-            Profiler.BeginSample($"{nameof(FpcBotPerception)}.ProcessSensedItems");
-            foreach (var sense in Senses)
+            finally
             {
-                sense.ProcessSensedItems();
-            }
-            Profiler.EndSample();
+                if (jobHandlesCount > 0)
+                {
+                    try
+                    {
+                        var outstandingJobs = jobHandlesBuffer.GetSubArray(0, jobHandlesCount);
+                        JobHandle.CompleteAll(outstandingJobs);
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogException(exception);
+                    }
+                }
 
-            Profiler.EndSample();
+                foreach (var processSense in processSensesEnumerators)
+                {
+                    try
+                    {
+                        processSense.Dispose();
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogException(exception);
+                    }
+                }
+
+                processSensesEnumerators.Clear();
+            }
         }
 
         public IEnumerable<DoorVariant> GetDoorsOnPath(IEnumerable<Vector3> pathOfPoints)
@@ -139,8 +191,63 @@ namespace SCPSLBot.AI.FirstPersonControl
             return Senses.Find(s => s is T) as T;
         }
 
-        private FpcBotPlayer _fpcBotPlayer;
+        public void Dispose()
+        {
+            if (isDisposed)
+            {
+                return;
+            }
 
-        private LayerMask _perceptionLayerMask = LayerMask.GetMask("Hitbox", "Door", "InteractableNoPlayerCollision", "Glass");
+            isDisposed = true;
+            RemoveTriggerHandlers();
+
+            foreach (var processSense in processSensesEnumerators)
+            {
+                try
+                {
+                    (processSense as IDisposable)?.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+            }
+
+            processSensesEnumerators.Clear();
+            foreach (var sense in Senses)
+            {
+                try
+                {
+                    (sense as IDisposable)?.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+            }
+
+            Senses.Clear();
+            Layers.Clear();
+            if (jobHandlesBuffer.IsCreated)
+            {
+                jobHandlesBuffer.Dispose();
+            }
+        }
+
+        private void RemoveTriggerHandlers()
+        {
+            if (perceptionComponent == null)
+            {
+                return;
+            }
+
+            perceptionComponent.TriggerEnter -= OnTriggerEnter;
+            perceptionComponent.TriggerExit -= OnTriggerExit;
+            perceptionComponent = null;
+        }
+
+        private NativeArray<JobHandle> jobHandlesBuffer;
+        private PerceptionComponent perceptionComponent;
+        private bool isDisposed;
     }
 }

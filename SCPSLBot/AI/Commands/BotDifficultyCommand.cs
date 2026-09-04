@@ -21,6 +21,11 @@ namespace SCPSLBot.AI.Commands
                 return true;
             }
 
+            if (!sender.CheckPermission(PlayerPermissions.PlayersManagement, out response))
+            {
+                return false;
+            }
+
             if (!Enum.TryParse(arguments.At(0), true, out BotCombatDifficulty difficulty))
             {
                 response = "Unknown difficulty. Use: easy, normal, hard, hardest.";

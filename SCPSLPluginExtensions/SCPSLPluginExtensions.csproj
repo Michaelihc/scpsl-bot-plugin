@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
@@ -26,14 +26,6 @@
     <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SL_APPDATA)\LabAPI\plugins\global">
-      <Output TaskParameter="CopiedFiles" ItemName="FilesCopied" />
-    </Copy>
-    <Message Text="Files copied @(FilesCopied)" Importance="high" />
-  </Target>
-
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
@@ -51,4 +43,10 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
+
+  <!-- Auto-deploy the built DLL over its existing copies on the local LabAPI server (see Deploy.targets). -->
+  <PropertyGroup>
+    <_DeployTargetsFile>$([MSBuild]::GetPathOfFileAbove('Deploy.targets', '$(MSBuildProjectDirectory)'))</_DeployTargetsFile>
+  </PropertyGroup>
+  <Import Project="$(_DeployTargetsFile)" Condition="'$(_DeployTargetsFile)' != ''" />
 </Project>

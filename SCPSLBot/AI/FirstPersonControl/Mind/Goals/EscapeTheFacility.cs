@@ -6,8 +6,6 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Goals
 {
     internal class EscapeTheFacility : IGoal
     {
-        private readonly FpcBotPlayer player;
-
         public void SetEnabledByBeliefs(FpcMind fpcMind)
         {
             fpcMind.GoalEnabledBy<PlayerEscaped, bool>(this, b => true, b => false);

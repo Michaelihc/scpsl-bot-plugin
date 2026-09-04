@@ -18,6 +18,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Looking
 
         private const float MaxSteeringForceDegrees = 640f;
 
+        // Exponential smoothing rate. At 60 FPS this reproduces the original fixed 0.075 alpha
+        // (1 - exp(-4.7/60) ~= 0.075) but stays consistent at any frame rate / tick interval.
+        private const float TurnResponsiveness = 4.7f;
+
         private readonly FpcBotPlayer botPlayer;
 
         public FpcLook(FpcBotPlayer botPlayer)
@@ -48,8 +52,9 @@ namespace SCPSLBot.AI.FirstPersonControl.Looking
 
             TargetHorizontalRotation = hRotation;
 
-            hRotation = Quaternion.Slerp(Quaternion.identity, hRotation, .075f);
-            vRotation = Quaternion.Slerp(Quaternion.identity, vRotation, .075f);
+            var turnAlpha = 1f - Mathf.Exp(-TurnResponsiveness * Time.deltaTime);
+            hRotation = Quaternion.Slerp(Quaternion.identity, hRotation, turnAlpha);
+            vRotation = Quaternion.Slerp(Quaternion.identity, vRotation, turnAlpha);
 
             hRotation = Quaternion.RotateTowards(Quaternion.identity, hRotation, Time.deltaTime * MaxSteeringForceDegrees);
             vRotation = Quaternion.RotateTowards(Quaternion.identity, vRotation, Time.deltaTime * MaxSteeringForceDegrees);

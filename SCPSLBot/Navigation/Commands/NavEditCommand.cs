@@ -21,6 +21,11 @@ namespace SCPSLBot.Navigation.Commands
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
+            if (!sender.CheckPermission(PlayerPermissions.ServerConfigs, out response))
+            {
+                return false;
+            }
+
             if (sender is not PlayerCommandSender playerCommandSender)
             {
                 response = "You must be in-game to use this command!";
@@ -30,6 +35,9 @@ namespace SCPSLBot.Navigation.Commands
             var navMeshEditor = NavigationMeshEditor.Instance;
 
             navMeshEditor.PlayerEditing = navMeshEditor.PlayerEditing == null ? Player.Get(playerCommandSender) : null;
+            LabApiPlugin.Instance?.Presentation?.SetNavDiagnosticsEnabled(
+                Player.Get(playerCommandSender),
+                navMeshEditor.PlayerEditing != null);
 
             response = $"Nav mesh editing is now {navMeshEditor.PlayerEditing}.";
             return true;

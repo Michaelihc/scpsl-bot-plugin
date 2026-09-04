@@ -12,7 +12,27 @@ namespace SCPSLBot.Navigation.Mesh
 {
     internal class NavigationMeshVisuals
     {
-        public LabApi.Features.Wrappers.Player PlayerEnabledVisualsFor { get; set; }
+        private LabApi.Features.Wrappers.Player playerEnabledVisualsFor;
+
+        public LabApi.Features.Wrappers.Player PlayerEnabledVisualsFor
+        {
+            get => playerEnabledVisualsFor;
+            set
+            {
+                if (ReferenceEquals(playerEnabledVisualsFor, value))
+                {
+                    return;
+                }
+
+                if (playerEnabledVisualsFor != null)
+                {
+                    LabApiPlugin.Instance?.Presentation?.RemoveNavDiagnostics(playerEnabledVisualsFor);
+                }
+
+                playerEnabledVisualsFor = value;
+                SentBroadcastMessage = null;
+            }
+        }
 
         public TransformVertex? NearestVertex { get; set; }
         public TransformVertex? FacingVertex { get; set; }
@@ -71,14 +91,14 @@ namespace SCPSLBot.Navigation.Mesh
                 if (messageLinesToSend.Any())
                 {
                     var broadcastMessage = string.Join("\n", messageLinesToSend);
-                    PlayerEnabledVisualsFor.SendBroadcast($"<size=30>{broadcastMessage}", 60, shouldClearPrevious: true);
+                    LabApiPlugin.Instance?.Presentation?.ShowNavDiagnostics(PlayerEnabledVisualsFor, broadcastMessage);
                     SentBroadcastMessage = broadcastMessage;
                 }
                 else
                 {
                     if (SentBroadcastMessage != null)
                     {
-                        PlayerEnabledVisualsFor.ClearBroadcasts();
+                        LabApiPlugin.Instance?.Presentation?.RemoveNavDiagnostics(PlayerEnabledVisualsFor);
                         SentBroadcastMessage = null;
                     }
                 }

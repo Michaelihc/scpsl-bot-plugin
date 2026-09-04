@@ -20,7 +20,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
         const DoorPermissionFlags AllPermissionFlags =
             DoorPermissionFlags.Checkpoints | DoorPermissionFlags.ExitGates | DoorPermissionFlags.Intercom | DoorPermissionFlags.AlphaWarhead |
             DoorPermissionFlags.ContainmentLevelOne | DoorPermissionFlags.ContainmentLevelTwo | DoorPermissionFlags.ContainmentLevelThree |
-            DoorPermissionFlags.ArmoryLevelOne | DoorPermissionFlags.ContainmentLevelTwo | DoorPermissionFlags.ContainmentLevelThree;
+            DoorPermissionFlags.ArmoryLevelOne | DoorPermissionFlags.ArmoryLevelTwo | DoorPermissionFlags.ArmoryLevelThree;
 
         public readonly bool IsInteractable(DoorPermissionFlags permissions)
         {
@@ -48,6 +48,10 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
         private void OnAfterSightSensing()
         {
+            // Drop entries for goals the bot has since abandoned; only the current navigation goal
+            // is relevant. Stale entries otherwise feed an outdated goalPos to door-opening actions.
+            PruneStaleEntries(navigator.GoalPosition);
+
             DoorEntry? obstuctingEntry = null;
 
             foreach (var (point, nextPoint) in navigator.PathSegments)
@@ -115,6 +119,33 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
             }
         }
 
+        private void PruneStaleEntries(Vector3 currentGoalPos)
+        {
+            if (GoalPositions.Count == 0)
+            {
+                return;
+            }
+
+            var removedAny = false;
+            for (var i = GoalPositions.Count - 1; i >= 0; i--)
+            {
+                var goalPos = GoalPositions[i];
+                if (goalPos == currentGoalPos)
+                {
+                    continue;
+                }
+
+                GoalPositions.RemoveAt(i);
+                Doors.Remove(goalPos);
+                removedAny = true;
+            }
+
+            if (removedAny)
+            {
+                InvokeOnUpdate();
+            }
+        }
+
         public bool IsAny => Doors.Count > 0;
         public Dictionary<Vector3, DoorEntry> Doors { get; } = new();
         public readonly List<Vector3> GoalPositions = new();
@@ -152,10 +183,15 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
                 return null;
             }
 
-            var (lastGoalPos, doorEntry) = Doors.Last(p => predicate(p.Value));
-            goalPos = lastGoalPos;
+            var match = Doors.LastOrDefault(p => predicate(p.Value));
+            if (match.Value.Door == null)
+            {
+                goalPos = default;
+                return null;
+            }
 
-            return doorEntry.Door ? doorEntry.Door : null;
+            goalPos = match.Key;
+            return match.Value.Door;
         }
 
         public DoorVariant GetLastDoor(DoorPermissionFlags keycardPermissions)

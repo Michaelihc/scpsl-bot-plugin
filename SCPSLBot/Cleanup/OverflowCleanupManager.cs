@@ -17,10 +17,17 @@ namespace SCPSLBot.Cleanup
         private BotPluginConfig config;
         private int generation;
         private int? baselineItemCount;
+        private bool initialized;
 
         public void Init(BotPluginConfig pluginConfig)
         {
-            config = pluginConfig;
+            if (initialized)
+            {
+                return;
+            }
+
+            config = pluginConfig ?? throw new ArgumentNullException(nameof(pluginConfig));
+            initialized = true;
             generation++;
             baselineItemCount = null;
             ServerEvents.RoundStarted += OnRoundStarted;
@@ -30,6 +37,12 @@ namespace SCPSLBot.Cleanup
 
         public void Terminate()
         {
+            if (!initialized)
+            {
+                return;
+            }
+
+            initialized = false;
             generation++;
             ServerEvents.RoundRestarted -= OnRoundRestarted;
             ServerEvents.RoundStarted -= OnRoundStarted;
@@ -56,7 +69,7 @@ namespace SCPSLBot.Cleanup
 
         private void Tick(int scheduleGeneration)
         {
-            if (scheduleGeneration != generation || config == null)
+            if (!initialized || scheduleGeneration != generation || config == null)
             {
                 return;
             }
@@ -74,7 +87,7 @@ namespace SCPSLBot.Cleanup
             }
             finally
             {
-                if (scheduleGeneration == generation && config != null)
+                if (initialized && scheduleGeneration == generation && config != null)
                 {
                     ScheduleNext();
                 }
@@ -84,7 +97,7 @@ namespace SCPSLBot.Cleanup
         private void CleanupIfNeeded()
         {
             int threshold = Mathf.Max(1, config.CleanupItemThreshold);
-            int itemCount = UnityEngine.Object.FindObjectsOfType<ItemPickupBase>().Length;
+            int itemCount = UnityEngine.Object.FindObjectsByType<ItemPickupBase>(FindObjectsSortMode.None).Length;
             if (!baselineItemCount.HasValue || itemCount < baselineItemCount.Value)
             {
                 baselineItemCount = itemCount;
@@ -113,8 +126,10 @@ namespace SCPSLBot.Cleanup
 
         private void ExecuteNativeCommand(ICommand command, string label)
         {
-            string response;
-            bool success = command.Execute(new ArraySegment<string>(Array.Empty<string>()), commandSender, out response);
+            bool success = command.Execute(
+                new ArraySegment<string>(Array.Empty<string>()),
+                commandSender,
+                out string response);
             if (!success)
             {
                 Logger.Warn($"[SCPSLBot] Native cleanup command '{label}' failed: {response}");

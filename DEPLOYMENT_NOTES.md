@@ -68,7 +68,7 @@ Keep spawn protection enabled through server config.
 Live SSH:
 
 ```powershell
-ssh -i "$env:USERPROFILE\.ssh\codex-scpsl-test-key" -o IdentitiesOnly=yes root@210.16.171.114
+ssh -i "$env:USERPROFILE\.ssh\codex-scpsl-test-key" -o IdentitiesOnly=yes root@47.76.117.246
 ```
 
 Live service:
@@ -80,19 +80,19 @@ scpsl-warmup.service
 Live LabAPI plugin folder:
 
 ```text
-/root/.config/SCP Secret Laboratory/LabAPI/plugins/7777
+/home/scpsl/.config/SCP Secret Laboratory/LabAPI/plugins/7777
 ```
 
 Live gameplay config:
 
 ```text
-/root/.config/SCP Secret Laboratory/config/7777/config_gameplay.txt
+/home/scpsl/.config/SCP Secret Laboratory/config/7777/config_gameplay.txt
 ```
 
 Live SCPSLBot config:
 
 ```text
-/root/.config/SCP Secret Laboratory/LabAPI/configs/7777/SCPSLBot/config.yml
+/home/scpsl/.config/SCP Secret Laboratory/LabAPI/configs/7777/SCPSLBot/config.yml
 ```
 
 Required live gameplay settings for warmup:

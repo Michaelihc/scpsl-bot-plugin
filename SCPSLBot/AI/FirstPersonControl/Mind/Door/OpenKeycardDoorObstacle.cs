@@ -48,7 +48,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Mind.Door
 
                 if (Vector3.Distance(interactablePosition, playerPosition) <= interactDistance)
                 {
-                    Debug.Log($"{doorToOpen} is within interactable distance");
+                    if (BotLog.Verbose) Debug.Log($"{doorToOpen} is within interactable distance");
 
                     if (!botPlayer.OpenDoor(doorToOpen, interactDistance))
                     {

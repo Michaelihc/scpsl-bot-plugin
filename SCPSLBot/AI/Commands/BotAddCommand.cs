@@ -1,5 +1,5 @@
 ﻿using CommandSystem;
-using SCPSLBot.AI;
+using SCPSLBot.Warmup;
 using System;
 
 namespace SCPSLBot.AI.Commands
@@ -15,22 +15,12 @@ namespace SCPSLBot.AI.Commands
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
-            if (!BotManager.Instance.CanSpawnBot())
+            if (!sender.CheckPermission(PlayerPermissions.PlayersManagement, out response))
             {
-                response = "Cannot spawn a bot before the network server is active.";
                 return false;
             }
 
-            if (BotManager.Instance.BotPlayers.Count >= 10)
-            {
-                response = "Bot cap reached (10). Use the warmup panel bot count control to lower it.";
-                return false;
-            }
-
-            BotManager.Instance.AddBotPlayer();
-
-            response = "Done.";
-            return true;
+            return WarmupManager.Instance.TryAddMaintainedBot(out response);
         }
     }
 }

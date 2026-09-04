@@ -1,10 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <Platforms>x64</Platforms>
     <AssemblyName>SCPSLBot.Components</AssemblyName>
     <RootNamespace>SCPSLBot.Components</RootNamespace>
+    <Version>1.0.0</Version>
+    <PackageVersion>1.0.0</PackageVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 
     <LangVersion>12.0</LangVersion>
     <Nullable>warnings</Nullable>
@@ -63,4 +69,10 @@
     <ProjectCapability Remove="ReferenceManagerAssemblies" />
   </ItemGroup>
 
+
+  <!-- Auto-deploy the built DLL over its existing copies on the local LabAPI server (see Deploy.targets). -->
+  <PropertyGroup>
+    <_DeployTargetsFile>$([MSBuild]::GetPathOfFileAbove('Deploy.targets', '$(MSBuildProjectDirectory)'))</_DeployTargetsFile>
+  </PropertyGroup>
+  <Import Project="$(_DeployTargetsFile)" Condition="'$(_DeployTargetsFile)' != ''" />
 </Project>

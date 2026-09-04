@@ -13,7 +13,12 @@ namespace SCPSLBot.AI.FirstPersonControl.Rotation
         [HarmonyPrefix()]
         public static bool UpdateBotRotation(FpcMouseLook __instance)
         {
-            var hub = HubField.GetValue(__instance) as ReferenceHub;
+            if (BotManager.Instance.BotPlayers.Count == 0)
+            {
+                return true;
+            }
+
+            var hub = HubFieldRef(__instance);
 
             if (hub != null && BotManager.Instance.BotPlayers.TryGetValue(hub, out var botHub)
                 && botHub.CurrentBotPlayer is FpcBotPlayer fpcPlayer)
@@ -43,6 +48,7 @@ namespace SCPSLBot.AI.FirstPersonControl.Rotation
             return true;
         }
 
-        private static readonly FieldInfo HubField = AccessTools.Field(typeof(FpcMouseLook), "_hub");
+        private static readonly AccessTools.FieldRef<FpcMouseLook, ReferenceHub> HubFieldRef =
+            AccessTools.FieldRefAccess<FpcMouseLook, ReferenceHub>("_hub");
     }
 }
